@@ -8,8 +8,6 @@ import {
   ShieldCheck, 
   AlertCircle, 
   CheckCircle2,
-  Users,
-  Briefcase,
   Shield,
   Sparkles
 } from 'lucide-react';
@@ -68,23 +66,6 @@ const Login = () => {
       navigate('/portal', { replace: true });
     } catch (err) {
       setErrorMsg(err.message || 'Đăng nhập Google không thành công.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Đăng nhập nhanh theo các vai trò chuẩn nội bộ Quỹ
-  const handleQuickLogin = async (quickEmail, defaultRole) => {
-    setEmail(quickEmail);
-    setPassword('123456');
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const res = await login(quickEmail, '123456');
-      toast.success(`Đăng nhập phân quyền: ${res.user.position} (${res.user.role?.toUpperCase()})`);
-      navigate('/portal', { replace: true });
-    } catch (err) {
-      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
@@ -212,77 +193,6 @@ const Login = () => {
               Đăng nhập với tài khoản Google
             </span>
           </button>
-
-          {/* Quick Login Section - Phân quyền mẫu nội bộ */}
-          <div className="mt-8 pt-6 border-t border-slate-200">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                Truy cập nhanh theo phân quyền
-              </span>
-              <span className="text-[10px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-bold border border-amber-200">
-                Phân quyền nội bộ
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('Sinhtdyt@gmail.com', 'staff')}
-                className="flex items-center justify-between p-2.5 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all text-left text-xs cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-[#059669] group-hover:text-white flex items-center justify-center text-slate-600 transition-colors shadow-2xs">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900">Cán bộ chuyên môn (Staff)</div>
-                    <div className="text-[10px] text-slate-500">Nguyễn Thị Sinh • Thẩm định tài sản</div>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#059669]">
-                  Đăng nhập →
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('nguyenvansontdyt@gmail.com', 'manager')}
-                className="flex items-center justify-between p-2.5 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all text-left text-xs cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-teal-50 group-hover:bg-[#059669] group-hover:text-white flex items-center justify-center text-[#059669] transition-colors shadow-2xs">
-                    <Briefcase className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900">Ban Điều hành (Manager)</div>
-                    <div className="text-[10px] text-slate-500">Nguyễn Văn Sơn • Giám đốc điều hành</div>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-700 group-hover:text-[#059669]">
-                  Đăng nhập →
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('ducanht@gmail.com', 'chairman')}
-                className="flex items-center justify-between p-2.5 rounded-2xl border border-slate-200 hover:border-amber-500 hover:bg-amber-50/50 transition-all text-left text-xs cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-50 group-hover:bg-amber-600 group-hover:text-white flex items-center justify-center text-amber-600 transition-colors shadow-2xs">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900">Chủ tịch HĐQT (Chairman)</div>
-                    <div className="text-[10px] text-slate-500">Trịnh Đức Anh • Chủ tịch HĐQT</div>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-amber-700 group-hover:text-amber-600">
-                  Đăng nhập →
-                </span>
-              </button>
-            </div>
-          </div>
         </Card>
 
         {/* Footer Address & Accreditation */}

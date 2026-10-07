@@ -217,22 +217,32 @@ Khi ở chế độ `OPTIONAL`, trên form biểu mẫu [TrustEvaluation.jsx](fi
 
 ## 👥 5. Danh Sách 12 Cán Bộ Nhân Viên Chính Thức Đã Nạp Vào CSDL Firestore
 
-Dữ liệu thực tế 12 CBNV đã được chuẩn hóa và nạp thành công vào Firestore (`users`), đồng thời khởi tạo tài khoản Firebase Authentication tương ứng (Mật khẩu mặc định: `123456`):
+Dữ liệu thực tế 12 CBNV đã được chuẩn hóa và nạp thành công vào Firestore (`users`), đồng thời khởi tạo tài khoản Firebase Authentication tương ứng (Mật khẩu mặc định: `Qtd@2003`, kích hoạt cờ bắt buộc đổi mật khẩu lần đầu `mustChangePassword: true`):
 
-| TT | Mã CB | Họ và Tên | Giới tính | Chức vụ chính quyền | Phòng ban | CCCD | Điện thoại | Email công vụ | Ngày vào Đảng | Ngày CT Đảng | Trạng thái |
-|:---:|:---:|:---|:---:|:---|:---|:---:|:---:|:---|:---:|:---:|:---:|
-| 1 | `CB01` | **Nguyễn Thị Sinh** | Nữ | Thẩm định tài sản | Phòng Tín dụng | `038162004401` | 0388232844 | `Sinhtdyt@gmail.com` | 09/03/2005 | 09/03/2006 | Hoạt động |
-| 2 | `CB02` | **Nguyễn Thị Mến** | Nữ | Kế toán trưởng | Phòng Kế toán - Ngân quỹ | `038183010925` | 0349547779 | `nguyenmen.yt.83@gmail.com` | 09/03/2007 | 08/03/2008 | Hoạt động |
-| 3 | `CB03` | **Nguyễn Văn Sơn** | Nam | UV HĐQT - Giám đốc | Ban Điều hành | `038080021750` | 0941562789 | `nguyenvansontdyt@gmail.com` | 09/10/2012 | 09/10/2013 | Hoạt động |
-| 4 | `CB04` | **Bùi Thị Thảo** | Nữ | Trưởng ban kiểm soát | Ban Kiểm soát | `038182047645` | 0839062825 | `thao.bui0282@gmail.com` | 19/11/2012 | 19/11/2013 | Hoạt động |
-| 5 | `CB05` | **Nguyễn Hữu Nhân** | Nam | CB tín dụng | Phòng Tín dụng | `038085009285` | 0949116817 | `qtdyentho.huunhan@gmail.com` | 30/01/2013 | 30/01/2014 | Hoạt động |
-| 6 | `CB06` | **Trịnh Thị Hiền** | Nữ | KST - Kiểm toán nội bộ | Ban Kiểm soát | `038183049074` | 0948784333 | `qtdyentho.hienha@gmail.com` | 21/05/2014 | 21/05/2015 | Hoạt động |
-| 7 | `CB07` | **Trịnh Đức Anh** | Nam | Chủ tịch HĐQT | Hội đồng Quản trị | `038086010115` | 0965122111 | `ducanht@gmail.com` | 03/06/2016 | 03/06/2017 | Hoạt động |
-| 8 | `CB08` | **Vũ Thị Hiền** | Nữ | UV HĐQT | Hội đồng Quản trị | `038186037786` | 0983502181 | `qtdyentho.vuhien@gmail.com` | 04/06/2018 | 04/06/2019 | Hoạt động |
-| 9 | `CB09` | **Trần Như Huyền** | Nữ | CB tín dụng | Phòng Tín dụng | `038189039532` | 0985709609 | `Huyennhutran@gmail.com` | 11/12/2020 | 11/12/2021 | Hoạt động |
-| 10 | `CB10` | **Hoàng Thị Lan** | Nữ | Kế toán viên | Phòng Kế toán - Ngân quỹ | `038189040044` | 0965178666 | `hoanglan1289@gmail.com` | 08/10/2021 | 08/10/2022 | Hoạt động |
-| 11 | `CB11` | **Phạm Thị Thảo** | Nữ | Thủ quỹ | Phòng Kế toán - Ngân quỹ | `038190051894` | 0965567596 | `qtdyentho.phamthao@gmail.com` | 06/09/2023 | 06/09/2024 | Hoạt động |
-| 12 | `CB12` | **Lưu Thị Định** | Nữ | CB tín dụng | Phòng Tín dụng | `038189028302` | 0961007855 | `qtdyentho.luudinh@gmail.com` | 06/09/2024 | 06/09/2025 | Hoạt động |
+| TT | Mã CB | Họ và Tên | Giới tính | Chức vụ chính quyền | Phân quyền (Role) | Phòng ban | CCCD | Điện thoại | Email công vụ | Mật khẩu ban đầu |
+|:---:|:---:|:---|:---:|:---|:---:|:---|:---:|:---:|:---|:---:|
+| 1 | `CB01` | **Nguyễn Thị Sinh** | Nữ | Thẩm định tài sản | `staff` (Nhân viên) | Phòng Tín dụng | `038162004401` | 0388232844 | `Sinhtdyt@gmail.com` | `Qtd@2003` |
+| 2 | `CB02` | **Nguyễn Thị Mến** | Nữ | Kế toán trưởng | `staff` (Nhân viên) | Phòng Kế toán - Ngân quỹ | `038183010925` | 0349547779 | `nguyenmen.yt.83@gmail.com` | `Qtd@2003` |
+| 3 | `CB03` | **Nguyễn Văn Sơn** | Nam | UV HĐQT - Giám đốc | **`admin` (Quản trị viên)** | Ban Điều hành | `038080021750` | 0941562789 | `nguyenvansontdyt@gmail.com` | `Qtd@2003` |
+| 4 | `CB04` | **Bùi Thị Thảo** | Nữ | Trưởng ban kiểm soát | `staff` (Nhân viên) | Ban Kiểm soát | `038182047645` | 0839062825 | `thao.bui0282@gmail.com` | `Qtd@2003` |
+| 5 | `CB05` | **Nguyễn Hữu Nhân** | Nam | CB tín dụng | `staff` (Nhân viên) | Phòng Tín dụng | `038085009285` | 0949116817 | `qtdyentho.huunhan@gmail.com` | `Qtd@2003` |
+| 6 | `CB06` | **Trịnh Thị Hiền** | Nữ | KST - Kiểm toán nội bộ | `staff` (Nhân viên) | Ban Kiểm soát | `038183049074` | 0948784333 | `qtdyentho.hienha@gmail.com` | `Qtd@2003` |
+| 7 | `CB07` | **Trịnh Đức Anh** | Nam | Chủ tịch HĐQT | **`admin` (Quản trị viên)** | Hội đồng Quản trị | `038086010115` | 0965122111 | `ducanht@gmail.com` | `Qtd@2003` |
+| 8 | `CB08` | **Vũ Thị Hiền** | Nữ | UV HĐQT | `staff` (Nhân viên) | Hội đồng Quản trị | `038186037786` | 0983502181 | `qtdyentho.vuhien@gmail.com` | `Qtd@2003` |
+| 9 | `CB09` | **Trần Như Huyền** | Nữ | CB tín dụng | `staff` (Nhân viên) | Phòng Tín dụng | `038189039532` | 0985709609 | `Huyennhutran@gmail.com` | `Qtd@2003` |
+| 10 | `CB10` | **Hoàng Thị Lan** | Nữ | Kế toán viên | `staff` (Nhân viên) | Phòng Kế toán - Ngân quỹ | `038189040044` | 0965178666 | `hoanglan1289@gmail.com` | `Qtd@2003` |
+| 11 | `CB11` | **Phạm Thị Thảo** | Nữ | Thủ quỹ | `staff` (Nhân viên) | Phòng Kế toán - Ngân quỹ | `038190051894` | 0965567596 | `qtdyentho.phamthao@gmail.com` | `Qtd@2003` |
+| 12 | `CB12` | **Lưu Thị Định** | Nữ | CB tín dụng | `staff` (Nhân viên) | Phòng Tín dụng | `038189028302` | 0961007855 | `qtdyentho.luudinh@gmail.com` | `Qtd@2003` |
+
+### 🔐 5.1. Chính Sách Đăng Nhập & Bảo Mật Mật Khẩu Lần Đầu
+- **Loại bỏ Đăng nhập nhanh**: Trang Login tuyệt đối không hiển thị nút hoặc khối đăng nhập nhanh/tài khoản mẫu để phòng ngừa rủi ro bảo mật thông tin.
+- **Phân quyền Chuẩn**: 
+  - Tài khoản Chủ tịch HĐQT (`CB07`) và Giám đốc (`CB03`) giữ vai trò `admin` (toàn quyền hệ thống).
+  - Tất cả các cán bộ khác giữ vai trò `staff` (nhân viên chuyên môn theo chức năng phân hệ).
+- **Yêu cầu đổi mật khẩu sau lần đăng nhập đầu tiên**:
+  - Toàn bộ tài khoản khởi tạo với mật khẩu mặc định `Qtd@2003` đều có trường `mustChangePassword: true`.
+  - Khi đăng nhập thành công vào hệ thống lần đầu, cửa sổ pop-up modal `ForceChangePasswordModal` sẽ kích hoạt, yêu cầu thiết lập mật khẩu riêng (tối thiểu 6 ký tự, khác `Qtd@2003`).
+  - Sau khi xác nhận thành công, hệ thống cập nhật đồng bộ lên Firebase Auth và Firestore `users/{userId}` với `mustChangePassword: false`.
 
 > **Ghi chú về các thông tin còn thiếu**: Các trường ngày sinh chi tiết, trình độ học vấn, ảnh chân dung thực tế và hồ sơ gia đình sẽ được bổ sung trực tiếp trên màn hình Quản lý hồ sơ cán bộ khi có đầy đủ hồ sơ văn bản.
 

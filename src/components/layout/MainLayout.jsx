@@ -5,6 +5,7 @@ import Navbar from './Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { Database, Server } from 'lucide-react';
 import AutoInitDbModal from '../common/AutoInitDbModal';
+import ForceChangePasswordModal from '../auth/ForceChangePasswordModal';
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,6 +63,9 @@ const MainLayout = () => {
 
       {/* Modal Tự động khởi tạo CSDL */}
       <AutoInitDbModal isOpen={dbModalOpen} onClose={() => setDbModalOpen(false)} />
+
+      {/* Modal Bắt buộc thay đổi mật khẩu lần đầu */}
+      <ForceChangePasswordModal />
     </div>
   );
 };

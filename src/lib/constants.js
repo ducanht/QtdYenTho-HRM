@@ -1,16 +1,22 @@
 // Danh mục Hằng số & Phân loại Chuẩn mực Quỹ TDND Yên Thọ
 // Áp dụng Chính sách Không sử dụng Dữ liệu Giả lập (Zero Mock Data Policy)
 
+export const DEFAULT_INITIAL_PASSWORD = 'Qtd@2003';
+
 export const ROLES = {
+  ADMIN: 'admin',
   STAFF: 'staff',
-  MANAGER: 'manager',
-  CHAIRMAN: 'chairman',
+  // Giữ alias tương thích ngược:
+  MANAGER: 'admin',
+  CHAIRMAN: 'admin',
 };
 
 export const ROLE_LABELS = {
+  [ROLES.ADMIN]: 'Ban Lãnh đạo (Admin)',
   [ROLES.STAFF]: 'Cán bộ nhân viên',
-  [ROLES.MANAGER]: 'Ban Điều hành & BKS',
-  [ROLES.CHAIRMAN]: 'Hội đồng Quản trị',
+  // Alias tương thích:
+  manager: 'Ban Lãnh đạo (Admin)',
+  chairman: 'Ban Lãnh đạo (Admin)',
 };
 
 export const DEPARTMENTS = [

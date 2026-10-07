@@ -3,9 +3,11 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup,
   signOut as firebaseSignOut, 
-  onAuthStateChanged
+  onAuthStateChanged,
+  updatePassword
 } from 'firebase/auth';
-import { auth, googleProvider, isFirebaseConfigured } from '../lib/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db, googleProvider, isFirebaseConfigured } from '../lib/firebase';
 import { getUserProfile, syncUserProfile } from '../lib/services';
 import { ROLES } from '../lib/constants';
 
@@ -55,6 +57,7 @@ export const AuthProvider = ({ children }) => {
               partyMember: Boolean(profile?.partyMember),
               politicalRole: profile?.politicalRole || '',
               assignedArea: profile?.assignedArea || '',
+              mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
             };
 
             setCurrentUser(userData);
@@ -123,6 +126,7 @@ export const AuthProvider = ({ children }) => {
         partyMember: Boolean(profile?.partyMember),
         politicalRole: profile?.politicalRole || '',
         assignedArea: profile?.assignedArea || '',
+        mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
       };
       
       failedAttempts = 0; // Reset số lần sai
@@ -188,6 +192,7 @@ export const AuthProvider = ({ children }) => {
         partyMember: Boolean(profile?.partyMember),
         politicalRole: profile?.politicalRole || '',
         assignedArea: profile?.assignedArea || '',
+        mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
       };
 
       failedAttempts = 0;
@@ -211,6 +216,44 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Hàm Đổi mật khẩu lần đầu hoặc theo yêu cầu bảo mật
+  const changeUserPassword = async (newPassword) => {
+    if (!newPassword || newPassword.trim().length < 6) {
+      throw new Error('Mật khẩu mới phải có tối thiểu 6 ký tự.');
+    }
+    if (newPassword.trim() === 'Qtd@2003') {
+      throw new Error('Mật khẩu mới không được trùng với mật khẩu mặc định (Qtd@2003).');
+    }
+
+    try {
+      if (isFirebaseConfigured && auth && auth.currentUser) {
+        await updatePassword(auth.currentUser, newPassword.trim());
+      }
+
+      // Cập nhật trạng thái Firestore: mustChangePassword = false
+      if (db && currentUser?.id) {
+        await updateDoc(doc(db, 'users', currentUser.id), {
+          mustChangePassword: false,
+          passwordChangedAt: serverTimestamp(),
+        }).catch((err) => console.warn('Cập nhật Firestore user doc thất bại:', err));
+      }
+
+      // Cập nhật state nội bộ
+      setCurrentUser((prev) => (prev ? { ...prev, mustChangePassword: false } : null));
+
+      return { success: true };
+    } catch (err) {
+      console.error('Lỗi khi đổi mật khẩu tài khoản:', err);
+      let msg = err.message || 'Không thể đổi mật khẩu. Vui lòng thử lại.';
+      if (err.code === 'auth/requires-recent-login') {
+        msg = 'Phiên làm việc đã hết hạn xác thực. Vui lòng đăng nhập lại để thực hiện đổi mật khẩu.';
+      } else if (err.code === 'auth/weak-password') {
+        msg = 'Mật khẩu quá yếu. Vui lòng chọn mật khẩu gồm cả chữ và số an toàn hơn.';
+      }
+      throw new Error(msg);
+    }
+  };
+
   // Đăng xuất
   const logout = async () => {
     try {
@@ -224,16 +267,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const isStaff = role === ROLES.STAFF;
-  const isManager = role === ROLES.MANAGER;
-  const isChairman = role === ROLES.CHAIRMAN;
-  const canAccessDashboard = isManager || isChairman;
+  // Phân quyền chuẩn: Chủ tịch HĐQT & Giám đốc là Admin, các tài khoản khác là Staff
+  const isAdmin = role === ROLES.ADMIN || role === 'admin' || role === 'chairman' || role === 'manager';
+  const isStaff = role === ROLES.STAFF || role === 'staff';
+  const isManager = isAdmin;
+  const isChairman = isAdmin;
+  const canAccessDashboard = isAdmin;
 
   const value = {
     currentUser,
     role,
     loading,
     authError,
+    isAdmin,
     isStaff,
     isManager,
     isChairman,
@@ -242,6 +288,7 @@ export const AuthProvider = ({ children }) => {
     login,
     loginWithGoogle,
     logout,
+    changeUserPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
