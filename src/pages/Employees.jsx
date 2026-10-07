@@ -151,14 +151,33 @@ const Employees = () => {
                 </Badge>
               </div>
 
-              <div className="space-y-0.5">
-                <h3 className="font-bold text-slate-900 text-sm">{emp.name}</h3>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 text-sm">{emp.name}</h3>
+                  {emp.gender && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">
+                      {emp.gender}
+                    </span>
+                  )}
+                </div>
                 <div className="text-[11px] font-bold text-[#0f766e] uppercase tracking-wider">
                   {emp.code} • {emp.position}
                 </div>
                 <div className="text-xs text-slate-500">{emp.department}</div>
+                {emp.cccd && (
+                  <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                    <span className="text-slate-400">CCCD:</span>
+                    <span className="font-semibold text-slate-700">{emp.cccd}</span>
+                  </div>
+                )}
+                {emp.partyDate && (
+                  <div className="text-[10px] text-amber-900 bg-amber-50/90 border border-amber-200 px-2 py-0.5 rounded-lg flex items-center gap-1.5 font-medium mt-1">
+                    <Award className="w-3 h-3 text-amber-600 shrink-0" />
+                    <span>Đảng viên (Vào: {formatDateVN(emp.partyDate)}{emp.partyOfficialDate ? ` • CT: ${formatDateVN(emp.partyOfficialDate)}` : ''})</span>
+                  </div>
+                )}
                 {emp.assignedArea && (
-                  <div className="text-[11px] text-slate-600 flex items-center gap-1 pt-1">
+                  <div className="text-[11px] text-slate-600 flex items-center gap-1 pt-0.5">
                     <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                     <span className="truncate">{emp.assignedArea}</span>
                   </div>
@@ -210,15 +229,27 @@ const Employees = () => {
         {selectedEmpHistory && (
           <div className="space-y-4">
             {/* Header info card */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <span className="text-slate-400 block text-[10px]">Đơn vị hiện tại:</span>
-                <span className="font-bold text-slate-900">{selectedEmpHistory.department}</span>
+                <span className="text-slate-400 block text-[10px]">Số CCCD:</span>
+                <span className="font-mono font-bold text-slate-900">{selectedEmpHistory.cccd || '—'}</span>
               </div>
-              <div className="text-right">
-                <span className="text-slate-400 block text-[10px]">Ngày vào Quỹ:</span>
-                <span className="font-semibold text-slate-800">
-                  {formatDateVN(selectedEmpHistory.joinDate || '2015-09-01')}
+              <div>
+                <span className="text-slate-400 block text-[10px]">Giới tính & SĐT:</span>
+                <span className="font-bold text-slate-800">
+                  {selectedEmpHistory.gender || '—'} • {selectedEmpHistory.phone || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Ngày vào Đảng:</span>
+                <span className="font-semibold text-amber-800">
+                  {selectedEmpHistory.partyDate ? formatDateVN(selectedEmpHistory.partyDate) : '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Ngày chính thức Đảng:</span>
+                <span className="font-semibold text-amber-900">
+                  {selectedEmpHistory.partyOfficialDate ? formatDateVN(selectedEmpHistory.partyOfficialDate) : '—'}
                 </span>
               </div>
             </div>

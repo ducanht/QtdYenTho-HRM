@@ -49,7 +49,7 @@ Người dùng **không cần phải tạo thủ công bất kỳ collection nà
    - `roles_permissions`: 4 ma trận phân quyền
    - `trust_criteria`: 10 tiêu chí tín nhiệm chuẩn
    - `evaluation_periods`: Danh mục các đợt đánh giá
-   - `users`: 9 hồ sơ cán bộ Quỹ kèm CCCD, chức vụ Đảng - Đoàn
+   - `users`: 12 hồ sơ cán bộ chính thức Quỹ TDND Yên Thọ kèm CCCD, ngày vào Đảng, ngày chính thức Đảng
    - `work_history`: Quá trình luân chuyển điều động cán bộ
    - `evaluations_trust`: Phiếu đánh giá tín nhiệm mẫu
    - `evaluations_kpi`: Dữ liệu KPI 3 bước

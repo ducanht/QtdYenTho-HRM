@@ -35,7 +35,10 @@ erDiagram
         string department "Phòng Tín dụng / Kế toán / BKS / HĐQT / BĐH"
         string position "Chủ tịch HĐQT, Giám đốc, Kế toán trưởng, CBTD..."
         string assignedArea "Địa bàn phụ trách hiện tại (Xã Quý Lộc, Yên Thọ...)"
-        string politicalRole "Bí thư Chi bộ, Chủ tịch Công đoàn..."
+        string politicalRole "Bí thư Chi bộ, Phó Bí thư, Chi ủy viên, Đảng viên..."
+        boolean partyMember "true: Đảng viên ĐCSVN"
+        date partyDate "Ngày kết nạp Đảng (YYYY-MM-DD)"
+        date partyOfficialDate "Ngày công nhận chính thức Đảng (YYYY-MM-DD)"
         string education "Trình độ chuyên môn (Đại học Ngân hàng, Luật...)"
         string joinDate "Ngày bắt đầu công tác tại Quỹ"
         string contractType "Không xác định thời hạn, Theo nhiệm kỳ..."
@@ -209,3 +212,27 @@ type VotingMode =
 Khi ở chế độ `OPTIONAL`, trên form biểu mẫu [TrustEvaluation.jsx](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/src/pages/TrustEvaluation.jsx) sẽ hiển thị một nút gạt:
 > 🔘 **"Bỏ phiếu ẩn danh (Bảo mật danh tính người chấm điểm)"**  
 > *Khi bật, họ tên và chức danh của bạn sẽ không xuất hiện trên phiếu đánh giá hay kết quả công bố.*
+
+---
+
+## 👥 5. Danh Sách 12 Cán Bộ Nhân Viên Chính Thức Đã Nạp Vào CSDL Firestore
+
+Dữ liệu thực tế 12 CBNV đã được chuẩn hóa và nạp thành công vào Firestore (`users`), đồng thời khởi tạo tài khoản Firebase Authentication tương ứng (Mật khẩu mặc định: `123456`):
+
+| TT | Mã CB | Họ và Tên | Giới tính | Chức vụ chính quyền | Phòng ban | CCCD | Điện thoại | Email công vụ | Ngày vào Đảng | Ngày CT Đảng | Trạng thái |
+|:---:|:---:|:---|:---:|:---|:---|:---:|:---:|:---|:---:|:---:|:---:|
+| 1 | `CB01` | **Nguyễn Thị Sinh** | Nữ | Thẩm định tài sản | Phòng Tín dụng | `038162004401` | 0388232844 | `Sinhtdyt@gmail.com` | 09/03/2005 | 09/03/2006 | Hoạt động |
+| 2 | `CB02` | **Nguyễn Thị Mến** | Nữ | Kế toán trưởng | Phòng Kế toán - Ngân quỹ | `038183010925` | 0349547779 | `nguyenmen.yt.83@gmail.com` | 09/03/2007 | 08/03/2008 | Hoạt động |
+| 3 | `CB03` | **Nguyễn Văn Sơn** | Nam | UV HĐQT - Giám đốc | Ban Điều hành | `038080021750` | 0941562789 | `nguyenvansontdyt@gmail.com` | 09/10/2012 | 09/10/2013 | Hoạt động |
+| 4 | `CB04` | **Bùi Thị Thảo** | Nữ | Trưởng ban kiểm soát | Ban Kiểm soát | `038182047645` | 0839062825 | `thao.bui0282@gmail.com` | 19/11/2012 | 19/11/2013 | Hoạt động |
+| 5 | `CB05` | **Nguyễn Hữu Nhân** | Nam | CB tín dụng | Phòng Tín dụng | `038085009285` | 0949116817 | `qtdyentho.huunhan@gmail.com` | 30/01/2013 | 30/01/2014 | Hoạt động |
+| 6 | `CB06` | **Trịnh Thị Hiền** | Nữ | KST - Kiểm toán nội bộ | Ban Kiểm soát | `038183049074` | 0948784333 | `qtdyentho.hienha@gmail.com` | 21/05/2014 | 21/05/2015 | Hoạt động |
+| 7 | `CB07` | **Trịnh Đức Anh** | Nam | Chủ tịch HĐQT | Hội đồng Quản trị | `038086010115` | 0965122111 | `ducanht@gmail.com` | 03/06/2016 | 03/06/2017 | Hoạt động |
+| 8 | `CB08` | **Vũ Thị Hiền** | Nữ | UV HĐQT | Hội đồng Quản trị | `038186037786` | 0983502181 | `qtdyentho.vuhien@gmail.com` | 04/06/2018 | 04/06/2019 | Hoạt động |
+| 9 | `CB09` | **Trần Như Huyền** | Nữ | CB tín dụng | Phòng Tín dụng | `038189039532` | 0985709609 | `Huyennhutran@gmail.com` | 11/12/2020 | 11/12/2021 | Hoạt động |
+| 10 | `CB10` | **Hoàng Thị Lan** | Nữ | Kế toán viên | Phòng Kế toán - Ngân quỹ | `038189040044` | 0965178666 | `hoanglan1289@gmail.com` | 08/10/2021 | 08/10/2022 | Hoạt động |
+| 11 | `CB11` | **Phạm Thị Thảo** | Nữ | Thủ quỹ | Phòng Kế toán - Ngân quỹ | `038190051894` | 0965567596 | `qtdyentho.phamthao@gmail.com` | 06/09/2023 | 06/09/2024 | Hoạt động |
+| 12 | `CB12` | **Lưu Thị Định** | Nữ | CB tín dụng | Phòng Tín dụng | `038189028302` | 0961007855 | `qtdyentho.luudinh@gmail.com` | 06/09/2024 | 06/09/2025 | Hoạt động |
+
+> **Ghi chú về các thông tin còn thiếu**: Các trường ngày sinh chi tiết, trình độ học vấn, ảnh chân dung thực tế và hồ sơ gia đình sẽ được bổ sung trực tiếp trên màn hình Quản lý hồ sơ cán bộ khi có đầy đủ hồ sơ văn bản.
+
