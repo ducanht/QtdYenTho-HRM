@@ -1,0 +1,261 @@
+# HƯỚNG DẪN KẾT NỐI FIREBASE & TỰ ĐỘNG KHỞI TẠO CSDL TOÀN DIỆN
+## Cổng Thông Tin Đánh Giá Tín Nhiệm & Quản Trị Nhân Sự — Quỹ Tín Dụng Nhân Dân Yên Thọ
+
+> **CƠ CHẾ TỰ ĐỘNG HÓA 100% (ZERO-MANUAL COLLECTION CREATION)**:
+> Bạn **KHÔNG CẦN** phải tạo thủ công bất kỳ collection hay bảng nào trên Firebase Console. Hệ thống đã tích hợp sẵn **Bộ máy Khởi tạo & Cập nhật CSDL Tự động (Automated Database Provisioning Engine)**. Sau khi dán cấu hình Firebase, chỉ cần nhấn **1-Click** trên thanh công cụ WebApp, toàn bộ 9 bộ sưu tập, dữ liệu nhân sự, lịch sử luân chuyển và 10 tiêu chí tín nhiệm sẽ được tạo và đồng bộ tự động.
+
+---
+
+## 📋 MỤC LỤC
+1. [Tổng Quan Kiến Trúc CSDL & Bảo Mật](#1-tổng-quan-kiến-trúc-csdl--bảo-mật)
+2. [Bước 1: Tạo Dự Án Firebase Mới (Miễn Phí)](#bước-1-tạo-dự-án-firebase-mới-miễn-phí)
+3. [Bước 2: Bật Dịch Vụ Xác Thực (Authentication)](#bước-2-bật-dịch-vụ-xác-thực-authentication)
+4. [Bước 3: Tạo Cơ Sở Dữ Liệu Cloud Firestore](#bước-3-tạo-cơ-sở-dữ-liệu-cloud-firestore)
+5. [Bước 4: Cấu Hình Quy Tắc Bảo Mật (Firestore Security Rules)](#bước-4-cấu-hình-quy-tắc-bảo-mật-firestore-security-rules)
+6. [Bước 5: Lấy Mã Cấu Hình & Dán Vào Ứng Dụng](#bước-5-lấy-mã-cấu-hình--dán-vào-ứng-dụng)
+7. [Bước 6: Kích Hoạt Khởi Tạo CSDL Tự Động 1-Click](#bước-6-kích-hoạt-khởi-tạo-csdl-tự-động-1-click)
+8. [Tạo Tài Khoản Cán Bộ & Phân Quyền Truy Cập](#tạo-tài-khoản-cán-bộ--phân-quyền-truy-cập)
+9. [Cấu Trúc Modular & Khả Năng Mở Rộng Dài Hạn (Chấm Công, Lương)](#cấu-trúc-modular--khả-năng-mở-rộng-dài-hạn)
+
+---
+
+## 1. TỔNG QUAN KIẾN TRÚC CSDL & BẢO MẬT
+
+Hệ thống quản lý dữ liệu trên Cloud Firestore theo 9 bộ sưu tập chuẩn hóa:
+
+```mermaid
+graph TD
+    A[evaluation_periods<br/>Cấu hình Đợt Ẩn danh/Công khai] --> D[evaluations_trust<br/>Phiếu đánh giá tín nhiệm 10 tiêu chí]
+    B[users<br/>Hồ sơ cán bộ & CCCD & Quyền hạn] --> D
+    B --> E[work_history<br/>Lịch sử luân chuyển công tác]
+    B --> F[evaluations_kpi<br/>Chấm điểm KPI 3 cấp 40-30-30]
+    B --> G[evaluations_planning<br/>Bỏ phiếu quy hoạch cán bộ]
+    C[trust_criteria<br/>10 Tiêu chí tín nhiệm chuẩn] --> D
+    H[system_modules<br/>Danh mục phân hệ mở rộng] --> I[HRM System Core]
+    J[roles_permissions<br/>Ma trận phân quyền chi tiết] --> I
+```
+
+### Nguyên tắc bảo mật bỏ phiếu kín:
+- **Cấu hình tại cấp Đợt**: Ban Quản trị quyết định đợt đánh giá là `ANONYMOUS` (Bỏ phiếu kín) hoặc `IDENTIFIED` (Công khai định danh).
+- **Cán bộ không tự ý chọn**: Ngăn chặn rủi ro lộ lọt hoặc nể nang trong nội bộ đơn vị.
+- **Bảo mật 2 tầng**: Ở tầng hiển thị, tên người chấm tự động hiển thị là `"Cán bộ Quỹ (Ẩn danh)"`. Ở tầng lưu trữ kiểm toán, hệ thống lưu mã tham chiếu chống bỏ phiếu trùng.
+
+---
+
+## BƯỚC 1: TẠO DỰ ÁN FIREBASE MỚI (MIỄN PHÍ)
+
+1. Truy cập vào **[Google Firebase Console](https://console.firebase.google.com/)** bằng tài khoản Google của Quỹ.
+2. Nhấn nút **"Add project"** (Thêm dự án).
+3. Đặt tên dự án: `qtd-yentho-hrm` (hoặc tên tùy chọn theo đơn vị).
+4. Nhấn **Continue** (ở bước Google Analytics có thể bật hoặc tắt tùy nhu cầu), sau đó nhấn **Create project**.
+5. Chờ 30 giây để Google thiết lập môi trường đám mây hoàn tất.
+
+---
+
+## BƯỚC 2: BẬT DỊCH VỤ XÁC THỰC (AUTHENTICATION)
+
+1. Tại menu bên trái Firebase Console, chọn **Build** $\rightarrow$ **Authentication**.
+2. Nhấn nút **Get started**.
+3. Tại tab **Sign-in method**, chọn nhà cung cấp **Email/Password**.
+4. Bật công tắc **Enable** ở dòng đầu tiên (*Email/Password*).
+5. Nhấn **Save**.
+
+---
+
+## BƯỚC 3: TẠO CƠ SỞ DỮ LIỆU CLOUD FIRESTORE
+
+1. Tại menu bên trái, chọn **Build** $\rightarrow$ **Firestore Database**.
+2. Nhấn nút **Create database**.
+3. Chọn vị trí lưu trữ (Location):
+   - Khuyến nghị chọn: `asia-southeast1` (Singapore) hoặc `asia-east1` để có tốc độ truy xuất nhanh nhất từ Việt Nam.
+4. Chọn chế độ bảo mật ban đầu:
+   - Chọn **Start in production mode** (Bắt đầu ở chế độ sản xuất).
+5. Nhấn **Create** để hoàn tất.
+
+---
+
+## BƯỚC 4: CẤU HÌNH QUY TẮC BẢO MẬT (FIRESTORE SECURITY RULES)
+
+1. Trong trang **Firestore Database**, chuyển sang tab **Rules**.
+2. Dán toàn bộ quy tắc phân quyền chuẩn mực dưới đây:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Hàm phụ trợ kiểm tra trạng thái đăng nhập
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Lấy thông tin role người dùng từ collection users
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isManagerOrChairman() {
+      return isAuthenticated() && (getUserRole() == 'manager' || getUserRole() == 'chairman' || getUserRole() == 'admin');
+    }
+
+    // 1. Hồ sơ nhân sự: Mọi cán bộ đã đăng nhập đều có quyền xem danh bạ; chỉ Quản trị/Ban Lãnh đạo được sửa
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagerOrChairman();
+    }
+
+    // 2. Lịch sử luân chuyển công tác: Xem công khai nội bộ; Quản trị ghi nhận quyết định
+    match /work_history/{historyId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagerOrChairman();
+    }
+
+    // 3. Tiêu chí tín nhiệm & Phân hệ hệ thống: Đọc công khai
+    match /trust_criteria/{criterionId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagerOrChairman();
+    }
+    match /system_modules/{moduleId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagerOrChairman();
+    }
+    match /roles_permissions/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagerOrChairman();
+    }
+
+    // 4. Đợt đánh giá: Cán bộ xem; Ban Quản trị cấu hình và quyết định Ẩn danh/Công khai
+    match /evaluation_periods/{periodId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagerOrChairman();
+    }
+
+    // 5. Phiếu đánh giá tín nhiệm: 
+    // - Mọi cán bộ được gửi phiếu đánh giá cho đồng nghiệp
+    // - Chỉ Ban Quản trị/Kiểm soát được xem tổng hợp toàn bộ phiếu
+    match /evaluations_trust/{evalId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isManagerOrChairman();
+    }
+
+    // 6. Đánh giá KPI 3 bước
+    match /evaluations_kpi/{kpiId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
+
+    // 7. Bỏ phiếu quy hoạch cán bộ
+    match /evaluations_planning/{planId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isManagerOrChairman();
+    }
+  }
+}
+```
+
+3. Nhấn nút **Publish** (Xuất bản) để kích hoạt luật bảo mật.
+
+---
+
+## BƯỚC 5: LẤY MÃ CẤU HÌNH & DÁN VÀO ỨNG DỤNG
+
+1. Tại Firebase Console, nhấn vào biểu tượng bánh răng **Project Settings** (Cài đặt dự án) ở góc trên bên trái.
+2. Cuộn xuống phần **Your apps** $\rightarrow$ Chọn biểu tượng Web **`</>`**.
+3. Nhập tên ứng dụng: `QtdYenTho-HRM-Web` $\rightarrow$ Nhấn **Register app**.
+4. Sao chép đoạn mã `firebaseConfig` (chỉ sao chép phần nằm trong `{ ... }`):
+
+```javascript
+const firebaseConfig = {
+  apiKey: "AIzaSyBxxxx...",
+  authDomain: "qtd-yentho-hrm.firebaseapp.com",
+  projectId: "qtd-yentho-hrm",
+  storageBucket: "qtd-yentho-hrm.firebasestorage.app",
+  messagingSenderId: "123456789...",
+  appId: "1:123456789:web:xxxx..."
+};
+```
+
+5. Mở tệp mã nguồn: `src/lib/firebase.js` trong thư mục dự án và dán đè vào đối tượng `firebaseConfig`:
+
+```javascript
+// src/lib/firebase.js
+const firebaseConfig = {
+  apiKey: "AIzaSyBxxxx...",
+  authDomain: "qtd-yentho-hrm.firebaseapp.com",
+  projectId: "qtd-yentho-hrm",
+  storageBucket: "qtd-yentho-hrm.firebasestorage.app",
+  messagingSenderId: "123456789...",
+  appId: "1:123456789:web:xxxx..."
+};
+```
+
+6. Lưu tệp (`Ctrl + S`). Ngay lập tức, ứng dụng sẽ tự động chuyển từ Chế độ Dữ liệu Nội bộ sang kết nối Đám mây Cloud Firestore!
+
+---
+
+## BƯỚC 6: KÍCH HOẠT KHỞI TẠO CSDL TỰ ĐỘNG 1-CLICK
+
+Sau khi lưu cấu hình, bạn không cần phải tạo từng bảng trên Firebase Console:
+
+1. Mở giao diện WebApp trên trình duyệt.
+2. Nhìn lên góc phải thanh tiêu đề Navbar, nhấn vào nút **"⚡ Tự động CSDL"** (hoặc nút **"Khởi tạo CSDL tự động"** trên thanh thông báo).
+3. Hộp thoại **"Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động"** xuất hiện.
+4. Nhấn nút: **"Tiến hành Khởi tạo & Cập nhật 9 Bảng CSDL Tự Động"**.
+5. Hệ thống sẽ tự động thực hiện 9 bước:
+   - ✅ **Bước 1/9**: Khởi tạo Danh mục phân hệ mở rộng (`system_modules`)
+   - ✅ **Bước 2/9**: Thiết lập Ma trận phân quyền chi tiết (`roles_permissions`)
+   - ✅ **Bước 3/9**: Chuẩn hóa 10 Tiêu chí đánh giá tín nhiệm (`trust_criteria`)
+   - ✅ **Bước 4/9**: Cấu hình Đợt đánh giá tín nhiệm (`evaluation_periods`)
+   - ✅ **Bước 5/9**: Cập nhật Danh bạ Hồ sơ Cán bộ nhân viên (`users`)
+   - ✅ **Bước 6/9**: Ghi nhận Quá trình luân chuyển điều động (`work_history`)
+   - ✅ **Bước 7/9**: Đồng bộ Phiếu đánh giá tín nhiệm (`evaluations_trust`)
+   - ✅ **Bước 8/9**: Cập nhật Dữ liệu chấm điểm KPI 3 cấp (`evaluations_kpi`)
+   - ✅ **Bước 9/9**: Thiết lập Dữ liệu bỏ phiếu quy hoạch (`evaluations_planning`)
+6. Sau khoảng 3 - 5 giây, thanh tiến độ đạt **100%** và bảng thống kê kết quả xuất hiện. Toàn bộ cơ sở dữ liệu trên Firebase Cloud Firestore đã sẵn sàng vận hành!
+
+---
+
+## TẠO TÀI KHOẢN CÁN BỘ & PHÂN QUYỀN TRUY CẬP
+
+Để các cán bộ có thể đăng nhập bằng tài khoản cá nhân:
+
+### Cách 1: Tạo trên Firebase Authentication Console
+1. Truy cập **Authentication** $\rightarrow$ Tab **Users** $\rightarrow$ Nhấn **Add user**.
+2. Nhập Email (VD: `canbo@qtdyentho.vn`) và Mật khẩu (VD: `Qtd123456@`).
+3. Sau khi tạo user, sao chép `User UID` của người đó.
+4. Mở Firestore collection `users`, tìm bản ghi tương ứng hoặc đổi ID tài liệu thành `User UID` vừa tạo để khớp hồ sơ trích ngang.
+
+### Danh sách tài khoản mặc định được khởi tạo tự động:
+| Email | Họ và tên | Chức vụ | Quyền hạn (Role) |
+| :--- | :--- | :--- | :--- |
+| `chutich@qtdyentho.vn` | Lê Đình Hải | Chủ tịch HĐQT | `chairman` |
+| `quanly@qtdyentho.vn` | Trần Thị Mai | Giám đốc điều hành | `manager` |
+| `bks@qtdyentho.vn` | Hoàng Văn Định | Trưởng Ban kiểm soát | `manager` (Thanh tra) |
+| `canbo@qtdyentho.vn` | Nguyễn Văn An | Cán bộ Tín dụng | `staff` |
+| `ketoan@qtdyentho.vn` | Lê Thị Bích | Kế toán trưởng | `staff` |
+
+---
+
+## CẤU TRÚC MODULAR & KHẢ NĂNG MỞ RỘNG DÀI HẠN
+
+Hệ thống được thiết kế theo kiến trúc **Modular Core Architecture** với bảng định danh `system_modules` và bộ quyền `roles_permissions`.
+
+### 1. Phân hệ đang hoạt động (ACTIVE):
+- `MODULE_HR`: Quản trị Danh bạ & Quá trình Luân chuyển Cán bộ.
+- `MODULE_TRUST`: Bỏ phiếu Đánh giá Tín nhiệm 10 Tiêu chí (Ẩn danh / Công khai).
+- `MODULE_KPI`: Đánh giá Hiệu quả Công việc 3 Cấp (40% - 30% - 30%).
+- `MODULE_PLANNING`: Bỏ phiếu Tín nhiệm Quy hoạch Cán bộ Lãnh đạo.
+- `MODULE_DASHBOARD`: Bảng Điều khiển Phân tích & Giám sát Tín nhiệm.
+
+### 2. Các phân hệ tương lai đã chuẩn bị sẵn cấu trúc CSDL (PLANNED):
+- `MODULE_TIMEKEEPING`: Quản lý Chấm công, Nghỉ phép & Thời giờ làm việc.
+- `MODULE_PAYROLL`: Tính Lương, Thưởng kinh doanh & Trích nộp BHXH.
+- `MODULE_AWARDS`: Thi đua, Khen thưởng & Xử lý Kỷ luật lao động.
+
+Khi đơn vị có nhu cầu phát triển thêm phân hệ Chấm công hoặc Tiền lương, chỉ cần chuyển trạng thái `status: 'ACTIVE'` trong bảng `system_modules` và gắn quyền tương ứng trong `src/lib/permissions.js` mà **không làm thay đổi hoặc xáo trộn cấu trúc CSDL hiện hữu**.
+
+---
+*Văn bản ban hành phục vụ triển khai kỹ thuật nội bộ — Quỹ Tín Dụng Nhân Dân Yên Thọ.*

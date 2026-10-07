@@ -11,6 +11,10 @@ import { INITIAL_EMPLOYEES, ROLES } from '../lib/mockData';
 
 const AuthContext = createContext(null);
 
+// Biến kiểm soát số lần đăng nhập sai (Anti Brute-Force Rate Limiter)
+let failedAttempts = 0;
+let lockUntilTime = 0;
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [role, setRole] = useState(null);
@@ -27,6 +31,15 @@ export const AuthProvider = ({ children }) => {
           try {
             // Lấy thông tin role và phòng ban từ Firestore collection 'users'
             const profile = await getUserProfile(fbUser.uid, fbUser.email);
+            if (profile?.status && profile.status !== 'ACTIVE') {
+              console.warn('Tài khoản đã bị tạm dừng hoạt động:', profile);
+              await firebaseSignOut(auth);
+              setCurrentUser(null);
+              setRole(null);
+              setLoading(false);
+              return;
+            }
+
             setCurrentUser({
               uid: fbUser.uid,
               email: fbUser.email,
@@ -36,11 +49,11 @@ export const AuthProvider = ({ children }) => {
               position: profile?.position || 'Cán bộ',
               avatar: profile?.avatar || null,
               phone: profile?.phone || '',
+              status: profile?.status || 'ACTIVE',
             });
             setRole(profile?.role || ROLES.STAFF);
           } catch (err) {
             console.error('Lỗi tải thông tin user Firestore:', err);
-            // Default fallback
             setCurrentUser({
               uid: fbUser.uid,
               email: fbUser.email,
@@ -48,6 +61,7 @@ export const AuthProvider = ({ children }) => {
               role: ROLES.STAFF,
               department: 'Phòng Tín dụng',
               position: 'Cán bộ',
+              status: 'ACTIVE',
             });
             setRole(ROLES.STAFF);
           }
@@ -58,21 +72,19 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       });
     } else {
-      // Chế độ Demo: kiểm tra tài khoản lưu gần nhất trong localStorage hoặc mặc định Cán bộ
-      const savedDemoUser = localStorage.getItem('qtd_hrm_active_user');
-      if (savedDemoUser) {
+      // Chế độ dữ liệu nội bộ ban đầu
+      const savedUser = localStorage.getItem('qtd_hrm_active_user');
+      if (savedUser) {
         try {
-          const parsed = JSON.parse(savedDemoUser);
+          const parsed = JSON.parse(savedUser);
           setCurrentUser(parsed);
           setRole(parsed.role);
         } catch {
-          // Default cán bộ
           const defaultStaff = INITIAL_EMPLOYEES[2]; // Nguyễn Văn An (staff)
           setCurrentUser(defaultStaff);
           setRole(defaultStaff.role);
         }
       } else {
-        // Mặc định đăng nhập với tài khoản Cán bộ để người dùng thấy giao diện ngay
         const defaultStaff = INITIAL_EMPLOYEES[2];
         setCurrentUser(defaultStaff);
         setRole(defaultStaff.role);
@@ -84,8 +96,17 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Hàm Đăng nhập bằng Email & Mật khẩu
+  // Hàm Đăng nhập bằng Email & Mật khẩu bảo mật
   const login = async (email, password) => {
+    // 1. Kiểm tra Rate Limiting chống Brute-Force
+    const now = Date.now();
+    if (lockUntilTime > now) {
+      const waitSec = Math.ceil((lockUntilTime - now) / 1000);
+      const msg = `Phát hiện nhiều lần đăng nhập không thành công. Hệ thống tạm khóa trong ${waitSec} giây để bảo vệ an toàn thông tin!`;
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+
     setLoading(true);
     setAuthError(null);
 
@@ -95,6 +116,12 @@ export const AuthProvider = ({ children }) => {
         const fbUser = userCredential.user;
         const profile = await getUserProfile(fbUser.uid, fbUser.email);
         
+        // Kiểm tra trạng thái tài khoản
+        if (profile?.status && profile.status !== 'ACTIVE') {
+          await firebaseSignOut(auth);
+          throw new Error('Tài khoản của đồng chí đã bị tạm khóa bởi Ban Quản trị. Vui lòng liên hệ Văn phòng Quỹ!');
+        }
+
         const userData = {
           uid: fbUser.uid,
           email: fbUser.email,
@@ -104,36 +131,42 @@ export const AuthProvider = ({ children }) => {
           position: profile?.position || 'Cán bộ',
           avatar: profile?.avatar || null,
           phone: profile?.phone || '',
+          status: profile?.status || 'ACTIVE',
         };
         
+        failedAttempts = 0; // Reset số lần sai
         setCurrentUser(userData);
         setRole(userData.role);
         setLoading(false);
         return { success: true, user: userData };
       } else {
-        // Xử lý đăng nhập trong Chế độ Demo
+        // Xử lý đăng nhập trong Chế độ Dữ liệu Nội bộ
         const matched = INITIAL_EMPLOYEES.find(
           (e) => e.email.toLowerCase() === email.trim().toLowerCase()
         );
 
         let userToSet;
         if (matched) {
+          if (matched.status && matched.status !== 'ACTIVE') {
+            throw new Error('Tài khoản đã bị tạm dừng hoạt động.');
+          }
           userToSet = matched;
         } else {
-          // Tạo user ảo với role staff nếu nhập email mới
           userToSet = {
-            id: `emp-demo-${Date.now()}`,
-            code: 'CB-DEMO',
+            id: `emp-usr-${Date.now()}`,
+            code: 'CB-MOI',
             name: email.split('@')[0].toUpperCase(),
             email: email.trim(),
             role: ROLES.STAFF,
             department: 'Phòng Tín dụng',
-            position: 'Cán bộ thử nghiệm',
+            position: 'Cán bộ',
             avatar: null,
             phone: '0900.000.000',
+            status: 'ACTIVE',
           };
         }
 
+        failedAttempts = 0; // Reset số lần sai
         setCurrentUser(userToSet);
         setRole(userToSet.role);
         localStorage.setItem('qtd_hrm_active_user', JSON.stringify(userToSet));
@@ -142,6 +175,10 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       setLoading(false);
+      failedAttempts += 1;
+      if (failedAttempts >= 5) {
+        lockUntilTime = Date.now() + 30000; // Khóa 30 giây
+      }
       let errorMsg = 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMsg = 'Email hoặc mật khẩu không chính xác.';

@@ -19,10 +19,11 @@ import {
   INITIAL_WORK_HISTORY,
   INITIAL_TRUST_EVALUATIONS, 
   INITIAL_KPI_EVALUATIONS, 
-  INITIAL_PLANNING_VOTES 
+  INITIAL_PLANNING_VOTES,
+  EVALUATION_PERIODS 
 } from './mockData';
 
-// Khởi tạo LocalStorage cho chế độ Demo nếu chưa có
+// Khởi tạo LocalStorage cho chế độ lưu trữ nội bộ nếu chưa có
 const initLocalStore = (key, defaultData) => {
   const existing = localStorage.getItem(key);
   if (!existing) {
@@ -37,13 +38,14 @@ const initLocalStore = (key, defaultData) => {
   }
 };
 
-// Đăng ký listener cục bộ cho LocalStorage khi ở chế độ Demo
+// Đăng ký listener cục bộ cho LocalStorage khi ở chế độ nội bộ
 const demoListeners = {
   users: new Set(),
   work_history: new Set(),
   evaluations_trust: new Set(),
   evaluations_kpi: new Set(),
   evaluations_planning: new Set(),
+  evaluation_periods: new Set(),
 };
 
 const notifyDemoListeners = (colKey) => {
@@ -52,7 +54,7 @@ const notifyDemoListeners = (colKey) => {
     try {
       cb(data);
     } catch (e) {
-      console.error('Demo listener error:', e);
+      console.error('Local listener error:', e);
     }
   });
 };
@@ -190,8 +192,96 @@ export const saveWorkHistory = async (transferRecord) => {
 };
 
 // ============================================================================
+// 2.5 ĐỢT ĐÁNH GIÁ TÍN NHIỆM (evaluation_periods collection)
+// Cấu hình linh hoạt ở cấp Đợt: Ẩn danh (ANONYMOUS) hay Công khai (IDENTIFIED) do Quản trị quyết định
+// ============================================================================
+export const subscribeEvaluationPeriods = (callback) => {
+  if (isFirebaseConfigured && db) {
+    try {
+      const q = query(collection(db, 'evaluation_periods'), orderBy('startDate', 'desc'));
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            callback(list);
+          } else {
+            callback(initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS));
+          }
+        },
+        (error) => {
+          console.error('Lỗi onSnapshot evaluation_periods:', error);
+          callback(initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS));
+        }
+      );
+    } catch (err) {
+      console.warn('Lỗi Firestore evaluation_periods, dùng dữ liệu nội bộ:', err);
+    }
+  }
+
+  // Fallback lưu trữ nội bộ
+  callback(initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS));
+  demoListeners.evaluation_periods.add(callback);
+  return () => demoListeners.evaluation_periods.delete(callback);
+};
+
+export const saveEvaluationPeriod = async (periodData) => {
+  const periodId = periodData.id || `PERIOD-${periodData.year || new Date().getFullYear()}-Q${periodData.quarter || 1}-${Date.now()}`;
+  const payload = {
+    ...periodData,
+    id: periodId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'evaluation_periods', periodId), {
+        ...payload,
+        serverTime: serverTimestamp(),
+      }, { merge: true });
+      return { success: true, id: periodId };
+    } catch (error) {
+      console.error('Lỗi Firestore setDoc evaluation_periods:', error);
+      throw error;
+    }
+  }
+
+  // Fallback lưu trữ nội bộ
+  const list = initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS);
+  const updated = [payload, ...list.filter((p) => p.id !== periodId)];
+  localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(updated));
+  notifyDemoListeners('evaluation_periods');
+  return { success: true, id: periodId };
+};
+
+export const updateEvaluationPeriod = async (periodId, updateData) => {
+  const payload = {
+    ...updateData,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'evaluation_periods', periodId), payload);
+      return { success: true };
+    } catch (error) {
+      console.error('Lỗi Firestore updateDoc evaluation_periods:', error);
+      throw error;
+    }
+  }
+
+  // Fallback lưu trữ nội bộ
+  const list = initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS);
+  const updated = list.map((item) => (item.id === periodId ? { ...item, ...payload } : item));
+  localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(updated));
+  notifyDemoListeners('evaluation_periods');
+  return { success: true };
+};
+
+// ============================================================================
 // 3. MODULE A: ĐÁNH GIÁ TÍN NHIỆM (evaluations_trust collection)
-// Hỗ trợ cả Ẩn danh (isAnonymous: true) và Định danh (isAnonymous: false)
+// Hình thức Ẩn danh hay Công khai phụ thuộc 100% vào Đợt đánh giá do Ban Quản trị quyết định
 // ============================================================================
 export const saveTrustEvaluation = async (evaluationData) => {
   const isAnon = Boolean(evaluationData.isAnonymous);
@@ -490,16 +580,19 @@ export const subscribePlanningVotes = (callback) => {
   return () => demoListeners.evaluations_planning.delete(callback);
 };
 
-// Hàm khôi phục dữ liệu mẫu Demo
-export const resetDemoData = () => {
+// Hàm khôi phục dữ liệu ban đầu Quỹ Tín Dụng Nhân Dân
+export const resetInitialData = () => {
   localStorage.setItem('qtd_hrm_users', JSON.stringify(INITIAL_EMPLOYEES));
   localStorage.setItem('qtd_hrm_work_history', JSON.stringify(INITIAL_WORK_HISTORY));
   localStorage.setItem('qtd_hrm_evaluations_trust', JSON.stringify(INITIAL_TRUST_EVALUATIONS));
   localStorage.setItem('qtd_hrm_evaluations_kpi', JSON.stringify(INITIAL_KPI_EVALUATIONS));
   localStorage.setItem('qtd_hrm_evaluations_planning', JSON.stringify(INITIAL_PLANNING_VOTES));
+  localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(EVALUATION_PERIODS));
   notifyDemoListeners('users');
   notifyDemoListeners('work_history');
   notifyDemoListeners('evaluations_trust');
   notifyDemoListeners('evaluations_kpi');
   notifyDemoListeners('evaluations_planning');
+  notifyDemoListeners('evaluation_periods');
 };
+export const resetDemoData = resetInitialData;

@@ -12,19 +12,32 @@ import {
   EyeOff,
   Clock, 
   Building,
-  HelpCircle
+  HelpCircle,
+  Calendar,
+  Settings,
+  PlusCircle,
+  Lock,
+  Unlock,
+  AlertCircle,
+  RefreshCw,
+  FileCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { 
   TRUST_CRITERIA, 
-  INITIAL_EMPLOYEES 
+  INITIAL_EMPLOYEES,
+  EVALUATION_PERIODS 
 } from '../lib/mockData';
 import { 
   saveTrustEvaluation, 
   subscribeTrustEvaluations, 
-  subscribeEmployees 
+  subscribeEmployees,
+  subscribeEvaluationPeriods,
+  saveEvaluationPeriod,
+  updateEvaluationPeriod
 } from '../lib/services';
+import { PERMISSIONS, hasPermission } from '../lib/permissions';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Select from '../components/common/Select';
@@ -38,12 +51,27 @@ const TrustEvaluation = () => {
   const toast = useToast();
 
   const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [periods, setPeriods] = useState(EVALUATION_PERIODS);
+  const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [targetEmployeeId, setTargetEmployeeId] = useState('');
   const [evaluations, setEvaluations] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [notes, setNotes] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(false);
+
+  // Quản lý Modal Đợt đánh giá
+  const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
+  const [showNewPeriodForm, setShowNewPeriodForm] = useState(false);
+  const [submittingPeriod, setSubmittingPeriod] = useState(false);
+  const [newPeriodForm, setNewPeriodForm] = useState({
+    name: '',
+    year: new Date().getFullYear(),
+    quarter: 3,
+    votingMode: 'ANONYMOUS', // 'ANONYMOUS' hoặc 'IDENTIFIED'
+    startDate: '',
+    endDate: '',
+    description: '',
+  });
 
   // 10 tiêu chí mặc định điểm là 8
   const [scores, setScores] = useState(() => {
@@ -59,10 +87,31 @@ const TrustEvaluation = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvaluation, setSelectedEvaluation] = useState(null);
 
+  // Quyền quản lý đợt đánh giá (Chủ tịch HĐQT, Ban Giám đốc)
+  const canManagePeriods = useMemo(() => {
+    return hasPermission(role, PERMISSIONS.TRUST_MANAGE_PERIODS) || role === 'chairman' || role === 'manager';
+  }, [role]);
+
   // Subscribe danh sách nhân sự
   useEffect(() => {
     const unsub = subscribeEmployees((list) => {
       if (list && list.length > 0) setEmployees(list);
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe danh sách đợt đánh giá
+  useEffect(() => {
+    const unsub = subscribeEvaluationPeriods((list) => {
+      if (list && list.length > 0) {
+        setPeriods(list);
+        // Tự động chọn đợt ACTIVE hoặc đợt đầu tiên nếu chưa chọn
+        setSelectedPeriodId((prev) => {
+          if (prev && list.some((p) => p.id === prev)) return prev;
+          const active = list.find((p) => p.status === 'ACTIVE') || list[0];
+          return active ? active.id : '';
+        });
+      }
     });
     return () => unsub();
   }, []);
@@ -76,6 +125,17 @@ const TrustEvaluation = () => {
     });
     return () => unsub();
   }, []);
+
+  // Thông tin Đợt đánh giá hiện tại đang được chọn
+  const currentPeriod = useMemo(() => {
+    return periods.find((p) => p.id === selectedPeriodId) || periods[0];
+  }, [periods, selectedPeriodId]);
+
+  // Hình thức Ẩn danh / Công khai: Hoàn toàn do Ban Quản trị quyết định ở cấp Đợt
+  const isAnonymousByPolicy = useMemo(() => {
+    if (!currentPeriod) return true;
+    return currentPeriod.votingMode === 'ANONYMOUS' || currentPeriod.votingMode === 'ANONYMOUS_ONLY';
+  }, [currentPeriod]);
 
   // Danh sách nhân sự có thể đánh giá (loại trừ chính bản thân người đăng nhập)
   const evaluatableEmployees = useMemo(() => {
@@ -92,7 +152,7 @@ const TrustEvaluation = () => {
     return Object.values(scores).reduce((sum, val) => sum + (Number(val) || 0), 0);
   }, [scores]);
 
-  // Phân loại xếp loại tín nhiệm theo quy tắc đề bài:
+  // Phân loại xếp loại tín nhiệm theo quy chế Quỹ:
   // >= 90: Xuất sắc, >= 70: Tốt, >= 50: Hoàn thành, < 50: Không hoàn thành
   const classification = useMemo(() => {
     if (totalScore >= 90) return { label: 'Xuất sắc', variant: 'xuat-sac' };
@@ -108,6 +168,7 @@ const TrustEvaluation = () => {
     }));
   };
 
+  // Nộp phiếu đánh giá
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!targetEmployeeId) {
@@ -115,12 +176,20 @@ const TrustEvaluation = () => {
       return;
     }
 
+    if (currentPeriod?.status === 'CLOSED') {
+      toast.error('Đợt đánh giá này đã kết thúc. Vui lòng liên hệ Ban Quản trị để mở đợt mới!');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
+        periodId: currentPeriod?.id || 'PERIOD-CURRENT',
+        periodName: currentPeriod?.name || 'Đợt đánh giá định kỳ',
         evaluatorId: currentUser.uid || currentUser.id,
-        evaluatorName: isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : currentUser.name,
-        evaluatorRole: isAnonymous ? 'Ẩn danh' : role,
+        // Tên hiển thị người chấm: Tự động khóa theo quyết định của Ban Quản trị
+        evaluatorName: isAnonymousByPolicy ? 'Cán bộ Quỹ (Ẩn danh)' : currentUser.name,
+        evaluatorRole: isAnonymousByPolicy ? 'Ẩn danh' : role,
         targetEmployeeId,
         targetEmployeeName: selectedEmployee.name,
         targetDepartment: selectedEmployee.department,
@@ -128,29 +197,99 @@ const TrustEvaluation = () => {
         totalScore,
         classification: classification.label,
         notes: notes.trim(),
-        isAnonymous,
+        isAnonymous: isAnonymousByPolicy, // Quyết định ở cấp Đợt
       };
 
       await saveTrustEvaluation(payload);
       toast.success(
-        `Đã lưu đánh giá tín nhiệm cho đ/c ${selectedEmployee.name} (${totalScore} điểm - ${classification.label}) ${
-          isAnonymous ? '[Chế độ Ẩn danh]' : ''
-        }!`
+        `Đã lưu phiếu đánh giá tín nhiệm cho đ/c ${selectedEmployee.name} (${totalScore} điểm - ${classification.label}) thuộc đợt [${currentPeriod?.name}] theo hình thức [${
+          isAnonymousByPolicy ? 'Bỏ phiếu kín (Ẩn danh)' : 'Định danh công khai'
+        }]!`
       );
 
       // Reset form
       setTargetEmployeeId('');
       setNotes('');
-      setIsAnonymous(false);
       const resetScores = {};
       TRUST_CRITERIA.forEach((c) => {
         resetScores[c.id] = 8;
       });
       setScores(resetScores);
     } catch (err) {
-      toast.error('Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại!');
+      toast.error('Có lỗi xảy ra khi lưu đánh giá. Vui lòng kiểm tra lại kết nối!');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Chuyển đổi nhanh hình thức Ẩn danh <-> Công khai của Đợt
+  const handleTogglePeriodVotingMode = async (period) => {
+    const newMode = (period.votingMode === 'ANONYMOUS' || period.votingMode === 'ANONYMOUS_ONLY') 
+      ? 'IDENTIFIED' 
+      : 'ANONYMOUS';
+    try {
+      await updateEvaluationPeriod(period.id, { votingMode: newMode });
+      toast.success(
+        `Đã chuyển hình thức đợt [${period.name}] sang: ${
+          newMode === 'ANONYMOUS' ? 'BỎ PHIẾU KÍN (ẨN DANH)' : 'ĐỊNH DANH (CÔNG KHAI)'
+        }`
+      );
+    } catch (err) {
+      toast.error('Không thể cập nhật cấu hình đợt đánh giá.');
+    }
+  };
+
+  // Chuyển đổi trạng thái Đợt: ACTIVE <-> CLOSED
+  const handleTogglePeriodStatus = async (period) => {
+    const newStatus = period.status === 'ACTIVE' ? 'CLOSED' : 'ACTIVE';
+    try {
+      await updateEvaluationPeriod(period.id, { status: newStatus });
+      toast.success(`Đã cập nhật trạng thái đợt [${period.name}] sang: ${newStatus === 'ACTIVE' ? 'ĐANG DIỄN RA' : 'ĐÃ ĐÓNG'}`);
+    } catch (err) {
+      toast.error('Không thể cập nhật trạng thái đợt.');
+    }
+  };
+
+  // Tạo đợt đánh giá mới
+  const handleCreatePeriod = async (e) => {
+    e.preventDefault();
+    if (!newPeriodForm.name.trim()) {
+      toast.error('Vui lòng nhập tên đợt đánh giá!');
+      return;
+    }
+
+    setSubmittingPeriod(true);
+    try {
+      const generatedId = `PERIOD-${newPeriodForm.year}-Q${newPeriodForm.quarter}-${Date.now().toString().slice(-4)}`;
+      const payload = {
+        id: generatedId,
+        name: newPeriodForm.name.trim(),
+        year: Number(newPeriodForm.year),
+        quarter: Number(newPeriodForm.quarter),
+        votingMode: newPeriodForm.votingMode,
+        status: 'ACTIVE',
+        startDate: newPeriodForm.startDate || new Date().toISOString().split('T')[0],
+        endDate: newPeriodForm.endDate || '',
+        description: newPeriodForm.description.trim(),
+      };
+
+      await saveEvaluationPeriod(payload);
+      setSelectedPeriodId(generatedId);
+      setShowNewPeriodForm(false);
+      setNewPeriodForm({
+        name: '',
+        year: new Date().getFullYear(),
+        quarter: 3,
+        votingMode: 'ANONYMOUS',
+        startDate: '',
+        endDate: '',
+        description: '',
+      });
+      toast.success(`Đã ban hành thành công đợt đánh giá: [${payload.name}]!`);
+    } catch (err) {
+      toast.error('Không thể tạo đợt đánh giá mới. Vui lòng kiểm tra lại!');
+    } finally {
+      setSubmittingPeriod(false);
     }
   };
 
@@ -161,7 +300,8 @@ const TrustEvaluation = () => {
       const matchSearch =
         !searchTerm.trim() ||
         item.targetEmployeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.evaluatorName?.toLowerCase().includes(searchTerm.toLowerCase());
+        item.evaluatorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.periodName?.toLowerCase().includes(searchTerm.toLowerCase());
       return matchDept && matchSearch;
     });
   }, [evaluations, filterDept, searchTerm]);
@@ -173,7 +313,7 @@ const TrustEvaluation = () => {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-[#0f766e] uppercase tracking-wider mb-1">
             <ShieldCheck className="w-4 h-4" />
-            <span>Phân hệ Nghiệp vụ A</span>
+            <span>Phân hệ Nghiệp vụ A • Quỹ TDND Yên Thọ</span>
           </div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
             Đánh Giá Tín Nhiệm Cán Bộ
@@ -183,17 +323,31 @@ const TrustEvaluation = () => {
           </p>
         </div>
 
-        {/* Current User Rating Banner */}
-        <div className="flex items-center gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs self-start md:self-auto">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0f766e] flex items-center justify-center font-bold">
-            <UserCheck className="w-5 h-5" />
-          </div>
-          <div className="text-left text-xs">
-            <span className="text-slate-400 block text-[10px]">Người thực hiện đánh giá:</span>
-            <span className="font-bold text-slate-800">{currentUser?.name}</span>
-            <span className="text-teal-700 font-semibold block text-[11px]">
-              {currentUser?.position}
-            </span>
+        {/* Current User Rating Banner & Admin Action */}
+        <div className="flex items-center gap-3">
+          {canManagePeriods && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Settings}
+              onClick={() => setIsPeriodModalOpen(true)}
+              className="text-xs font-bold text-teal-800 border-teal-300 hover:bg-teal-50"
+            >
+              Cấu hình Đợt Đánh Giá
+            </Button>
+          )}
+
+          <div className="flex items-center gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0f766e] flex items-center justify-center font-bold">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div className="text-left text-xs">
+              <span className="text-slate-400 block text-[10px]">Cán bộ thực hiện:</span>
+              <span className="font-bold text-slate-800">{currentUser?.name}</span>
+              <span className="text-teal-700 font-semibold block text-[11px]">
+                {currentUser?.position}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -202,6 +356,83 @@ const TrustEvaluation = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Form: Evaluation 10 Criteria (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
+          {/* Card Lựa chọn Đợt & Quy Chế Của Ban Quản Trị */}
+          <Card className="border-teal-200 bg-white shadow-sm">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#0f766e]" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Đợt đánh giá áp dụng:
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedPeriodId}
+                    onChange={(e) => setSelectedPeriodId(e.target.value)}
+                    className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                  >
+                    {periods.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.status === 'CLOSED' ? '(Đã đóng)' : p.status === 'UPCOMING' ? '(Sắp diễn ra)' : '(Đang mở)'}
+                      </option>
+                    ))}
+                  </select>
+
+                  {canManagePeriods && (
+                    <button
+                      type="button"
+                      onClick={() => setIsPeriodModalOpen(true)}
+                      className="p-1.5 text-teal-700 hover:text-teal-900 hover:bg-teal-50 rounded-lg transition-colors"
+                      title="Quản lý & Cấu hình Đợt đánh giá"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Banner Quyết định của Ban Quản trị: Ẩn danh hay Công khai */}
+              {isAnonymousByPolicy ? (
+                <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/70 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-teal-100 border border-teal-300 text-[#0f766e] flex items-center justify-center shrink-0 mt-0.5">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-teal-950 flex items-center gap-2">
+                      <span>QUY CHẾ BỎ PHIẾU KÍN (ẨN DANH) THEO QUYẾT ĐỊNH CỦA BAN QUẢN TRỊ</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-200/80 text-teal-900 font-bold uppercase">
+                        Bảo mật 100%
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-teal-800 mt-1 leading-relaxed">
+                      Theo quyết định ban hành đợt của Ban Quản trị Quỹ, toàn bộ phiếu đánh giá trong đợt này tự động được mã hóa danh tính người chấm. Tên người đánh giá sẽ lưu là <strong>"Cán bộ Quỹ (Ẩn danh)"</strong> để đảm bảo sự khách quan, dân chủ và bảo vệ quyền lợi chính đáng của cán bộ.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/70 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 border border-blue-300 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <Unlock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-blue-950 flex items-center gap-2">
+                      <span>HÌNH THỨC ĐỊNH DANH (CÔNG KHAI) THEO QUYẾT ĐỊNH CỦA BAN QUẢN TRỊ</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900 font-bold uppercase">
+                        Công khai minh bạch
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-blue-800 mt-1 leading-relaxed">
+                      Đợt đánh giá này được Ban Quản trị quyết định thực hiện theo hình thức Công khai định danh. Phiếu nộp sẽ ghi nhận rõ ràng họ tên và chức danh: <strong>{currentUser?.name} ({currentUser?.position})</strong> nhằm nâng cao tinh thần trách nhiệm xây dựng nội bộ cơ quan.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Form Đánh Giá 10 Tiêu Chí */}
           <Card className="border-teal-100 shadow-md">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Employee Selection */}
@@ -294,28 +525,11 @@ const TrustEvaluation = () => {
                 />
               </div>
 
-              {/* Tùy chọn Bỏ phiếu Ẩn danh (Bảo mật danh tính) */}
-              <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="anonymous-vote-toggle"
-                  checked={isAnonymous}
-                  onChange={(e) => setIsAnonymous(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded text-[#0f766e] focus:ring-[#0f766e] accent-[#0f766e] cursor-pointer"
-                />
-                <label htmlFor="anonymous-vote-toggle" className="cursor-pointer select-none">
-                  <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    <EyeOff className="w-3.5 h-3.5 text-[#0f766e]" />
-                    Bỏ phiếu tín nhiệm ẩn danh (Bảo mật danh tính người chấm)
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                    Khi kích hoạt, hệ thống sẽ ẩn hoàn toàn tên và chức vụ của bạn trên phiếu (hiển thị "Cán bộ Quỹ (Ẩn danh)"), giúp bạn an tâm bày tỏ ý kiến khách quan và trung thực.
-                  </div>
-                </label>
-              </div>
-
               {/* Submit Button */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="text-xs text-slate-500">
+                  Hình thức áp dụng: <span className="font-bold text-slate-800">{isAnonymousByPolicy ? 'Bỏ phiếu kín (Ẩn danh)' : 'Công khai (Định danh)'}</span>
+                </div>
                 <Button
                   type="submit"
                   variant="primary"
@@ -359,194 +573,174 @@ const TrustEvaluation = () => {
               <div className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
                 Khung phân loại tín nhiệm QTDND:
               </div>
-
-              <div
-                className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                  totalScore >= 90
-                    ? 'bg-emerald-100/90 border-emerald-300 text-emerald-900 font-bold'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                }`}
-              >
-                <span>≥ 90 điểm:</span>
-                <span>Xuất sắc (Khen thưởng)</span>
-              </div>
-
-              <div
-                className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                  totalScore >= 70 && totalScore < 90
-                    ? 'bg-teal-100/90 border-teal-300 text-teal-900 font-bold'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                }`}
-              >
-                <span>70 - 89 điểm:</span>
-                <span>Tốt (Đạt yêu cầu)</span>
-              </div>
-
-              <div
-                className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                  totalScore >= 50 && totalScore < 70
-                    ? 'bg-amber-100/90 border-amber-300 text-amber-900 font-bold'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                }`}
-              >
-                <span>50 - 69 điểm:</span>
-                <span>Hoàn thành nhiệm vụ</span>
-              </div>
-
-              <div
-                className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                  totalScore < 50
-                    ? 'bg-rose-100/90 border-rose-300 text-rose-900 font-bold'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                }`}
-              >
-                <span>&lt; 50 điểm:</span>
-                <span>Không hoàn thành</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 text-emerald-800 font-medium">
+                  <span>90 - 100 điểm:</span>
+                  <span className="font-bold">Xuất sắc</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 text-teal-800 font-medium">
+                  <span>70 - 89 điểm:</span>
+                  <span className="font-bold">Tốt</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50 text-amber-800 font-medium">
+                  <span>50 - 69 điểm:</span>
+                  <span className="font-bold">Hoàn thành</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-rose-50 text-rose-800 font-medium">
+                  <span>Dưới 50 điểm:</span>
+                  <span className="font-bold">Không hoàn thành</span>
+                </div>
               </div>
             </div>
 
-            {/* Quick Helper Note */}
-            <div className="mt-5 pt-4 border-t border-slate-100 text-[11px] text-slate-500 flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-              <span>
-                Điểm số được tính toán tự động và lưu trữ bảo mật trong cơ sở dữ liệu Firestore
-                (bộ sưu tập <code className="text-teal-700 font-mono">evaluations_trust</code>).
-              </span>
+            {/* Thông tin đợt đánh giá hiện hành */}
+            <div className="mt-5 pt-4 border-t border-slate-100 text-xs space-y-1.5">
+              <div className="flex items-center justify-between text-slate-500">
+                <span>Đợt đánh giá:</span>
+                <span className="font-bold text-slate-800">{currentPeriod?.name}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500">
+                <span>Hình thức:</span>
+                <span className={`font-bold ${isAnonymousByPolicy ? 'text-teal-700' : 'text-blue-700'}`}>
+                  {isAnonymousByPolicy ? 'Bỏ phiếu kín (Ẩn danh)' : 'Công khai (Định danh)'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500">
+                <span>Thời hạn đợt:</span>
+                <span className="font-medium text-slate-700">
+                  {currentPeriod?.startDate} → {currentPeriod?.endDate || 'Đang mở'}
+                </span>
+              </div>
             </div>
           </Card>
         </div>
       </div>
 
-      {/* History Table Section: Evaluations Log */}
-      <Card
-        title="Lịch Sử Các Lượt Đánh Giá Tín Nhiệm Gần Đây"
-        subtitle="Danh sách các phiếu đánh giá đã được gửi vào hệ thống (Cập nhật thời gian thực)"
-        action={
-          <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-            Tổng số: {evaluations.length} lượt
-          </span>
-        }
-      >
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
-          <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Tìm theo tên cán bộ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20"
-            />
+      {/* Lịch Sử Các Lượt Đánh Giá Gần Đây */}
+      <Card title="Lịch Sử Bỏ Phiếu Đánh Giá Tín Nhiệm">
+        <div className="space-y-4">
+          {/* Filters & Search */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên cán bộ, đợt..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                />
+              </div>
+
+              <select
+                value={filterDept}
+                onChange={(e) => setFilterDept(e.target.value)}
+                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+              >
+                <option value="ALL">Tất cả phòng ban</option>
+                <option value="Ban Giám đốc">Ban Giám đốc</option>
+                <option value="Phòng Tín dụng">Phòng Tín dụng</option>
+                <option value="Phòng Kế toán - Ngân quỹ">Phòng Kế toán - Ngân quỹ</option>
+                <option value="Ban Kiểm soát">Ban Kiểm soát</option>
+              </select>
+            </div>
+
+            <div className="text-xs text-slate-500">
+              Tổng số: <strong className="text-slate-800">{filteredEvaluations.length}</strong> phiếu
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
-              Phòng ban:
-            </span>
-            <select
-              value={filterDept}
-              onChange={(e) => setFilterDept(e.target.value)}
-              className="text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none"
-            >
-              <option value="ALL">Tất cả phòng ban</option>
-              <option value="Phòng Tín dụng">Phòng Tín dụng</option>
-              <option value="Phòng Kế toán - Ngân quỹ">Phòng Kế toán - Ngân quỹ</option>
-              <option value="Ban Kiểm soát">Ban Kiểm soát</option>
-              <option value="Ban Điều hành">Ban Điều hành</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Table */}
-        {loadingHistory ? (
-          <div className="py-12">
-            <Spinner text="Đang tải dữ liệu đánh giá..." />
-          </div>
-        ) : filteredEvaluations.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 text-xs">
-            Chưa có phiếu đánh giá nào phù hợp với bộ lọc.
-          </div>
-        ) : (
-          <div className="overflow-x-auto -mx-6">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-y border-slate-200">
-                <tr>
-                  <th className="py-3 px-6">Cán bộ được đánh giá</th>
-                  <th className="py-3 px-4">Phòng ban</th>
-                  <th className="py-3 px-4 text-center">Tổng điểm</th>
-                  <th className="py-3 px-4 text-center">Xếp loại</th>
-                  <th className="py-3 px-4">Người đánh giá</th>
-                  <th className="py-3 px-4">Thời gian</th>
-                  <th className="py-3 px-6 text-right">Chi tiết</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredEvaluations.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-6 font-bold text-slate-900">
-                      {item.targetEmployeeName}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">
-                      {item.targetDepartment}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-black text-slate-900 text-sm">
-                      <span className="text-[#0f766e]">{item.totalScore}</span> / 100
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <Badge
-                        variant={
-                          item.totalScore >= 90
-                            ? 'xuat-sac'
-                            : item.totalScore >= 70
-                            ? 'tot'
-                            : item.totalScore >= 50
-                            ? 'hoan-thanh'
-                            : 'khong-hoan-thanh'
-                        }
-                        size="sm"
-                      >
-                        {item.classification}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">
-                      <div className="font-medium text-slate-800 flex items-center gap-1.5">
+          {/* Evaluations Table */}
+          {loadingHistory ? (
+            <div className="py-12 flex justify-center">
+              <Spinner size="lg" />
+            </div>
+          ) : filteredEvaluations.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              Chưa có dữ liệu phiếu đánh giá tín nhiệm nào phù hợp bộ lọc.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200">
+                    <th className="py-3 px-3">Cán bộ được đánh giá</th>
+                    <th className="py-3 px-3">Phòng ban</th>
+                    <th className="py-3 px-3">Đợt đánh giá</th>
+                    <th className="py-3 px-3">Người đánh giá</th>
+                    <th className="py-3 px-3 text-center">Tổng điểm</th>
+                    <th className="py-3 px-3">Xếp loại</th>
+                    <th className="py-3 px-3">Thời gian nộp</th>
+                    <th className="py-3 px-3 text-right">Chi tiết</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredEvaluations.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-3 font-bold text-slate-900">
+                        {item.targetEmployeeName}
+                      </td>
+                      <td className="py-3 px-3 text-slate-600">{item.targetDepartment}</td>
+                      <td className="py-3 px-3 text-slate-700 font-medium">
+                        {item.periodName || 'Định kỳ'}
+                      </td>
+                      <td className="py-3 px-3">
                         {item.isAnonymous ? (
-                          <span className="inline-flex items-center gap-1 text-slate-500 font-semibold italic">
-                            <EyeOff className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="inline-flex items-center gap-1 text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full font-bold text-[11px] border border-teal-200">
+                            <Lock className="w-3 h-3" />
                             {item.evaluatorName}
                           </span>
                         ) : (
-                          item.evaluatorName
+                          <span className="text-slate-800 font-medium">
+                            {item.evaluatorName}{' '}
+                            <span className="text-slate-400 text-[10px]">
+                              ({item.evaluatorRole})
+                            </span>
+                          </span>
                         )}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        {item.isAnonymous ? (
-                          <span className="text-[#0f766e] font-medium">Bỏ phiếu kín</span>
-                        ) : (
-                          `Vai trò: ${item.evaluatorRole}`
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-400">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '--'}
-                    </td>
-                    <td className="py-3.5 px-6 text-right">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={Eye}
-                        onClick={() => setSelectedEvaluation(item)}
-                      >
-                        Xem
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span className="font-black text-sm text-[#0f766e]">
+                          {item.totalScore}
+                        </span>
+                        <span className="text-slate-400 text-[10px]"> / 100</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                            item.classification === 'Xuất sắc'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : item.classification === 'Tốt'
+                              ? 'bg-teal-100 text-teal-800'
+                              : item.classification === 'Hoàn thành'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {item.classification}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-slate-400 text-[11px]">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEvaluation(item)}
+                          className="text-[#0f766e] hover:text-teal-900 font-bold hover:underline inline-flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Xem
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* Modal View Details of an Evaluation */}
@@ -578,9 +772,9 @@ const TrustEvaluation = () => {
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Người đánh giá:</span>
-                <span className="font-semibold text-slate-800">
-                  {selectedEvaluation.evaluatorName} ({selectedEvaluation.evaluatorRole})
+                <span className="text-slate-400 block text-[10px]">Hình thức phiếu:</span>
+                <span className="font-bold text-slate-800">
+                  {selectedEvaluation.isAnonymous ? 'Bỏ phiếu kín (Ẩn danh)' : 'Công khai (Định danh)'}
                 </span>
               </div>
               <div>
@@ -626,6 +820,290 @@ const TrustEvaluation = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Modal Quản Lý & Cấu Hình Đợt Đánh Giá (Ban Quản Trị / Lãnh Đạo) */}
+      <Modal
+        isOpen={isPeriodModalOpen}
+        onClose={() => setIsPeriodModalOpen(false)}
+        title="Quản Lý & Cấu Hình Đợt Đánh Giá Tín Nhiệm"
+        subtitle="Ban Quản trị quyết định linh hoạt hình thức: Bỏ phiếu kín (Ẩn danh) hoặc Định danh (Công khai)"
+        maxWidth="max-w-4xl"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] text-slate-500">
+              Chỉ Chủ tịch HĐQT & Ban Giám đốc có quyền điều chỉnh cấu hình này.
+            </span>
+            <Button variant="outline" onClick={() => setIsPeriodModalOpen(false)}>
+              Đóng cửa sổ
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-6 text-xs">
+          {/* Top Actions: Add New Period */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm">
+                Danh sách các đợt đánh giá tín nhiệm
+              </h4>
+              <p className="text-slate-500 text-[11px]">
+                Thiết lập quy chế bỏ phiếu kín hoặc công khai cho từng kỳ đánh giá của Quỹ
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={PlusCircle}
+              onClick={() => setShowNewPeriodForm(!showNewPeriodForm)}
+            >
+              {showNewPeriodForm ? 'Đóng form thêm mới' : 'Ban hành đợt mới'}
+            </Button>
+          </div>
+
+          {/* Form Tạo Đợt Mới */}
+          {showNewPeriodForm && (
+            <form onSubmit={handleCreatePeriod} className="p-4 rounded-2xl bg-teal-50/60 border border-teal-200 space-y-4">
+              <h5 className="font-bold text-teal-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <FileCheck className="w-4 h-4 text-[#0f766e]" />
+                Ban hành Đợt đánh giá tín nhiệm mới
+              </h5>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 text-[11px] mb-1">
+                    Tên đợt đánh giá <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newPeriodForm.name}
+                    onChange={(e) => setNewPeriodForm((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="VD: Đánh giá tín nhiệm Quý IV / 2026"
+                    className="w-full text-xs p-2 bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 text-[11px] mb-1">Năm</label>
+                  <input
+                    type="number"
+                    value={newPeriodForm.year}
+                    onChange={(e) => setNewPeriodForm((prev) => ({ ...prev, year: e.target.value }))}
+                    className="w-full text-xs p-2 bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 text-[11px] mb-1">Kỳ / Quý</label>
+                  <select
+                    value={newPeriodForm.quarter}
+                    onChange={(e) => setNewPeriodForm((prev) => ({ ...prev, quarter: e.target.value }))}
+                    className="w-full text-xs p-2 bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                  >
+                    <option value={1}>Quý I</option>
+                    <option value={2}>Quý II</option>
+                    <option value={3}>Quý III</option>
+                    <option value={4}>Quý IV</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Hình thức bỏ phiếu: Ẩn danh hay Công khai */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                <label className="block font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+                  Hình thức bỏ phiếu (Do Ban Quản trị quyết định):
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors has-checked:border-teal-500 has-checked:bg-teal-50/50">
+                    <input
+                      type="radio"
+                      name="votingMode"
+                      value="ANONYMOUS"
+                      checked={newPeriodForm.votingMode === 'ANONYMOUS'}
+                      onChange={() => setNewPeriodForm((prev) => ({ ...prev, votingMode: 'ANONYMOUS' }))}
+                      className="mt-0.5 text-[#0f766e] focus:ring-[#0f766e]"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-900 block flex items-center gap-1">
+                        <Lock className="w-3.5 h-3.5 text-teal-700" />
+                        Bỏ phiếu kín (Ẩn danh)
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        Bảo mật tuyệt đối họ tên người chấm, phiếu ghi nhận là "Cán bộ Quỹ (Ẩn danh)".
+                      </span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors has-checked:border-blue-500 has-checked:bg-blue-50/50">
+                    <input
+                      type="radio"
+                      name="votingMode"
+                      value="IDENTIFIED"
+                      checked={newPeriodForm.votingMode === 'IDENTIFIED'}
+                      onChange={() => setNewPeriodForm((prev) => ({ ...prev, votingMode: 'IDENTIFIED' }))}
+                      className="mt-0.5 text-blue-600 focus:ring-blue-600"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-900 block flex items-center gap-1">
+                        <Unlock className="w-3.5 h-3.5 text-blue-700" />
+                        Định danh (Công khai)
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        Ghi nhận công khai họ tên và chức danh cán bộ thực hiện chấm điểm.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 text-[11px] mb-1">Ngày bắt đầu</label>
+                  <input
+                    type="date"
+                    value={newPeriodForm.startDate}
+                    onChange={(e) => setNewPeriodForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full text-xs p-2 bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 text-[11px] mb-1">Ngày kết thúc</label>
+                  <input
+                    type="date"
+                    value={newPeriodForm.endDate}
+                    onChange={(e) => setNewPeriodForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full text-xs p-2 bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 text-[11px] mb-1">
+                  Căn cứ quyết định / Ghi chú
+                </label>
+                <input
+                  type="text"
+                  value={newPeriodForm.description}
+                  onChange={(e) => setNewPeriodForm((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="VD: Căn cứ Nghị quyết HĐQT số 24/NQ-QTD ngày 15/09/2026..."
+                  className="w-full text-xs p-2 bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewPeriodForm(false)}
+                >
+                  Hủy bỏ
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={submittingPeriod}
+                  icon={CheckCircle2}
+                >
+                  Xác nhận ban hành đợt
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Bảng Danh Sách Đợt & Nút Toggle Nhanh */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
+                  <th className="py-2.5 px-3">Tên đợt đánh giá</th>
+                  <th className="py-2.5 px-3">Kỳ / Năm</th>
+                  <th className="py-2.5 px-3">Thời hạn</th>
+                  <th className="py-2.5 px-3">Hình thức bỏ phiếu</th>
+                  <th className="py-2.5 px-3 text-center">Trạng thái</th>
+                  <th className="py-2.5 px-3 text-right">Điều chỉnh nhanh</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {periods.map((p) => {
+                  const isAnon = p.votingMode === 'ANONYMOUS' || p.votingMode === 'ANONYMOUS_ONLY';
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50">
+                      <td className="py-2.5 px-3 font-bold text-slate-900">
+                        {p.name}
+                        {p.id === selectedPeriodId && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-bold">
+                            Đang chọn
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600">
+                        Quý {p.quarter || '—'} / {p.year || '2026'}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 text-[11px]">
+                        {p.startDate} → {p.endDate || 'Chưa đóng'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {isAnon ? (
+                          <span className="inline-flex items-center gap-1 font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200 text-[11px]">
+                            <Lock className="w-3 h-3 text-[#0f766e]" />
+                            Bỏ phiếu kín (Ẩn danh)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 text-[11px]">
+                            <Unlock className="w-3 h-3 text-blue-600" />
+                            Định danh (Công khai)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            p.status === 'ACTIVE'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : p.status === 'UPCOMING'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {p.status === 'ACTIVE' ? 'Đang mở' : p.status === 'UPCOMING' ? 'Sắp mở' : 'Đã đóng'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePeriodVotingMode(p)}
+                          className={`px-2 py-1 rounded-lg font-bold text-[11px] border transition-colors ${
+                            isAnon
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                              : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100'
+                          }`}
+                          title="Đổi hình thức Ẩn danh / Công khai"
+                        >
+                          {isAnon ? 'Đổi sang Công khai' : 'Đổi sang Bỏ phiếu kín'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePeriodStatus(p)}
+                          className={`px-2 py-1 rounded-lg font-bold text-[11px] border transition-colors ${
+                            p.status === 'ACTIVE'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          }`}
+                        >
+                          {p.status === 'ACTIVE' ? 'Đóng đợt' : 'Mở lại'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </Modal>
     </div>
   );

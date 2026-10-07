@@ -161,7 +161,7 @@ const Login = () => {
                 Đăng nhập nhanh theo phân quyền
               </span>
               <span className="text-[10px] bg-teal-50 text-[#0f766e] px-2 py-0.5 rounded font-semibold border border-teal-200">
-                1-Click Test
+                Phân quyền nội bộ
               </span>
             </div>
 
@@ -181,7 +181,7 @@ const Login = () => {
                   </div>
                 </div>
                 <span className="text-[10px] font-semibold text-slate-400 group-hover:text-[#0f766e]">
-                  Vào thử →
+                  Truy cập →
                 </span>
               </button>
 
@@ -200,7 +200,7 @@ const Login = () => {
                   </div>
                 </div>
                 <span className="text-[10px] font-semibold text-teal-600 group-hover:text-[#0f766e]">
-                  Vào thử →
+                  Truy cập →
                 </span>
               </button>
 
@@ -219,7 +219,7 @@ const Login = () => {
                   </div>
                 </div>
                 <span className="text-[10px] font-semibold text-rose-600">
-                  Vào thử →
+                  Truy cập →
                 </span>
               </button>
             </div>

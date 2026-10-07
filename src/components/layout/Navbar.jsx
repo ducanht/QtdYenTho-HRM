@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { 
   Menu, 
   Bell, 
@@ -7,15 +6,18 @@ import {
   Shield, 
   Building, 
   Award,
-  RefreshCw
+  RefreshCw,
+  Database
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS, ROLES } from '../../lib/mockData';
 import Badge from '../common/Badge';
+import AutoInitDbModal from '../common/AutoInitDbModal';
 
 const Navbar = ({ onToggleSidebar }) => {
   const { currentUser, role, isDemoMode, switchDemoAccount } = useAuth();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3">
@@ -44,8 +46,19 @@ const Navbar = ({ onToggleSidebar }) => {
           </div>
         </div>
 
-        {/* Right: Quick Switch Role (Great for Demo & Testing RBAC) + User Profile */}
-        <div className="flex items-center gap-3">
+        {/* Right: Tự động CSDL + Quick Switch Role + User Profile */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Nút Khởi tạo & Cập nhật CSDL Tự Động */}
+          <button
+            type="button"
+            onClick={() => setIsDbModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 hover:border-teal-300 bg-white hover:bg-teal-50/60 text-slate-700 hover:text-[#0f766e] text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+            title="Khởi tạo & Cập nhật toàn bộ 9 bảng CSDL tự động"
+          >
+            <Database className="w-3.5 h-3.5 text-[#0f766e]" />
+            <span className="hidden sm:inline">Tự động CSDL</span>
+          </button>
+
           {/* Quick Role Switcher Pill */}
           <div className="relative">
             <button
@@ -180,6 +193,12 @@ const Navbar = ({ onToggleSidebar }) => {
           )}
         </div>
       </div>
+
+      {/* Modal Tự động Khởi tạo & Cập nhật CSDL */}
+      <AutoInitDbModal 
+        isOpen={isDbModalOpen} 
+        onClose={() => setIsDbModalOpen(false)} 
+      />
     </header>
   );
 };
