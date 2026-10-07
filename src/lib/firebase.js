@@ -9,13 +9,12 @@ import { getFirestore } from 'firebase/firestore';
 // Truy cập https://console.firebase.google.com -> Project Settings -> General -> Your apps
 // ============================================================================
 export const firebaseConfig = {
-  apiKey: "",            // <-- DÁN API KEY CỦA BẠN TẠI ĐÂY (Ví dụ: "AIzaSy...")
-  authDomain: "",        // <-- DÁN AUTH DOMAIN (Ví dụ: "qtd-yentho-hrm.firebaseapp.com")
-  projectId: "",         // <-- DÁN PROJECT ID (Ví dụ: "qtd-yentho-hrm")
-  storageBucket: "",     // <-- DÁN STORAGE BUCKET (Ví dụ: "qtd-yentho-hrm.firebasestorage.app")
-  messagingSenderId: "", // <-- DÁN MESSAGING SENDER ID (Ví dụ: "1234567890")
-  appId: "",             // <-- DÁN APP ID (Ví dụ: "1:1234567890:web:abcdef123456")
-  measurementId: ""      // <-- (Tùy chọn) MEASUREMENT ID
+  apiKey: "AIzaSyAp-VFLx0EpD81zYSedMZSJpzE7BQuvvkM",
+  authDomain: "qtdyentho-hrm.firebaseapp.com",
+  projectId: "qtdyentho-hrm",
+  storageBucket: "qtdyentho-hrm.firebasestorage.app",
+  messagingSenderId: "112031414979",
+  appId: "1:112031414979:web:e96098d3108638f50d4076"
 };
 
 // Kiểm tra xem người dùng đã điền cấu hình Firebase hợp lệ hay chưa
