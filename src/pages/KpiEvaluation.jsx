@@ -25,6 +25,7 @@ import {
   subscribeEmployees
 } from '../lib/services';
 import { INITIAL_EMPLOYEES, ROLES } from '../lib/mockData';
+import { formatDateVN, formatDateTimeVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
@@ -398,10 +399,15 @@ const KpiEvaluation = () => {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                         <div>
                           <div className="font-bold text-slate-900 text-sm">
-                            {item.employeeName}
+                            {item.employeeName} {item.employeeCode && <span className="text-xs text-teal-700 font-semibold font-mono">({item.employeeCode})</span>}
                           </div>
                           <div className="text-[11px] text-slate-500">
                             {item.position} • {item.department}
+                            {item.updatedAt && (
+                              <span className="text-slate-400 block sm:inline sm:ml-2">
+                                • Cập nhật: {formatDateTimeVN(item.updatedAt)}
+                              </span>
+                            )}
                           </div>
                         </div>
 

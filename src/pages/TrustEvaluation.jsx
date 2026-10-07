@@ -38,6 +38,7 @@ import {
   updateEvaluationPeriod
 } from '../lib/services';
 import { PERMISSIONS, hasPermission } from '../lib/permissions';
+import { formatDateVN, formatDateTimeVN, formatDateRangeVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Select from '../components/common/Select';
@@ -608,7 +609,7 @@ const TrustEvaluation = () => {
               <div className="flex items-center justify-between text-slate-500">
                 <span>Thời hạn đợt:</span>
                 <span className="font-medium text-slate-700">
-                  {currentPeriod?.startDate} → {currentPeriod?.endDate || 'Đang mở'}
+                  {formatDateRangeVN(currentPeriod?.startDate, currentPeriod?.endDate)}
                 </span>
               </div>
             </div>
@@ -722,7 +723,7 @@ const TrustEvaluation = () => {
                         </span>
                       </td>
                       <td className="py-3 px-3 text-slate-400 text-[11px]">
-                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '—'}
+                        {formatDateTimeVN(item.createdAt)}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <button
@@ -1043,7 +1044,7 @@ const TrustEvaluation = () => {
                         Quý {p.quarter || '—'} / {p.year || '2026'}
                       </td>
                       <td className="py-2.5 px-3 text-slate-500 text-[11px]">
-                        {p.startDate} → {p.endDate || 'Chưa đóng'}
+                        {formatDateRangeVN(p.startDate, p.endDate)}
                       </td>
                       <td className="py-2.5 px-3">
                         {isAnon ? (

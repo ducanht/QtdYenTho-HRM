@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { INITIAL_EMPLOYEES, DEPARTMENTS, ROLE_LABELS } from '../lib/mockData';
 import { subscribeEmployees, subscribeWorkHistory } from '../lib/services';
+import { formatDateVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
@@ -217,7 +218,7 @@ const Employees = () => {
               <div className="text-right">
                 <span className="text-slate-400 block text-[10px]">Ngày vào Quỹ:</span>
                 <span className="font-semibold text-slate-800">
-                  {selectedEmpHistory.joinDate || '2015-09-01'}
+                  {formatDateVN(selectedEmpHistory.joinDate || '2015-09-01')}
                 </span>
               </div>
             </div>
@@ -244,7 +245,12 @@ const Employees = () => {
                         </div>
                         <div className="flex items-center gap-2 text-slate-500 text-[11px]">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Hiệu lực: {item.effectiveDate}</span>
+                          <span>Hiệu lực: {formatDateVN(item.effectiveDate)}</span>
+                          {item.decisionDate && (
+                            <span className="text-slate-400">
+                              (Ký: {formatDateVN(item.decisionDate)})
+                            </span>
+                          )}
                         </div>
                       </div>
 

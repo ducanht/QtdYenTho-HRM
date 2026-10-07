@@ -36,6 +36,7 @@ import {
   subscribeEmployees
 } from '../lib/services';
 import { DEPARTMENTS, INITIAL_EMPLOYEES } from '../lib/mockData';
+import { formatDateVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import Spinner from '../components/common/Spinner';
@@ -494,7 +495,7 @@ const Dashboard = () => {
                   </td>
                   <td className="py-3 px-4 text-slate-600">{row.author}</td>
                   <td className="py-3 px-6 text-right text-slate-400">
-                    {row.time ? new Date(row.time).toLocaleDateString('vi-VN') : '--'}
+                    {formatDateVN(row.time)}
                   </td>
                 </tr>
               ))}
