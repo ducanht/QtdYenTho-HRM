@@ -116,9 +116,21 @@ npm run dev
 
 # 4. Kiểm tra bản đóng gói sản phẩm (Production build)
 npm run build
+
+# 5. Triển khai lên Google Firebase Hosting (100% Miễn phí)
+npm run deploy
 ```
 
-Hệ thống hoạt động tại: `http://localhost:5173/`
+Hệ thống hoạt động cục bộ tại: `http://localhost:5173/`
+
+---
+
+## 🌐 7. Triển Khai Lên Google Firebase Hosting (Free Tier)
+
+Hệ thống được thiết kế chạy 100% trên hạ tầng máy chủ toàn cầu miễn phí của Google Firebase Hosting (Spark Plan):
+- **Tên miền truy cập chính**: `https://qtdyentho-hrm.web.app`
+- **Tên miền dự phòng**: `https://qtdyentho-hrm.firebaseapp.com`
+- **Tài liệu hướng dẫn chi tiết từng bước**: [docs/HUONG_DAN_DEPLOY_FIREBASE_HOSTING.md](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/docs/HUONG_DAN_DEPLOY_FIREBASE_HOSTING.md)
 
 ---
 *Tài liệu kỹ thuật nội bộ — Quỹ Tín Dụng Nhân Dân Yên Thọ.*
