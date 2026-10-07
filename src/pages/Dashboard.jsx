@@ -36,10 +36,11 @@ import {
   subscribeEmployees
 } from '../lib/services';
 import { DEPARTMENTS, INITIAL_EMPLOYEES } from '../lib/mockData';
-import { formatDateVN } from '../lib/dateUtils';
+import { formatDateVN, formatDateTimeVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import Spinner from '../components/common/Spinner';
+import EmployeeBadge from '../components/common/EmployeeBadge';
 
 const Dashboard = () => {
   const { currentUser, role } = useAuth();
@@ -458,6 +459,7 @@ const Dashboard = () => {
                   type: 'Tín nhiệm (Module A)',
                   typeVariant: 'tot',
                   person: t.targetEmployeeName,
+                  code: t.targetEmployeeCode,
                   dept: t.targetDepartment,
                   result: `${t.totalScore} đ (${t.classification})`,
                   author: t.evaluatorName,
@@ -467,6 +469,7 @@ const Dashboard = () => {
                   type: 'KPI (Module B)',
                   typeVariant: 'completed',
                   person: k.employeeName,
+                  code: k.employeeCode,
                   dept: k.department,
                   result: k.finalScore ? `${k.finalScore} điểm (Tổng kết)` : `Tự chấm ${k.scoreSelf} đ`,
                   author: k.status === 'completed' ? 'Chủ tịch HĐQT' : 'Cán bộ',
@@ -476,6 +479,7 @@ const Dashboard = () => {
                   type: 'Quy hoạch (Module C)',
                   typeVariant: 'warning',
                   person: p.candidateName,
+                  code: '',
                   dept: p.department,
                   result: p.vote,
                   author: p.voterName,
@@ -488,14 +492,24 @@ const Dashboard = () => {
                       {row.type}
                     </Badge>
                   </td>
-                  <td className="py-3 px-4 font-bold text-slate-900">{row.person}</td>
+                  <td className="py-3 px-4">
+                    <EmployeeBadge
+                      employee={{
+                        name: row.person,
+                        code: row.code,
+                        department: row.dept,
+                      }}
+                      size="xs"
+                      showCode={Boolean(row.code)}
+                    />
+                  </td>
                   <td className="py-3 px-4 text-slate-600">{row.dept}</td>
                   <td className="py-3 px-4 text-center font-bold text-[#0f766e]">
                     {row.result}
                   </td>
                   <td className="py-3 px-4 text-slate-600">{row.author}</td>
-                  <td className="py-3 px-6 text-right text-slate-400">
-                    {formatDateVN(row.time)}
+                  <td className="py-3 px-6 text-right text-slate-400 text-[11px]">
+                    {formatDateTimeVN(row.time)}
                   </td>
                 </tr>
               ))}

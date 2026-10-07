@@ -32,6 +32,8 @@ import Badge from '../components/common/Badge';
 import Input from '../components/common/Input';
 import Modal from '../components/common/Modal';
 import Spinner from '../components/common/Spinner';
+import EmployeeBadge from '../components/common/EmployeeBadge';
+import StatusBadge from '../components/common/StatusBadge';
 
 const KpiEvaluation = () => {
   const { currentUser, role, isStaff, isManager, isChairman } = useAuth();
@@ -398,25 +400,27 @@ const KpiEvaluation = () => {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                         <div>
-                          <div className="font-bold text-slate-900 text-sm">
-                            {item.employeeName} {item.employeeCode && <span className="text-xs text-teal-700 font-semibold font-mono">({item.employeeCode})</span>}
-                          </div>
-                          <div className="text-[11px] text-slate-500">
-                            {item.position} • {item.department}
-                            {item.updatedAt && (
-                              <span className="text-slate-400 block sm:inline sm:ml-2">
-                                • Cập nhật: {formatDateTimeVN(item.updatedAt)}
-                              </span>
-                            )}
-                          </div>
+                          <EmployeeBadge
+                            employee={{
+                              name: item.employeeName,
+                              code: item.employeeCode,
+                              position: item.position,
+                              department: item.department,
+                            }}
+                            size="md"
+                            showCode={true}
+                            showPosition={true}
+                            showDepartment={true}
+                          />
+                          {item.updatedAt && (
+                            <div className="text-[10px] text-slate-400 ml-11 mt-0.5">
+                              Cập nhật: {formatDateTimeVN(item.updatedAt)}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <Badge variant={item.status} size="sm" dot>
-                            {item.status === 'pending_manager' && 'Chờ BĐH chấm'}
-                            {item.status === 'pending_chairman' && 'Chờ Chủ tịch chấm'}
-                            {item.status === 'completed' && 'Đã hoàn tất'}
-                          </Badge>
+                          <StatusBadge type="kpi_status" value={item.status} />
 
                           {/* Action Button for Manager or Chairman */}
                           {canManagerScore && (

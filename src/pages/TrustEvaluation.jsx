@@ -46,6 +46,8 @@ import Badge from '../components/common/Badge';
 import RatingInput from '../components/common/RatingInput';
 import Modal from '../components/common/Modal';
 import Spinner from '../components/common/Spinner';
+import EmployeeBadge from '../components/common/EmployeeBadge';
+import StatusBadge from '../components/common/StatusBadge';
 
 const TrustEvaluation = () => {
   const { currentUser, role } = useAuth();
@@ -338,17 +340,15 @@ const TrustEvaluation = () => {
             </Button>
           )}
 
-          <div className="flex items-center gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0f766e] flex items-center justify-center font-bold">
-              <UserCheck className="w-5 h-5" />
-            </div>
-            <div className="text-left text-xs">
-              <span className="text-slate-400 block text-[10px]">Cán bộ thực hiện:</span>
-              <span className="font-bold text-slate-800">{currentUser?.name}</span>
-              <span className="text-teal-700 font-semibold block text-[11px]">
-                {currentUser?.position}
-              </span>
-            </div>
+          <div className="bg-white px-3 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2">
+            <span className="text-slate-400 text-[10px] hidden sm:inline font-medium shrink-0">Cán bộ:</span>
+            <EmployeeBadge
+              employee={currentUser}
+              size="sm"
+              showCode={false}
+              showPosition={true}
+              showDepartment={false}
+            />
           </div>
         </div>
       </div>
@@ -460,29 +460,14 @@ const TrustEvaluation = () => {
                 />
 
                 {selectedEmployee && (
-                  <div className="mt-3.5 pt-3.5 border-t border-slate-200 flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-teal-100 border border-teal-300 text-[#0f766e] flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
-                      {selectedEmployee.avatar ? (
-                        <img
-                          src={selectedEmployee.avatar}
-                          alt={selectedEmployee.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        selectedEmployee.name.charAt(0)
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-bold text-slate-900 text-sm">
-                        {selectedEmployee.name}{' '}
-                        <span className="text-xs font-normal text-slate-500">
-                          (Mã: {selectedEmployee.code})
-                        </span>
-                      </div>
-                      <div className="text-xs text-[#0f766e] font-medium">
-                        {selectedEmployee.position} • {selectedEmployee.department}
-                      </div>
-                    </div>
+                  <div className="mt-3.5 pt-3.5 border-t border-slate-200">
+                    <EmployeeBadge
+                      employee={selectedEmployee}
+                      size="lg"
+                      showCode={true}
+                      showPosition={true}
+                      showDepartment={true}
+                    />
                   </div>
                 )}
               </div>
@@ -679,8 +664,16 @@ const TrustEvaluation = () => {
                 <tbody className="divide-y divide-slate-100">
                   {filteredEvaluations.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-3 font-bold text-slate-900">
-                        {item.targetEmployeeName}
+                      <td className="py-3 px-3">
+                        <EmployeeBadge
+                          employee={{
+                            name: item.targetEmployeeName,
+                            code: item.targetEmployeeCode,
+                            department: item.targetDepartment,
+                          }}
+                          size="sm"
+                          showCode={true}
+                        />
                       </td>
                       <td className="py-3 px-3 text-slate-600">{item.targetDepartment}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium">
@@ -708,19 +701,7 @@ const TrustEvaluation = () => {
                         <span className="text-slate-400 text-[10px]"> / 100</span>
                       </td>
                       <td className="py-3 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                            item.classification === 'Xuất sắc'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : item.classification === 'Tốt'
-                              ? 'bg-teal-100 text-teal-800'
-                              : item.classification === 'Hoàn thành'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}
-                        >
-                          {item.classification}
-                        </span>
+                        <StatusBadge type="trust_classification" value={item.classification} />
                       </td>
                       <td className="py-3 px-3 text-slate-400 text-[11px]">
                         {formatDateTimeVN(item.createdAt)}
@@ -759,31 +740,38 @@ const TrustEvaluation = () => {
       >
         {selectedEvaluation && (
           <div className="space-y-6 text-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div>
-                <span className="text-slate-400 block text-[10px]">Cán bộ được đánh giá:</span>
-                <span className="font-bold text-slate-900 text-sm">
-                  {selectedEvaluation.targetEmployeeName}
-                </span>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div className="sm:col-span-2">
+                <span className="text-slate-400 block text-[10px] mb-1">Cán bộ được đánh giá:</span>
+                <EmployeeBadge
+                  employee={{
+                    name: selectedEvaluation.targetEmployeeName,
+                    code: selectedEvaluation.targetEmployeeCode,
+                    department: selectedEvaluation.targetDepartment,
+                  }}
+                  size="md"
+                  showCode={true}
+                  showDepartment={true}
+                />
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Phòng ban:</span>
-                <span className="font-semibold text-slate-800">
-                  {selectedEvaluation.targetDepartment}
-                </span>
+                <span className="text-slate-400 block text-[10px] mb-1">Hình thức phiếu:</span>
+                <StatusBadge
+                  type="voting_mode"
+                  value={selectedEvaluation.isAnonymous ? 'ANONYMOUS' : 'IDENTIFIED'}
+                />
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Hình thức phiếu:</span>
-                <span className="font-bold text-slate-800">
-                  {selectedEvaluation.isAnonymous ? 'Bỏ phiếu kín (Ẩn danh)' : 'Công khai (Định danh)'}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px]">Tổng điểm & Xếp loại:</span>
-                <span className="font-bold text-[#0f766e] text-sm">
-                  {selectedEvaluation.totalScore} điểm
-                </span>{' '}
-                - <span className="font-semibold">{selectedEvaluation.classification}</span>
+                <span className="text-slate-400 block text-[10px] mb-1">Tổng điểm & Xếp loại:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-[#0f766e] text-sm">
+                    {selectedEvaluation.totalScore} điểm
+                  </span>
+                  <StatusBadge
+                    type="trust_classification"
+                    value={selectedEvaluation.classification}
+                  />
+                </div>
               </div>
             </div>
 
@@ -1047,30 +1035,10 @@ const TrustEvaluation = () => {
                         {formatDateRangeVN(p.startDate, p.endDate)}
                       </td>
                       <td className="py-2.5 px-3">
-                        {isAnon ? (
-                          <span className="inline-flex items-center gap-1 font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200 text-[11px]">
-                            <Lock className="w-3 h-3 text-[#0f766e]" />
-                            Bỏ phiếu kín (Ẩn danh)
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 text-[11px]">
-                            <Unlock className="w-3 h-3 text-blue-600" />
-                            Định danh (Công khai)
-                          </span>
-                        )}
+                        <StatusBadge type="voting_mode" value={p.votingMode} />
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.status === 'ACTIVE'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : p.status === 'UPCOMING'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-200 text-slate-700'
-                          }`}
-                        >
-                          {p.status === 'ACTIVE' ? 'Đang mở' : p.status === 'UPCOMING' ? 'Sắp mở' : 'Đã đóng'}
-                        </span>
+                        <StatusBadge type="period_status" value={p.status} />
                       </td>
                       <td className="py-2.5 px-3 text-right space-x-1">
                         <button
