@@ -16,10 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { 
-  INITIAL_EMPLOYEES, 
-  PLANNING_POSITIONS 
-} from '../lib/mockData';
+import { PLANNING_POSITIONS } from '../lib/constants';
 import { 
   savePlanningVote, 
   subscribePlanningVotes, 
@@ -36,7 +33,7 @@ const PlanningVote = () => {
   const { currentUser, role } = useAuth();
   const toast = useToast();
 
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState([]);
   const [votes, setVotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

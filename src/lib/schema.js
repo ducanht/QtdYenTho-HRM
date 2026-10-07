@@ -1,7 +1,7 @@
 // Bộ quy tắc xác thực & Kiểm tra ràng buộc cơ sở dữ liệu (Schema Validation)
 // Quỹ Tín Dụng Nhân Dân Yên Thọ - HRM
 
-import { TRUST_CRITERIA } from './mockData';
+import { TRUST_CRITERIA_DEFAULT as TRUST_CRITERIA } from './constants';
 
 /**
  * Phân loại kết quả đánh giá tín nhiệm dựa trên tổng điểm (0 - 100)

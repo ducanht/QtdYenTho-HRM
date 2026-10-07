@@ -22,7 +22,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { SYSTEM_MODULES, canAccessModule } from '../lib/permissions';
-import { ROLE_LABELS } from '../lib/mockData';
+import { ROLE_LABELS } from '../lib/constants';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';

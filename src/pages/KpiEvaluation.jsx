@@ -24,7 +24,7 @@ import {
   calculateKpiFinal,
   subscribeEmployees
 } from '../lib/services';
-import { INITIAL_EMPLOYEES, ROLES } from '../lib/mockData';
+import { ROLES } from '../lib/constants';
 import { formatDateVN, formatDateTimeVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -40,7 +40,7 @@ const KpiEvaluation = () => {
   const toast = useToast();
 
   const [kpiList, setKpiList] = useState([]);
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('Quý III / 2026');
 

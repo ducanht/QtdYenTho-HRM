@@ -35,7 +35,7 @@ import {
   subscribePlanningVotes,
   subscribeEmployees
 } from '../lib/services';
-import { DEPARTMENTS, INITIAL_EMPLOYEES } from '../lib/mockData';
+import { DEPARTMENTS } from '../lib/constants';
 import { formatDateVN, formatDateTimeVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
@@ -48,16 +48,16 @@ const Dashboard = () => {
   const [trustData, setTrustData] = useState([]);
   const [kpiData, setKpiData] = useState([]);
   const [planningData, setPlanningData] = useState([]);
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Subscribe real-time onSnapshot to all three collections
+  // Subscribe real-time onSnapshot to all Firestore collections
   useEffect(() => {
     setLoading(true);
     let countLoaded = 0;
     const checkLoaded = () => {
       countLoaded += 1;
-      if (countLoaded >= 3) setLoading(false);
+      if (countLoaded >= 4) setLoading(false);
     };
 
     const unsubTrust = subscribeTrustEvaluations((data) => {
@@ -76,7 +76,8 @@ const Dashboard = () => {
     });
 
     const unsubEmp = subscribeEmployees((data) => {
-      if (data) setEmployees(data);
+      setEmployees(data || []);
+      checkLoaded();
     });
 
     return () => {

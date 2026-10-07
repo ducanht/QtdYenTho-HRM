@@ -1,4 +1,5 @@
-// Dịch vụ truy xuất dữ liệu Firestore & Fallback State Storage
+// Dịch vụ truy xuất dữ liệu 100% Cloud Firestore - Quỹ TDND Yên Thọ
+// Áp dụng chính sách không dùng dữ liệu giả lập (Zero Mock Data Policy)
 import { 
   collection, 
   doc, 
@@ -13,620 +14,470 @@ import {
   where,
   serverTimestamp 
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from './firebase';
-import { 
-  INITIAL_EMPLOYEES, 
-  INITIAL_WORK_HISTORY,
-  INITIAL_TRUST_EVALUATIONS, 
-  INITIAL_KPI_EVALUATIONS, 
-  INITIAL_PLANNING_VOTES,
-  EVALUATION_PERIODS 
-} from './mockData';
-
-// Khởi tạo LocalStorage cho chế độ lưu trữ nội bộ nếu chưa có
-const initLocalStore = (key, defaultData) => {
-  const existing = localStorage.getItem(key);
-  if (!existing) {
-    localStorage.setItem(key, JSON.stringify(defaultData));
-    return defaultData;
-  }
-  try {
-    return JSON.parse(existing);
-  } catch {
-    localStorage.setItem(key, JSON.stringify(defaultData));
-    return defaultData;
-  }
-};
-
-// Đăng ký listener cục bộ cho LocalStorage khi ở chế độ nội bộ
-const demoListeners = {
-  users: new Set(),
-  work_history: new Set(),
-  evaluations_trust: new Set(),
-  evaluations_kpi: new Set(),
-  evaluations_planning: new Set(),
-  evaluation_periods: new Set(),
-};
-
-const notifyDemoListeners = (colKey) => {
-  const data = JSON.parse(localStorage.getItem(`qtd_hrm_${colKey}`) || '[]');
-  demoListeners[colKey]?.forEach((cb) => {
-    try {
-      cb(data);
-    } catch (e) {
-      console.error('Local listener error:', e);
-    }
-  });
-};
+import { db } from './firebase';
 
 // ============================================================================
-// 1. NHÂN SỰ & NGƯỜI DÙNG (users collection)
+// 1. HỒ SƠ CÁN BỘ & XÁC THỰC (users collection)
 // ============================================================================
 export const getUserProfile = async (uid, email) => {
-  if (isFirebaseConfigured && db) {
-    try {
+  if (!db) throw new Error('Cơ sở dữ liệu Firestore chưa được khởi tạo');
+
+  try {
+    // 1. Thử tra cứu theo Document ID chính xác (uid)
+    if (uid) {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
         return { id: userDoc.id, ...userDoc.data() };
       }
-    } catch (err) {
-      console.warn('Lỗi khi lấy hồ sơ user từ Firestore, kiểm tra fallback:', err);
     }
-  }
 
-  // Fallback demo
-  const users = initLocalStore('qtd_hrm_users', INITIAL_EMPLOYEES);
-  const found = users.find((u) => u.id === uid || u.email?.toLowerCase() === email?.toLowerCase());
-  return found || {
-    id: uid,
-    email,
-    name: email?.split('@')[0] || 'Cán bộ QTDND',
-    role: 'staff',
-    department: 'Phòng Tín dụng',
-    position: 'Cán bộ',
-  };
+    // 2. Tra cứu theo email trong collection 'users'
+    if (email) {
+      const normalizedEmail = email.trim().toLowerCase();
+      const usersSnap = await getDocs(collection(db, 'users'));
+      for (const d of usersSnap.docs) {
+        const uData = d.data();
+        if (uData.email && uData.email.trim().toLowerCase() === normalizedEmail) {
+          // Lưu lại authUid để các lần sau tra cứu tức thì theo doc(db, 'users', uid)
+          if (uid && !uData.authUid) {
+            await setDoc(doc(db, 'users', d.id), { authUid: uid }, { merge: true }).catch(() => {});
+          }
+          return { id: d.id, ...uData };
+        }
+      }
+    }
+
+    // 3. Tra cứu theo authUid nếu đã được gán trước đó
+    if (uid) {
+      const q = query(collection(db, 'users'), where('authUid', '==', uid));
+      const qSnap = await getDocs(q);
+      if (!qSnap.empty) {
+        const firstDoc = qSnap.docs[0];
+        return { id: firstDoc.id, ...firstDoc.data() };
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error('Lỗi khi truy vấn hồ sơ cán bộ từ Firestore:', err);
+    throw err;
+  }
 };
 
 export const syncUserProfile = async (user) => {
-  if (isFirebaseConfigured && db && user?.uid) {
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) {
-        const initialMatch = INITIAL_EMPLOYEES.find(
-          (e) => e.email.toLowerCase() === user.email?.toLowerCase()
-        );
-        const newProfile = {
-          id: user.uid,
-          code: initialMatch?.code || `CB-${user.uid.slice(0, 4).toUpperCase()}`,
-          name: user.displayName || initialMatch?.name || user.email?.split('@')[0] || 'Cán bộ QTDND',
-          email: user.email || '',
-          role: initialMatch?.role || 'staff',
-          department: initialMatch?.department || 'Phòng Tín dụng',
-          position: initialMatch?.position || 'Cán bộ',
-          avatar: user.photoURL || initialMatch?.avatar || null,
-          phone: initialMatch?.phone || '',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString()
-        };
-        await setDoc(userRef, newProfile);
-        return newProfile;
-      } else {
-        return { id: userDoc.id, ...userDoc.data() };
-      }
-    } catch (err) {
-      console.warn('Lỗi khi đồng bộ hồ sơ user vào Firestore:', err);
-    }
+  if (!db || !user?.uid) return null;
+  try {
+    const profile = await getUserProfile(user.uid, user.email);
+    return profile;
+  } catch (err) {
+    console.error('Lỗi đồng bộ hồ sơ user:', err);
+    return null;
   }
-  return null;
 };
 
 export const subscribeEmployees = (callback) => {
-  if (isFirebaseConfigured && db) {
-    try {
-      const q = query(collection(db, 'users'), orderBy('code', 'asc'));
-      return onSnapshot(
-        q,
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-            callback(list);
-          } else {
-            callback(initLocalStore('qtd_hrm_users', INITIAL_EMPLOYEES));
-          }
-        },
-        (error) => {
-          console.error('Lỗi onSnapshot users:', error);
-          callback(initLocalStore('qtd_hrm_users', INITIAL_EMPLOYEES));
-        }
-      );
-    } catch (err) {
-      console.warn('Không thể thiết lập onSnapshot users, sử dụng demo:', err);
-    }
+  if (!db) {
+    console.error('Firestore db chưa sẵn sàng');
+    callback([]);
+    return () => {};
   }
 
-  // Demo fallback
-  callback(initLocalStore('qtd_hrm_users', INITIAL_EMPLOYEES));
-  demoListeners.users.add(callback);
-  return () => demoListeners.users.delete(callback);
+  try {
+    const q = query(collection(db, 'users'), orderBy('code', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot users từ Firestore:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot users:', err);
+    callback([]);
+    return () => {};
+  }
 };
 
 // ============================================================================
 // 2. QUÁ TRÌNH LUÂN CHUYỂN CÔNG TÁC (work_history collection)
 // ============================================================================
 export const subscribeWorkHistory = (employeeId = null, callback) => {
-  if (isFirebaseConfigured && db) {
-    try {
-      let q = collection(db, 'work_history');
-      if (employeeId) {
-        q = query(q, where('employeeId', '==', employeeId), orderBy('effectiveDate', 'desc'));
-      } else {
-        q = query(q, orderBy('effectiveDate', 'desc'));
-      }
-
-      return onSnapshot(
-        q,
-        (snapshot) => {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-          callback(list);
-        },
-        (error) => {
-          console.error('Lỗi onSnapshot work_history:', error);
-          const localList = initLocalStore('qtd_hrm_work_history', INITIAL_WORK_HISTORY);
-          callback(employeeId ? localList.filter((w) => w.employeeId === employeeId) : localList);
-        }
-      );
-    } catch (err) {
-      console.warn('Lỗi query work_history, dùng demo:', err);
-    }
+  if (!db) {
+    callback([]);
+    return () => {};
   }
 
-  // Demo fallback
-  const allHistory = initLocalStore('qtd_hrm_work_history', INITIAL_WORK_HISTORY);
-  const filtered = employeeId ? allHistory.filter((w) => w.employeeId === employeeId) : allHistory;
-  callback(filtered);
+  try {
+    let q = collection(db, 'work_history');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId), orderBy('effectiveDate', 'desc'));
+    } else {
+      q = query(q, orderBy('effectiveDate', 'desc'));
+    }
 
-  const wrapper = (data) => {
-    const list = employeeId ? data.filter((w) => w.employeeId === employeeId) : data;
-    callback(list);
-  };
-  demoListeners.work_history.add(wrapper);
-  return () => demoListeners.work_history.delete(wrapper);
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot work_history từ Firestore:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot work_history:', err);
+    callback([]);
+    return () => {};
+  }
 };
 
 export const saveWorkHistory = async (transferRecord) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
   const payload = {
     ...transferRecord,
     createdAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      const docRef = await addDoc(collection(db, 'work_history'), {
-        ...payload,
-        serverTime: serverTimestamp(),
-      });
-      return { success: true, id: docRef.id };
-    } catch (error) {
-      console.error('Lỗi Firestore addDoc work_history:', error);
-      throw error;
-    }
+  try {
+    const docRef = await addDoc(collection(db, 'work_history'), payload);
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error('Lỗi Firestore addDoc work_history:', error);
+    throw error;
   }
-
-  // Demo fallback
-  const list = initLocalStore('qtd_hrm_work_history', INITIAL_WORK_HISTORY);
-  const newRecord = {
-    id: `trans-${Date.now()}`,
-    ...payload,
-  };
-  const updated = [newRecord, ...list];
-  localStorage.setItem('qtd_hrm_work_history', JSON.stringify(updated));
-  notifyDemoListeners('work_history');
-  return { success: true, id: newRecord.id };
 };
 
 // ============================================================================
-// 2.5 ĐỢT ĐÁNH GIÁ TÍN NHIỆM (evaluation_periods collection)
-// Cấu hình linh hoạt ở cấp Đợt: Ẩn danh (ANONYMOUS) hay Công khai (IDENTIFIED) do Quản trị quyết định
+// 3. ĐỢT ĐÁNH GIÁ TÍN NHIỆM (evaluation_periods collection)
 // ============================================================================
 export const subscribeEvaluationPeriods = (callback) => {
-  if (isFirebaseConfigured && db) {
-    try {
-      const q = query(collection(db, 'evaluation_periods'), orderBy('startDate', 'desc'));
-      return onSnapshot(
-        q,
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-            callback(list);
-          } else {
-            callback(initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS));
-          }
-        },
-        (error) => {
-          console.error('Lỗi onSnapshot evaluation_periods:', error);
-          callback(initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS));
-        }
-      );
-    } catch (err) {
-      console.warn('Lỗi Firestore evaluation_periods, dùng dữ liệu nội bộ:', err);
-    }
+  if (!db) {
+    callback([]);
+    return () => {};
   }
 
-  // Fallback lưu trữ nội bộ
-  callback(initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS));
-  demoListeners.evaluation_periods.add(callback);
-  return () => demoListeners.evaluation_periods.delete(callback);
+  try {
+    const q = query(collection(db, 'evaluation_periods'), orderBy('startDate', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot evaluation_periods từ Firestore:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot evaluation_periods:', err);
+    callback([]);
+    return () => {};
+  }
 };
 
 export const saveEvaluationPeriod = async (periodData) => {
-  const periodId = periodData.id || `PERIOD-${periodData.year || new Date().getFullYear()}-Q${periodData.quarter || 1}-${Date.now()}`;
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
+  const periodId = periodData.id || `PERIOD-${periodData.year}-Q${periodData.quarter || 'ALL'}-${Date.now()}`;
   const payload = {
     ...periodData,
     id: periodId,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      await setDoc(doc(db, 'evaluation_periods', periodId), {
-        ...payload,
-        serverTime: serverTimestamp(),
-      }, { merge: true });
-      return { success: true, id: periodId };
-    } catch (error) {
-      console.error('Lỗi Firestore setDoc evaluation_periods:', error);
-      throw error;
-    }
+  try {
+    await setDoc(doc(db, 'evaluation_periods', periodId), payload, { merge: true });
+    return { success: true, id: periodId };
+  } catch (error) {
+    console.error('Lỗi setDoc evaluation_periods trên Firestore:', error);
+    throw error;
   }
-
-  // Fallback lưu trữ nội bộ
-  const list = initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS);
-  const updated = [payload, ...list.filter((p) => p.id !== periodId)];
-  localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(updated));
-  notifyDemoListeners('evaluation_periods');
-  return { success: true, id: periodId };
 };
 
-export const updateEvaluationPeriod = async (periodId, updateData) => {
-  const payload = {
-    ...updateData,
-    updatedAt: new Date().toISOString(),
-  };
+export const updateEvaluationPeriod = async (periodId, updateFields) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
 
-  if (isFirebaseConfigured && db) {
-    try {
-      await updateDoc(doc(db, 'evaluation_periods', periodId), payload);
-      return { success: true };
-    } catch (error) {
-      console.error('Lỗi Firestore updateDoc evaluation_periods:', error);
-      throw error;
-    }
+  try {
+    await updateDoc(doc(db, 'evaluation_periods', periodId), {
+      ...updateFields,
+      updatedAt: new Date().toISOString(),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Lỗi updateDoc evaluation_periods trên Firestore:', error);
+    throw error;
   }
-
-  // Fallback lưu trữ nội bộ
-  const list = initLocalStore('qtd_hrm_evaluation_periods', EVALUATION_PERIODS);
-  const updated = list.map((item) => (item.id === periodId ? { ...item, ...payload } : item));
-  localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(updated));
-  notifyDemoListeners('evaluation_periods');
-  return { success: true };
 };
 
 // ============================================================================
-// 3. MODULE A: ĐÁNH GIÁ TÍN NHIỆM (evaluations_trust collection)
-// Hình thức Ẩn danh hay Công khai phụ thuộc 100% vào Đợt đánh giá do Ban Quản trị quyết định
+// 4. TIÊU CHÍ ĐÁNH GIÁ TÍN NHIỆM (trust_criteria collection)
+// ============================================================================
+export const subscribeTrustCriteria = (callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    const q = query(collection(db, 'trust_criteria'), orderBy('code', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot trust_criteria từ Firestore:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot trust_criteria:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+// ============================================================================
+// 5. PHIẾU ĐÁNH GIÁ TÍN NHIỆM (evaluations_trust collection)
 // ============================================================================
 export const saveTrustEvaluation = async (evaluationData) => {
-  const isAnon = Boolean(evaluationData.isAnonymous);
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
+  // Tính tổng điểm
+  const scoresObj = evaluationData.scores || {};
+  const scoresArray = Object.values(scoresObj).map(Number);
+  const totalScore = scoresArray.reduce((acc, curr) => acc + (isNaN(curr) ? 0 : curr), 0);
+
+  // Phân loại xếp loại tín nhiệm
+  let classification = 'Không hoàn thành';
+  if (totalScore >= 90) classification = 'Xuất sắc';
+  else if (totalScore >= 70) classification = 'Tốt';
+  else if (totalScore >= 50) classification = 'Hoàn thành';
+
+  const isAnonymous = Boolean(evaluationData.isAnonymous);
+
   const payload = {
     ...evaluationData,
-    isAnonymous: isAnon,
-    // Nếu chọn ẩn danh thì tên hiển thị sẽ được bảo vệ
-    evaluatorName: isAnon ? 'Cán bộ Quỹ (Ẩn danh)' : evaluationData.evaluatorName,
-    evaluatorRole: isAnon ? 'Ẩn danh' : evaluationData.evaluatorRole,
+    isAnonymous,
+    totalScore,
+    classification,
     createdAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      const docRef = await addDoc(collection(db, 'evaluations_trust'), {
-        ...payload,
-        serverTime: serverTimestamp(),
-      });
-      return { success: true, id: docRef.id };
-    } catch (error) {
-      console.error('Lỗi Firestore addDoc evaluations_trust:', error);
-      throw error;
-    }
+  try {
+    const docRef = await addDoc(collection(db, 'evaluations_trust'), payload);
+    return { success: true, id: docRef.id, totalScore, classification };
+  } catch (error) {
+    console.error('Lỗi Firestore addDoc evaluations_trust:', error);
+    throw error;
   }
-
-  // Demo fallback
-  const list = initLocalStore('qtd_hrm_evaluations_trust', INITIAL_TRUST_EVALUATIONS);
-  const newRecord = {
-    id: `trust-${Date.now()}`,
-    ...payload,
-  };
-  const updated = [newRecord, ...list];
-  localStorage.setItem('qtd_hrm_evaluations_trust', JSON.stringify(updated));
-  notifyDemoListeners('evaluations_trust');
-  return { success: true, id: newRecord.id };
 };
 
 export const subscribeTrustEvaluations = (callback) => {
-  if (isFirebaseConfigured && db) {
-    try {
-      const q = query(collection(db, 'evaluations_trust'), orderBy('createdAt', 'desc'));
-      return onSnapshot(
-        q,
-        (snapshot) => {
-          const list = snapshot.docs.map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              ...data,
-              // Xử lý bảo mật ẩn danh
-              evaluatorName: data.isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : data.evaluatorName,
-              evaluatorRole: data.isAnonymous ? 'Ẩn danh' : data.evaluatorRole,
-            };
-          });
-          callback(list);
-        },
-        (error) => {
-          console.error('Lỗi onSnapshot evaluations_trust:', error);
-          callback(initLocalStore('qtd_hrm_evaluations_trust', INITIAL_TRUST_EVALUATIONS));
-        }
-      );
-    } catch (err) {
-      console.warn('Lỗi kết nối Firestore evaluations_trust, dùng demo:', err);
-    }
+  if (!db) {
+    callback([]);
+    return () => {};
   }
 
-  // Demo fallback
-  const raw = initLocalStore('qtd_hrm_evaluations_trust', INITIAL_TRUST_EVALUATIONS);
-  const sanitized = raw.map((item) => ({
-    ...item,
-    evaluatorName: item.isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : item.evaluatorName,
-    evaluatorRole: item.isAnonymous ? 'Ẩn danh' : item.evaluatorRole,
-  }));
-  callback(sanitized);
-
-  const wrapper = (data) => {
-    const s = data.map((item) => ({
-      ...item,
-      evaluatorName: item.isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : item.evaluatorName,
-      evaluatorRole: item.isAnonymous ? 'Ẩn danh' : item.evaluatorRole,
-    }));
-    callback(s);
-  };
-  demoListeners.evaluations_trust.add(wrapper);
-  return () => demoListeners.evaluations_trust.delete(wrapper);
+  try {
+    const q = query(collection(db, 'evaluations_trust'), orderBy('createdAt', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((docItem) => {
+          const data = docItem.data();
+          if (data.isAnonymous) {
+            return {
+              ...data,
+              id: docItem.id,
+              evaluatorName: 'Cán bộ Quỹ (Bỏ phiếu kín)',
+              evaluatorRole: 'Ẩn danh',
+            };
+          }
+          return { id: docItem.id, ...data };
+        });
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot evaluations_trust từ Firestore:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot evaluations_trust:', err);
+    callback([]);
+    return () => {};
+  }
 };
 
 // ============================================================================
-// 4. MODULE B: CHẤM ĐIỂM KPI (evaluations_kpi collection)
+// 6. CHẤM ĐIỂM KPI 3 CẤP (evaluations_kpi collection)
+// Trọng số: Cán bộ tự chấm (40%) - Ban điều hành (30%) - Chủ tịch HĐQT (30%)
 // ============================================================================
-export const calculateKpiFinal = (scoreSelf, scoreManager, scoreChairman) => {
-  if (
-    scoreSelf === null || scoreSelf === undefined ||
-    scoreManager === null || scoreManager === undefined ||
-    scoreChairman === null || scoreChairman === undefined
-  ) {
-    return null;
-  }
-  const sSelf = Number(scoreSelf);
-  const sManager = Number(scoreManager);
-  const sChairman = Number(scoreChairman);
-  const finalScore = (sSelf * 0.4) + (sManager * 0.3) + (sChairman * 0.3);
-  return Number(finalScore.toFixed(2));
+export const calculateKpiFinal = (self, manager, chairman) => {
+  const s = Number(self) || 0;
+  const m = Number(manager) || 0;
+  const c = Number(chairman) || 0;
+  const final = Number((s * 0.4 + m * 0.3 + c * 0.3).toFixed(1));
+
+  let classification = 'Không đạt';
+  if (final >= 90) classification = 'Xuất sắc';
+  else if (final >= 75) classification = 'Tốt';
+  else if (final >= 60) classification = 'Đạt yêu cầu';
+
+  return { finalScore: final, classification };
 };
 
 export const saveKpiStep1Self = async (kpiData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
   const payload = {
     ...kpiData,
-    scoreSelf: Number(kpiData.scoreSelf),
-    scoreManager: null,
-    scoreChairman: null,
-    finalScore: null,
     status: 'pending_manager',
+    scoreManager: null,
+    managerNotes: '',
+    scoreChairman: null,
+    chairmanNotes: '',
+    finalScore: null,
+    classification: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      const docRef = await addDoc(collection(db, 'evaluations_kpi'), {
-        ...payload,
-        serverTime: serverTimestamp(),
-      });
-      return { success: true, id: docRef.id };
-    } catch (error) {
-      console.error('Lỗi Firestore addDoc evaluations_kpi (Step 1):', error);
-      throw error;
-    }
+  try {
+    const docRef = await addDoc(collection(db, 'evaluations_kpi'), payload);
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error('Lỗi Firestore addDoc evaluations_kpi (Step 1):', error);
+    throw error;
   }
-
-  // Demo fallback
-  const list = initLocalStore('qtd_hrm_evaluations_kpi', INITIAL_KPI_EVALUATIONS);
-  const newRecord = {
-    id: `kpi-${Date.now()}`,
-    ...payload,
-  };
-  const updated = [newRecord, ...list];
-  localStorage.setItem('qtd_hrm_evaluations_kpi', JSON.stringify(updated));
-  notifyDemoListeners('evaluations_kpi');
-  return { success: true, id: newRecord.id };
 };
 
-export const updateKpiStep2Manager = async (kpiId, scoreManager, managerNotes) => {
-  const updateFields = {
-    scoreManager: Number(scoreManager),
-    managerNotes: managerNotes || '',
-    status: 'pending_chairman',
-    updatedAt: new Date().toISOString(),
-  };
+export const updateKpiStep2Manager = async (kpiId, { scoreManager, managerNotes }) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
 
-  if (isFirebaseConfigured && db) {
-    try {
-      await updateDoc(doc(db, 'evaluations_kpi', kpiId), updateFields);
-      return { success: true };
-    } catch (error) {
-      console.error('Lỗi updateDoc evaluations_kpi (Step 2):', error);
-      throw error;
-    }
+  try {
+    await updateDoc(doc(db, 'evaluations_kpi', kpiId), {
+      scoreManager: Number(scoreManager),
+      managerNotes: managerNotes || '',
+      status: 'pending_chairman',
+      updatedAt: new Date().toISOString(),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Lỗi updateDoc evaluations_kpi (Step 2):', error);
+    throw error;
   }
-
-  // Demo fallback
-  const list = initLocalStore('qtd_hrm_evaluations_kpi', INITIAL_KPI_EVALUATIONS);
-  const updated = list.map((item) => {
-    if (item.id === kpiId) {
-      return {
-        ...item,
-        ...updateFields,
-      };
-    }
-    return item;
-  });
-  localStorage.setItem('qtd_hrm_evaluations_kpi', JSON.stringify(updated));
-  notifyDemoListeners('evaluations_kpi');
-  return { success: true };
 };
 
-export const updateKpiStep3Chairman = async (kpiId, scoreChairman, chairmanNotes, existingSelf, existingManager) => {
-  const finalScore = calculateKpiFinal(existingSelf, existingManager, scoreChairman);
+export const updateKpiStep3Chairman = async (
+  kpiId, 
+  { scoreChairman, chairmanNotes, scoreSelf, scoreManager }
+) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
+  const { finalScore, classification } = calculateKpiFinal(scoreSelf, scoreManager, scoreChairman);
+
   const updateFields = {
     scoreChairman: Number(scoreChairman),
     chairmanNotes: chairmanNotes || '',
     finalScore,
+    classification,
     status: 'completed',
     updatedAt: new Date().toISOString(),
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      await updateDoc(doc(db, 'evaluations_kpi', kpiId), updateFields);
-      return { success: true, finalScore };
-    } catch (error) {
-      console.error('Lỗi updateDoc evaluations_kpi (Step 3):', error);
-      throw error;
-    }
+  try {
+    await updateDoc(doc(db, 'evaluations_kpi', kpiId), updateFields);
+    return { success: true, finalScore, classification };
+  } catch (error) {
+    console.error('Lỗi updateDoc evaluations_kpi (Step 3):', error);
+    throw error;
   }
-
-  // Demo fallback
-  const list = initLocalStore('qtd_hrm_evaluations_kpi', INITIAL_KPI_EVALUATIONS);
-  const updated = list.map((item) => {
-    if (item.id === kpiId) {
-      return {
-        ...item,
-        ...updateFields,
-      };
-    }
-    return item;
-  });
-  localStorage.setItem('qtd_hrm_evaluations_kpi', JSON.stringify(updated));
-  notifyDemoListeners('evaluations_kpi');
-  return { success: true, finalScore };
 };
 
 export const subscribeKpiEvaluations = (callback) => {
-  if (isFirebaseConfigured && db) {
-    try {
-      const q = query(collection(db, 'evaluations_kpi'), orderBy('updatedAt', 'desc'));
-      return onSnapshot(
-        q,
-        (snapshot) => {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-          callback(list);
-        },
-        (error) => {
-          console.error('Lỗi onSnapshot evaluations_kpi:', error);
-          callback(initLocalStore('qtd_hrm_evaluations_kpi', INITIAL_KPI_EVALUATIONS));
-        }
-      );
-    } catch (err) {
-      console.warn('Lỗi kết nối Firestore evaluations_kpi, dùng demo:', err);
-    }
+  if (!db) {
+    callback([]);
+    return () => {};
   }
 
-  // Demo fallback
-  callback(initLocalStore('qtd_hrm_evaluations_kpi', INITIAL_KPI_EVALUATIONS));
-  demoListeners.evaluations_kpi.add(callback);
-  return () => demoListeners.evaluations_kpi.delete(callback);
+  try {
+    const q = query(collection(db, 'evaluations_kpi'), orderBy('updatedAt', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot evaluations_kpi từ Firestore:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot evaluations_kpi:', err);
+    callback([]);
+    return () => {};
+  }
 };
 
 // ============================================================================
-// 5. MODULE C: BỎ PHIẾU QUY HOẠCH (evaluations_planning collection)
+// 7. BỎ PHIẾU QUY HOẠCH CÁN BỘ (evaluations_planning collection)
 // ============================================================================
 export const savePlanningVote = async (voteData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
   const payload = {
     ...voteData,
     createdAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      const docRef = await addDoc(collection(db, 'evaluations_planning'), {
-        ...payload,
-        serverTime: serverTimestamp(),
-      });
-      return { success: true, id: docRef.id };
-    } catch (error) {
-      console.error('Lỗi Firestore addDoc evaluations_planning:', error);
-      throw error;
-    }
+  try {
+    const docRef = await addDoc(collection(db, 'evaluations_planning'), payload);
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error('Lỗi Firestore addDoc evaluations_planning:', error);
+    throw error;
   }
-
-  // Demo fallback
-  const list = initLocalStore('qtd_hrm_evaluations_planning', INITIAL_PLANNING_VOTES);
-  const newRecord = {
-    id: `vote-${Date.now()}`,
-    ...payload,
-  };
-  const updated = [newRecord, ...list];
-  localStorage.setItem('qtd_hrm_evaluations_planning', JSON.stringify(updated));
-  notifyDemoListeners('evaluations_planning');
-  return { success: true, id: newRecord.id };
 };
 
 export const subscribePlanningVotes = (callback) => {
-  if (isFirebaseConfigured && db) {
-    try {
-      const q = query(collection(db, 'evaluations_planning'), orderBy('createdAt', 'desc'));
-      return onSnapshot(
-        q,
-        (snapshot) => {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-          callback(list);
-        },
-        (error) => {
-          console.error('Lỗi onSnapshot evaluations_planning:', error);
-          callback(initLocalStore('qtd_hrm_evaluations_planning', INITIAL_PLANNING_VOTES));
-        }
-      );
-    } catch (err) {
-      console.warn('Lỗi kết nối Firestore evaluations_planning, dùng demo:', err);
-    }
+  if (!db) {
+    callback([]);
+    return () => {};
   }
 
-  // Demo fallback
-  callback(initLocalStore('qtd_hrm_evaluations_planning', INITIAL_PLANNING_VOTES));
-  demoListeners.evaluations_planning.add(callback);
-  return () => demoListeners.evaluations_planning.delete(callback);
+  try {
+    const q = query(collection(db, 'evaluations_planning'), orderBy('createdAt', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot evaluations_planning từ Firestore:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot evaluations_planning:', err);
+    callback([]);
+    return () => {};
+  }
 };
-
-// Hàm khôi phục dữ liệu ban đầu Quỹ Tín Dụng Nhân Dân
-export const resetInitialData = () => {
-  localStorage.setItem('qtd_hrm_users', JSON.stringify(INITIAL_EMPLOYEES));
-  localStorage.setItem('qtd_hrm_work_history', JSON.stringify(INITIAL_WORK_HISTORY));
-  localStorage.setItem('qtd_hrm_evaluations_trust', JSON.stringify(INITIAL_TRUST_EVALUATIONS));
-  localStorage.setItem('qtd_hrm_evaluations_kpi', JSON.stringify(INITIAL_KPI_EVALUATIONS));
-  localStorage.setItem('qtd_hrm_evaluations_planning', JSON.stringify(INITIAL_PLANNING_VOTES));
-  localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(EVALUATION_PERIODS));
-  notifyDemoListeners('users');
-  notifyDemoListeners('work_history');
-  notifyDemoListeners('evaluations_trust');
-  notifyDemoListeners('evaluations_kpi');
-  notifyDemoListeners('evaluations_planning');
-  notifyDemoListeners('evaluation_periods');
-};
-export const resetDemoData = resetInitialData;

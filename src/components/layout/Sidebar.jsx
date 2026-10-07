@@ -12,7 +12,7 @@ import {
   Layers
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { ROLE_LABELS } from '../../lib/mockData';
+import { ROLE_LABELS } from '../../lib/constants';
 import Badge from '../common/Badge';
 
 const Sidebar = ({ isOpen, onClose }) => {

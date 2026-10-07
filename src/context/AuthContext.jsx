@@ -3,12 +3,11 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup,
   signOut as firebaseSignOut, 
-  onAuthStateChanged,
-  createUserWithEmailAndPassword
+  onAuthStateChanged
 } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '../lib/firebase';
 import { getUserProfile, syncUserProfile } from '../lib/services';
-import { INITIAL_EMPLOYEES, ROLES } from '../lib/mockData';
+import { ROLES } from '../lib/constants';
 
 const AuthContext = createContext(null);
 
@@ -22,7 +21,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
-  // Khởi tạo trạng thái xác thực
+  // Khởi tạo trạng thái xác thực từ Firebase Authentication & Firestore
   useEffect(() => {
     let unsubscribe = () => {};
 
@@ -30,10 +29,10 @@ export const AuthProvider = ({ children }) => {
       unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
         if (fbUser) {
           try {
-            // Lấy thông tin role và phòng ban từ Firestore collection 'users'
+            // Lấy thông tin role và phòng ban thực tế từ Firestore collection 'users'
             const profile = await getUserProfile(fbUser.uid, fbUser.email);
             if (profile?.status && profile.status !== 'ACTIVE') {
-              console.warn('Tài khoản đã bị tạm dừng hoạt động:', profile);
+              console.warn('Tài khoản đã bị tạm dừng hoạt động trên Firestore:', profile);
               await firebaseSignOut(auth);
               setCurrentUser(null);
               setRole(null);
@@ -41,8 +40,10 @@ export const AuthProvider = ({ children }) => {
               return;
             }
 
-            setCurrentUser({
+            const userData = {
               uid: fbUser.uid,
+              id: profile?.id || fbUser.uid,
+              code: profile?.code || 'CB-QT',
               email: fbUser.email,
               name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
               role: profile?.role || ROLES.STAFF,
@@ -51,20 +52,17 @@ export const AuthProvider = ({ children }) => {
               avatar: profile?.avatar || null,
               phone: profile?.phone || '',
               status: profile?.status || 'ACTIVE',
-            });
-            setRole(profile?.role || ROLES.STAFF);
+              partyMember: Boolean(profile?.partyMember),
+              politicalRole: profile?.politicalRole || '',
+              assignedArea: profile?.assignedArea || '',
+            };
+
+            setCurrentUser(userData);
+            setRole(userData.role);
           } catch (err) {
             console.error('Lỗi tải thông tin user Firestore:', err);
-            setCurrentUser({
-              uid: fbUser.uid,
-              email: fbUser.email,
-              name: fbUser.email.split('@')[0],
-              role: ROLES.STAFF,
-              department: 'Phòng Tín dụng',
-              position: 'Cán bộ',
-              status: 'ACTIVE',
-            });
-            setRole(ROLES.STAFF);
+            setCurrentUser(null);
+            setRole(null);
           }
         } else {
           setCurrentUser(null);
@@ -73,31 +71,15 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       });
     } else {
-      // Chế độ dữ liệu nội bộ ban đầu
-      const savedUser = localStorage.getItem('qtd_hrm_active_user');
-      if (savedUser) {
-        try {
-          const parsed = JSON.parse(savedUser);
-          setCurrentUser(parsed);
-          setRole(parsed.role);
-        } catch {
-          const defaultStaff = INITIAL_EMPLOYEES[2]; // Nguyễn Văn An (staff)
-          setCurrentUser(defaultStaff);
-          setRole(defaultStaff.role);
-        }
-      } else {
-        const defaultStaff = INITIAL_EMPLOYEES[2];
-        setCurrentUser(defaultStaff);
-        setRole(defaultStaff.role);
-        localStorage.setItem('qtd_hrm_active_user', JSON.stringify(defaultStaff));
-      }
+      setCurrentUser(null);
+      setRole(null);
       setLoading(false);
     }
 
     return () => unsubscribe();
   }, []);
 
-  // Hàm Đăng nhập bằng Email & Mật khẩu bảo mật
+  // Hàm Đăng nhập bằng Email & Mật khẩu bảo mật qua Firebase Auth
   const login = async (email, password) => {
     // 1. Kiểm tra Rate Limiting chống Brute-Force
     const now = Date.now();
@@ -112,75 +94,49 @@ export const AuthProvider = ({ children }) => {
     setAuthError(null);
 
     try {
-      if (isFirebaseConfigured && auth) {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const fbUser = userCredential.user;
-        const profile = await getUserProfile(fbUser.uid, fbUser.email);
-        
-        // Kiểm tra trạng thái tài khoản
-        if (profile?.status && profile.status !== 'ACTIVE') {
-          await firebaseSignOut(auth);
-          throw new Error('Tài khoản của đồng chí đã bị tạm khóa bởi Ban Quản trị. Vui lòng liên hệ Văn phòng Quỹ!');
-        }
-
-        const userData = {
-          uid: fbUser.uid,
-          email: fbUser.email,
-          name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
-          role: profile?.role || ROLES.STAFF,
-          department: profile?.department || 'Phòng Tín dụng',
-          position: profile?.position || 'Cán bộ',
-          avatar: profile?.avatar || null,
-          phone: profile?.phone || '',
-          status: profile?.status || 'ACTIVE',
-        };
-        
-        failedAttempts = 0; // Reset số lần sai
-        setCurrentUser(userData);
-        setRole(userData.role);
-        setLoading(false);
-        return { success: true, user: userData };
-      } else {
-        // Xử lý đăng nhập trong Chế độ Dữ liệu Nội bộ
-        const matched = INITIAL_EMPLOYEES.find(
-          (e) => e.email.toLowerCase() === email.trim().toLowerCase()
-        );
-
-        let userToSet;
-        if (matched) {
-          if (matched.status && matched.status !== 'ACTIVE') {
-            throw new Error('Tài khoản đã bị tạm dừng hoạt động.');
-          }
-          userToSet = matched;
-        } else {
-          userToSet = {
-            id: `emp-usr-${Date.now()}`,
-            code: 'CB-MOI',
-            name: email.split('@')[0].toUpperCase(),
-            email: email.trim(),
-            role: ROLES.STAFF,
-            department: 'Phòng Tín dụng',
-            position: 'Cán bộ',
-            avatar: null,
-            phone: '0900.000.000',
-            status: 'ACTIVE',
-          };
-        }
-
-        failedAttempts = 0; // Reset số lần sai
-        setCurrentUser(userToSet);
-        setRole(userToSet.role);
-        localStorage.setItem('qtd_hrm_active_user', JSON.stringify(userToSet));
-        setLoading(false);
-        return { success: true, user: userToSet };
+      if (!isFirebaseConfigured || !auth) {
+        throw new Error('Hệ thống xác thực Firebase chưa sẵn sàng. Vui lòng kiểm tra kết nối.');
       }
+
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const fbUser = userCredential.user;
+      const profile = await getUserProfile(fbUser.uid, fbUser.email);
+      
+      // Kiểm tra trạng thái tài khoản
+      if (profile?.status && profile.status !== 'ACTIVE') {
+        await firebaseSignOut(auth);
+        throw new Error('Tài khoản của đồng chí đã bị tạm dừng hoạt động bởi Ban Quản trị.');
+      }
+
+      const userData = {
+        uid: fbUser.uid,
+        id: profile?.id || fbUser.uid,
+        code: profile?.code || 'CB-QT',
+        email: fbUser.email,
+        name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
+        role: profile?.role || ROLES.STAFF,
+        department: profile?.department || 'Phòng Tín dụng',
+        position: profile?.position || 'Cán bộ',
+        avatar: profile?.avatar || null,
+        phone: profile?.phone || '',
+        status: profile?.status || 'ACTIVE',
+        partyMember: Boolean(profile?.partyMember),
+        politicalRole: profile?.politicalRole || '',
+        assignedArea: profile?.assignedArea || '',
+      };
+      
+      failedAttempts = 0; // Reset số lần sai
+      setCurrentUser(userData);
+      setRole(userData.role);
+      setLoading(false);
+      return { success: true, user: userData };
     } catch (error) {
       setLoading(false);
       failedAttempts += 1;
       if (failedAttempts >= 5) {
         lockUntilTime = Date.now() + 30000; // Khóa 30 giây
       }
-      let errorMsg = 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.';
+      let errorMsg = error.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMsg = 'Email hoặc mật khẩu không chính xác.';
       } else if (error.code === 'auth/too-many-requests') {
@@ -199,58 +155,46 @@ export const AuthProvider = ({ children }) => {
     setAuthError(null);
 
     try {
-      if (isFirebaseConfigured && auth && googleProvider) {
-        const result = await signInWithPopup(auth, googleProvider);
-        const fbUser = result.user;
-
-        // Tự động kiểm tra hoặc đồng bộ hồ sơ vào collection 'users'
-        let profile = await getUserProfile(fbUser.uid, fbUser.email);
-        if (!profile || profile.id !== fbUser.uid) {
-          profile = await syncUserProfile(fbUser);
-        }
-
-        if (profile?.status && profile.status !== 'ACTIVE') {
-          await firebaseSignOut(auth);
-          throw new Error('Tài khoản đã bị tạm dừng hoạt động. Vui lòng liên hệ Văn phòng Quỹ!');
-        }
-
-        const userData = {
-          uid: fbUser.uid,
-          email: fbUser.email,
-          name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
-          role: profile?.role || ROLES.STAFF,
-          department: profile?.department || 'Phòng Tín dụng',
-          position: profile?.position || 'Cán bộ',
-          avatar: profile?.avatar || fbUser.photoURL || null,
-          phone: profile?.phone || '',
-          status: profile?.status || 'ACTIVE',
-        };
-
-        failedAttempts = 0;
-        setCurrentUser(userData);
-        setRole(userData.role);
-        setLoading(false);
-        return { success: true, user: userData };
-      } else {
-        // Chế độ mô phỏng khi chưa kết nối
-        const demoGoogleUser = {
-          id: `emp-google-${Date.now()}`,
-          code: 'CB-GOOGLE',
-          name: 'Cán bộ Google (Mô phỏng)',
-          email: 'canbo.google@qtdyentho.vn',
-          role: ROLES.STAFF,
-          department: 'Phòng Tín dụng',
-          position: 'Cán bộ',
-          avatar: null,
-          phone: '0912.888.999',
-          status: 'ACTIVE',
-        };
-        setCurrentUser(demoGoogleUser);
-        setRole(demoGoogleUser.role);
-        localStorage.setItem('qtd_hrm_active_user', JSON.stringify(demoGoogleUser));
-        setLoading(false);
-        return { success: true, user: demoGoogleUser };
+      if (!isFirebaseConfigured || !auth || !googleProvider) {
+        throw new Error('Đăng nhập Google chưa được cấu hình.');
       }
+
+      const result = await signInWithPopup(auth, googleProvider);
+      const fbUser = result.user;
+
+      // Tra cứu hồ sơ từ Firestore
+      let profile = await getUserProfile(fbUser.uid, fbUser.email);
+      if (!profile) {
+        profile = await syncUserProfile(fbUser);
+      }
+
+      if (profile?.status && profile.status !== 'ACTIVE') {
+        await firebaseSignOut(auth);
+        throw new Error('Tài khoản đã bị tạm dừng hoạt động. Vui lòng liên hệ Văn phòng Quỹ!');
+      }
+
+      const userData = {
+        uid: fbUser.uid,
+        id: profile?.id || fbUser.uid,
+        code: profile?.code || 'CB-QT',
+        email: fbUser.email,
+        name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
+        role: profile?.role || ROLES.STAFF,
+        department: profile?.department || 'Phòng Tín dụng',
+        position: profile?.position || 'Cán bộ',
+        avatar: profile?.avatar || fbUser.photoURL || null,
+        phone: profile?.phone || '',
+        status: profile?.status || 'ACTIVE',
+        partyMember: Boolean(profile?.partyMember),
+        politicalRole: profile?.politicalRole || '',
+        assignedArea: profile?.assignedArea || '',
+      };
+
+      failedAttempts = 0;
+      setCurrentUser(userData);
+      setRole(userData.role);
+      setLoading(false);
+      return { success: true, user: userData };
     } catch (error) {
       setLoading(false);
       console.error('Lỗi xác thực Google:', error);
@@ -275,22 +219,8 @@ export const AuthProvider = ({ children }) => {
       }
       setCurrentUser(null);
       setRole(null);
-      localStorage.removeItem('qtd_hrm_active_user');
     } catch (err) {
       console.error('Lỗi đăng xuất:', err);
-    }
-  };
-
-  // Chuyển đổi nhanh vai trò / tài khoản mẫu (tiện lợi cho việc review/demo tất cả 3 phân quyền)
-  const switchDemoAccount = (targetEmailOrRole) => {
-    let target = INITIAL_EMPLOYEES.find((e) => e.email === targetEmailOrRole);
-    if (!target) {
-      target = INITIAL_EMPLOYEES.find((e) => e.role === targetEmailOrRole);
-    }
-    if (target) {
-      setCurrentUser(target);
-      setRole(target.role);
-      localStorage.setItem('qtd_hrm_active_user', JSON.stringify(target));
     }
   };
 
@@ -308,11 +238,10 @@ export const AuthProvider = ({ children }) => {
     isManager,
     isChairman,
     canAccessDashboard,
-    isDemoMode: !isFirebaseConfigured,
+    isDemoMode: false,
     login,
     loginWithGoogle,
     logout,
-    switchDemoAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -25,15 +25,11 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { 
-  TRUST_CRITERIA, 
-  INITIAL_EMPLOYEES,
-  EVALUATION_PERIODS 
-} from '../lib/mockData';
-import { 
   saveTrustEvaluation, 
   subscribeTrustEvaluations, 
   subscribeEmployees,
   subscribeEvaluationPeriods,
+  subscribeTrustCriteria,
   saveEvaluationPeriod,
   updateEvaluationPeriod
 } from '../lib/services';
@@ -49,12 +45,26 @@ import Spinner from '../components/common/Spinner';
 import EmployeeBadge from '../components/common/EmployeeBadge';
 import StatusBadge from '../components/common/StatusBadge';
 
+const FALLBACK_CRITERIA = [
+  { id: 1, code: 'TC01', title: '1. Tinh thần trách nhiệm & Đạo đức nghề nghiệp', description: 'Gương mẫu, tận tụy với công việc, trung thực, liêm chính.' },
+  { id: 2, code: 'TC02', title: '2. Chấp hành Quy chế, Nội quy & Pháp luật NHNN', description: 'Tuân thủ tuyệt đối quy trình nghiệp vụ và pháp luật ngân hàng.' },
+  { id: 3, code: 'TC03', title: '3. Năng lực chuyên môn & Nghiệp vụ chuyên sâu', description: 'Nắm vững chính sách, xử lý công việc chính xác, an toàn.' },
+  { id: 4, code: 'TC04', title: '4. Tác phong giao dịch & Văn hóa phục vụ thành viên', description: 'Chu đáo, tôn trọng, giữ gìn uy tín Quỹ tín dụng nhân dân.' },
+  { id: 5, code: 'TC05', title: '5. Tinh thần đoàn kết & Phối hợp phòng ban', description: 'Tương trợ đồng nghiệp, phối hợp nhịp nhàng giữa các bộ phận.' },
+  { id: 6, code: 'TC06', title: '6. Kỷ luật giờ giấc & Bảo mật thông tin tài chính', description: 'Nghiêm túc chấp hành kỷ luật lao động và an toàn thông tin.' },
+  { id: 7, code: 'TC07', title: '7. Đổi mới sáng tạo & Chuyển đổi số', description: 'Tích cực ứng dụng công nghệ, cải tiến quy trình công tác.' },
+  { id: 8, code: 'TC08', title: '8. Liêm chính tài chính & Phòng ngừa rủi ro đạo đức', description: 'Không vụ lợi, không bao che sai phạm, phòng ngừa rủi ro.' },
+  { id: 9, code: 'TC09', title: '9. Đóng góp phong trào & Văn hóa tổ chức', description: 'Tham gia sôi nổi các hoạt động đoàn thể, văn thể mỹ của Quỹ.' },
+  { id: 10, code: 'TC10', title: '10. Hiệu quả hoàn thành chỉ tiêu công việc', description: 'Mức độ hoàn thành kế hoạch được giao theo tiến độ và chất lượng.' },
+];
+
 const TrustEvaluation = () => {
   const { currentUser, role } = useAuth();
   const toast = useToast();
 
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
-  const [periods, setPeriods] = useState(EVALUATION_PERIODS);
+  const [employees, setEmployees] = useState([]);
+  const [periods, setPeriods] = useState([]);
+  const [criteria, setCriteria] = useState(FALLBACK_CRITERIA);
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [targetEmployeeId, setTargetEmployeeId] = useState('');
   const [evaluations, setEvaluations] = useState([]);
@@ -79,9 +89,9 @@ const TrustEvaluation = () => {
   // 10 tiêu chí mặc định điểm là 8
   const [scores, setScores] = useState(() => {
     const initial = {};
-    TRUST_CRITERIA.forEach((c) => {
-      initial[c.id] = 8;
-    });
+    for (let i = 1; i <= 10; i++) {
+      initial[i] = 8;
+    }
     return initial;
   });
 
@@ -95,10 +105,18 @@ const TrustEvaluation = () => {
     return hasPermission(role, PERMISSIONS.TRUST_MANAGE_PERIODS) || role === 'chairman' || role === 'manager';
   }, [role]);
 
+  // Subscribe danh sách tiêu chí từ Firestore
+  useEffect(() => {
+    const unsub = subscribeTrustCriteria((list) => {
+      if (list && list.length > 0) setCriteria(list);
+    });
+    return () => unsub();
+  }, []);
+
   // Subscribe danh sách nhân sự
   useEffect(() => {
     const unsub = subscribeEmployees((list) => {
-      if (list && list.length > 0) setEmployees(list);
+      setEmployees(list || []);
     });
     return () => unsub();
   }, []);
@@ -485,7 +503,7 @@ const TrustEvaluation = () => {
                 </div>
 
                 <div className="space-y-3.5">
-                  {TRUST_CRITERIA.map((criterion) => (
+                  {criteria.map((criterion) => (
                     <RatingInput
                       key={criterion.id}
                       label={criterion.title}
@@ -780,7 +798,7 @@ const TrustEvaluation = () => {
                 Chi tiết điểm 10 tiêu chí:
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {TRUST_CRITERIA.map((criterion) => {
+                {criteria.map((criterion) => {
                   const score = selectedEvaluation.scores?.[criterion.id] ?? 0;
                   return (
                     <div

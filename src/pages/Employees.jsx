@@ -17,16 +17,18 @@ import {
   MapPin,
   Award
 } from 'lucide-react';
-import { INITIAL_EMPLOYEES, DEPARTMENTS, ROLE_LABELS } from '../lib/mockData';
+import { DEPARTMENTS, ROLE_LABELS } from '../lib/constants';
 import { subscribeEmployees, subscribeWorkHistory } from '../lib/services';
 import { formatDateVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import Spinner from '../components/common/Spinner';
 
 const Employees = () => {
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
 
@@ -36,7 +38,8 @@ const Employees = () => {
 
   useEffect(() => {
     const unsub = subscribeEmployees((list) => {
-      if (list && list.length > 0) setEmployees(list);
+      setEmployees(list || []);
+      setLoading(false);
     });
     return () => unsub();
   }, []);
@@ -120,9 +123,18 @@ const Employees = () => {
         </div>
       </Card>
 
-      {/* Grid of Employee Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((emp) => (
+      {/* Loading & Grid of Employee Cards */}
+      {loading && employees.length === 0 ? (
+        <div className="py-20 flex justify-center items-center">
+          <Spinner text="Đang đồng bộ hồ sơ cán bộ từ cơ sở dữ liệu..." />
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="text-center py-16">
+          <p className="text-slate-500 text-sm">Không tìm thấy cán bộ nào phù hợp với điều kiện tìm kiếm.</p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((emp) => (
           <div
             key={emp.id}
             className="bg-white rounded-2xl border border-slate-200/90 hover:border-teal-300 hover:shadow-md p-5 transition-all flex flex-col justify-between"
@@ -212,6 +224,7 @@ const Employees = () => {
           </div>
         ))}
       </div>
+    )}
 
       {/* Modal Xem Quá trình Luân chuyển công tác (work_history) */}
       <Modal
