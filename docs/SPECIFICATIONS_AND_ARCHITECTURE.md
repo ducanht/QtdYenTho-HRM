@@ -166,4 +166,23 @@ d:\Antigravity Projects\QtdYenTho-HRM\
    - Sticky Summary Card hiển thị đồng thời bên phải.
 
 ---
+
+## 🧪 7. HỆ THỐNG KIỂM THỬ TỰ ĐỘNG PLAYWRIGHT (E2E)
+
+Hệ thống được tích hợp bộ kiểm thử tự động toàn diện **Playwright Test** với 5 kịch bản End-to-End đã vượt qua kiểm định 100%:
+- **TC01**: Màn hình Đăng nhập Quỹ TDND Yên Thọ (Thương hiệu, khẩu hiệu, 3 tài khoản cán bộ chính thức).
+- **TC02**: Đăng nhập & Truy cập Cổng Phân Hệ Ô Lưới (`/portal`) với lời chào đúng chức danh.
+- **TC03**: Danh bạ Cán bộ & Modal Luân chuyển công tác (`/employees`).
+- **TC04**: Form Đánh giá Tín nhiệm 10 Tiêu chí & Quy chế Ban Quản trị (`/trust-evaluation`).
+- **TC05**: Kiểm thử giao diện di động (Mobile Viewport 375x667).
+
+### Các lệnh thực thi:
+```bash
+npm run test:e2e        # Chạy kiểm thử tự động Headless
+npm run test:e2e:ui     # Chạy giao diện tương tác Playwright UI
+npm run test:e2e:report # Xem báo cáo HTML chi tiết
+```
+Chi tiết xem tại: [docs/HUONG_DAN_KIEM_THU_PLAYWRIGHT.md](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/docs/HUONG_DAN_KIEM_THU_PLAYWRIGHT.md).
+
+---
 *Tài liệu kỹ thuật nội bộ — Quỹ Tín Dụng Nhân Dân Yên Thọ.*

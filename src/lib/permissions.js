@@ -212,7 +212,8 @@ export const ROLE_PERMISSIONS = {
  * @param {string} permission Mã quyền cần kiểm tra (từ PERMISSIONS)
  * @returns {boolean}
  */
-export const hasPermission = (user, permission) => {
+export const hasPermission = (userOrRole, permission) => {
+  const user = typeof userOrRole === 'string' ? { role: userOrRole } : userOrRole;
   if (!user || !user.role) return false;
   
   // Nếu người dùng có danh sách quyền tùy biến riêng (custom permissions override)
@@ -227,12 +228,13 @@ export const hasPermission = (user, permission) => {
 
 /**
  * Kiểm tra quyền truy cập vào một phân hệ cụ thể
- * @param {Object} user 
+ * @param {Object|string} userOrRole 
  * @param {string} moduleCode 
  * @returns {boolean}
  */
-export const canAccessModule = (user, moduleCode) => {
-  if (!user) return false;
+export const canAccessModule = (userOrRole, moduleCode) => {
+  const user = typeof userOrRole === 'string' ? { role: userOrRole } : userOrRole;
+  if (!user || !user.role) return false;
   switch (moduleCode) {
     case SYSTEM_MODULES.DASHBOARD.code:
       return hasPermission(user, PERMISSIONS.DASHBOARD_VIEW);

@@ -1,3 +1,5 @@
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShieldCheck, 
@@ -110,9 +112,9 @@ const Sidebar = ({ isOpen, onClose }) => {
               <Building2 className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-bold text-white tracking-wide truncate">
+              <div className="text-sm font-bold text-white tracking-wide truncate">
                 QTDND YÊN THỌ
-              </h2>
+              </div>
               <p className="text-[11px] text-teal-400 font-medium tracking-tight">
                 CỔNG QUẢN TRỊ NHÂN SỰ
               </p>

@@ -227,7 +227,7 @@ const Login = () => {
             <div className="grid grid-cols-1 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('canbo@qtdyentho.vn', 'staff')}
+                onClick={() => handleQuickLogin('Sinhtdyt@gmail.com', 'staff')}
                 className="flex items-center justify-between p-2.5 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all text-left text-xs cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
@@ -235,18 +235,18 @@ const Login = () => {
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-900">Cán bộ (Staff)</div>
-                    <div className="text-[10px] text-slate-500">Nguyễn Văn An • Tín dụng</div>
+                    <div className="font-bold text-slate-900">Cán bộ chuyên môn (Staff)</div>
+                    <div className="text-[10px] text-slate-500">Nguyễn Thị Sinh • Thẩm định tài sản</div>
                   </div>
                 </div>
                 <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#059669]">
-                  Truy cập →
+                  Đăng nhập →
                 </span>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleQuickLogin('quanly@qtdyentho.vn', 'manager')}
+                onClick={() => handleQuickLogin('nguyenvansontdyt@gmail.com', 'manager')}
                 className="flex items-center justify-between p-2.5 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all text-left text-xs cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
@@ -254,18 +254,18 @@ const Login = () => {
                     <Briefcase className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-900">Ban điều hành (Manager)</div>
-                    <div className="text-[10px] text-slate-500">Trần Thị Mai • Giám đốc</div>
+                    <div className="font-bold text-slate-900">Ban Điều hành (Manager)</div>
+                    <div className="text-[10px] text-slate-500">Nguyễn Văn Sơn • Giám đốc điều hành</div>
                   </div>
                 </div>
                 <span className="text-[11px] font-bold text-emerald-700 group-hover:text-[#059669]">
-                  Truy cập →
+                  Đăng nhập →
                 </span>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleQuickLogin('chutich@qtdyentho.vn', 'chairman')}
+                onClick={() => handleQuickLogin('ducanht@gmail.com', 'chairman')}
                 className="flex items-center justify-between p-2.5 rounded-2xl border border-slate-200 hover:border-amber-500 hover:bg-amber-50/50 transition-all text-left text-xs cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
@@ -274,11 +274,11 @@ const Login = () => {
                   </div>
                   <div>
                     <div className="font-bold text-slate-900">Chủ tịch HĐQT (Chairman)</div>
-                    <div className="text-[10px] text-slate-500">Lê Đình Hải • HĐQT</div>
+                    <div className="text-[10px] text-slate-500">Trịnh Đức Anh • Chủ tịch HĐQT</div>
                   </div>
                 </div>
                 <span className="text-[11px] font-bold text-amber-700 group-hover:text-amber-600">
-                  Truy cập →
+                  Đăng nhập →
                 </span>
               </button>
             </div>
