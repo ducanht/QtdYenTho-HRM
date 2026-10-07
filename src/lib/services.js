@@ -87,6 +87,40 @@ export const getUserProfile = async (uid, email) => {
   };
 };
 
+export const syncUserProfile = async (user) => {
+  if (isFirebaseConfigured && db && user?.uid) {
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        const initialMatch = INITIAL_EMPLOYEES.find(
+          (e) => e.email.toLowerCase() === user.email?.toLowerCase()
+        );
+        const newProfile = {
+          id: user.uid,
+          code: initialMatch?.code || `CB-${user.uid.slice(0, 4).toUpperCase()}`,
+          name: user.displayName || initialMatch?.name || user.email?.split('@')[0] || 'Cán bộ QTDND',
+          email: user.email || '',
+          role: initialMatch?.role || 'staff',
+          department: initialMatch?.department || 'Phòng Tín dụng',
+          position: initialMatch?.position || 'Cán bộ',
+          avatar: user.photoURL || initialMatch?.avatar || null,
+          phone: initialMatch?.phone || '',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString()
+        };
+        await setDoc(userRef, newProfile);
+        return newProfile;
+      } else {
+        return { id: userDoc.id, ...userDoc.data() };
+      }
+    } catch (err) {
+      console.warn('Lỗi khi đồng bộ hồ sơ user vào Firestore:', err);
+    }
+  }
+  return null;
+};
+
 export const subscribeEmployees = (callback) => {
   if (isFirebaseConfigured && db) {
     try {

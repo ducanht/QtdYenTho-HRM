@@ -1,0 +1,163 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Models
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields: id, code, name, email, role, department, position, phone, status, avatar, joinDate, birthYear, cccd, gender, partyMember, tradeUnion, createdAt, updatedAt
+    //
+    // Collection: work_history
+    // Document ID: {historyId}
+    // Fields: id, employeeId, employeeName, employeeCode, decisionNumber, decisionDate, effectiveDate, previousPosition, previousDepartment, newPosition, newDepartment, signerName, signerPosition, reason, type, notes, createdAt
+    //
+    // Collection: evaluation_periods
+    // Document ID: {periodId}
+    // Fields: id, code, name, year, quarter, startDate, endDate, status, isAnonymous, description, totalParticipants, submittedCount, createdAt, updatedAt
+    //
+    // Collection: trust_criteria
+    // Document ID: {criterionId}
+    // Fields: id, code, name, category, description, maxScore, weight, order
+    //
+    // Collection: evaluations_trust
+    // Document ID: {evalId}
+    // Fields: id, periodId, targetEmployeeId, targetEmployeeName, evaluatorId, evaluatorName, evaluatorRole, scores, totalScore, generalComments, strengths, weaknesses, isAnonymous, periodIsAnonymous, createdAt
+    //
+    // Collection: evaluations_kpi
+    // Document ID: {kpiId}
+    // Fields: id, employeeId, employeeName, department, position, periodId, year, quarter, status, selfScore, managerScore, chairmanScore, finalScore, kpiItems, updatedAt, submittedAt, approvedAt
+    //
+    // Collection: evaluations_planning
+    // Document ID: {planningId}
+    // Fields: id, periodId, voterId, candidateId, candidateName, planningPosition, confidenceLevel, reason, createdAt
+    //
+    // Collection: system_modules
+    // Document ID: {moduleCode}
+    // Fields: code, name, shortName, description, icon, path, status, badge, colorTheme, order, minRole
+    //
+    // Collection: roles_permissions
+    // Document ID: {roleKey}
+    // Fields: roleKey, roleName, description, modules, features, updatedAt
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Kiểm tra người dùng đã đăng nhập qua Firebase Auth
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Kiểm tra người dùng sở hữu tài liệu theo userId
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Lấy thông tin hồ sơ của người dùng hiện tại từ CSDL
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Kiểm tra vai trò quản lý (HĐQT hoặc Ban điều hành)
+    function isManagerOrChairman() {
+      return isAuthenticated() && (
+        getUserData().role in ['manager', 'chairman', 'admin'] ||
+        request.auth.token.email.matches('.*admin.*') ||
+        request.auth.token.email.matches('.*chutich.*') ||
+        request.auth.token.email.matches('.*quanly.*')
+      );
+    }
+
+    // ===============================================================
+    // 1. Hồ sơ Cán bộ (users)
+    // ===============================================================
+    match /users/{userId} {
+      // Cán bộ nội bộ được phép đọc danh bạ để phục vụ nghiệp vụ và đánh giá tín nhiệm
+      allow read: if isAuthenticated();
+      
+      // Cho phép khởi tạo hồ sơ khi đăng nhập lần đầu
+      allow create: if isAuthenticated();
+      // Cho phép cập nhật hồ sơ cá nhân hoặc quản lý cập nhật
+      allow update: if isOwner(userId) || isManagerOrChairman();
+      allow delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 2. Quá trình Luân chuyển công tác (work_history)
+    // ===============================================================
+    match /work_history/{historyId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 3. Đợt Đánh giá Tín nhiệm (evaluation_periods)
+    // ===============================================================
+    match /evaluation_periods/{periodId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 4. Danh mục Tiêu chí Tín nhiệm (trust_criteria)
+    // ===============================================================
+    match /trust_criteria/{criterionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 5. Phiếu Đánh giá Tín nhiệm (evaluations_trust)
+    // ===============================================================
+    match /evaluations_trust/{evalId} {
+      allow read: if isAuthenticated();
+      // Cho phép cán bộ nộp phiếu đánh giá
+      allow create: if isAuthenticated();
+      allow update, delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 6. Chấm điểm KPI 3 Cấp (evaluations_kpi)
+    // ===============================================================
+    match /evaluations_kpi/{kpiId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 7. Bỏ phiếu Quy hoạch Cán bộ (evaluations_planning)
+    // ===============================================================
+    match /evaluations_planning/{planningId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 8. Danh mục Phân hệ Hệ thống (system_modules)
+    // ===============================================================
+    match /system_modules/{moduleCode} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 9. Ma trận Phân quyền (roles_permissions)
+    // ===============================================================
+    match /roles_permissions/{roleKey} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
+  }
+}

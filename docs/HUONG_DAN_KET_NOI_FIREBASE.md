@@ -1,21 +1,22 @@
 # HƯỚNG DẪN KẾT NỐI FIREBASE & TỰ ĐỘNG KHỞI TẠO CSDL TOÀN DIỆN
 ## Cổng Thông Tin Đánh Giá Tín Nhiệm & Quản Trị Nhân Sự — Quỹ Tín Dụng Nhân Dân Yên Thọ
 
-> **CƠ CHẾ TỰ ĐỘNG HÓA 100% (ZERO-MANUAL COLLECTION CREATION)**:
-> Bạn **KHÔNG CẦN** phải tạo thủ công bất kỳ collection hay bảng nào trên Firebase Console. Hệ thống đã tích hợp sẵn **Bộ máy Khởi tạo & Cập nhật CSDL Tự động (Automated Database Provisioning Engine)**. Sau khi dán cấu hình Firebase, chỉ cần nhấn **1-Click** trên thanh công cụ WebApp, toàn bộ 9 bộ sưu tập, dữ liệu nhân sự, lịch sử luân chuyển và 10 tiêu chí tín nhiệm sẽ được tạo và đồng bộ tự động.
+> **TRẠNG THÁI HỆ THỐNG**:
+> - **Firebase Project ID**: `qtdyentho-hrm`
+> - **Web App ID**: `1:112031414979:web:e96098d3108638f50d4076`
+> - **Phương thức Xác thực (Authentication)**: Đã kích hoạt **Email/Password** & **Google Sign-In**.
+> - **Cơ sở dữ liệu (Firestore)**: Đã khởi tạo vùng `asia-southeast1` (Singapore) và triển khai `firestore.rules`.
+> - **Địa chỉ truy cập trực tuyến**: `https://qtdyentho-hrm.web.app`
 
 ---
 
 ## 📋 MỤC LỤC
 1. [Tổng Quan Kiến Trúc CSDL & Bảo Mật](#1-tổng-quan-kiến-trúc-csdl--bảo-mật)
-2. [Bước 1: Tạo Dự Án Firebase Mới (Miễn Phí)](#bước-1-tạo-dự-án-firebase-mới-miễn-phí)
-3. [Bước 2: Bật Dịch Vụ Xác Thực (Authentication)](#bước-2-bật-dịch-vụ-xác-thực-authentication)
-4. [Bước 3: Tạo Cơ Sở Dữ Liệu Cloud Firestore](#bước-3-tạo-cơ-sở-dữ-liệu-cloud-firestore)
-5. [Bước 4: Cấu Hình Quy Tắc Bảo Mật (Firestore Security Rules)](#bước-4-cấu-hình-quy-tắc-bảo-mật-firestore-security-rules)
-6. [Bước 5: Lấy Mã Cấu Hình & Dán Vào Ứng Dụng](#bước-5-lấy-mã-cấu-hình--dán-vào-ứng-dụng)
-7. [Bước 6: Kích Hoạt Khởi Tạo CSDL Tự Động 1-Click](#bước-6-kích-hoạt-khởi-tạo-csdl-tự-động-1-click)
-8. [Tạo Tài Khoản Cán Bộ & Phân Quyền Truy Cập](#tạo-tài-khoản-cán-bộ--phân-quyền-truy-cập)
-9. [Cấu Trúc Modular & Khả Năng Mở Rộng Dài Hạn (Chấm Công, Lương)](#cấu-trúc-modular--khả-năng-mở-rộng-dài-hạn)
+2. [Cấu Hình Xác Thực Authentication (Email & Google)](#2-cấu-hình-xác-thực-authentication-email--google)
+3. [Cơ Sở Dữ Liệu Cloud Firestore & Bảo Mật Rules](#3-cơ-sở-dữ-liệu-cloud-firestore--bảo-mật-rules)
+4. [Kích Hoạt Khởi Tạo CSDL Tự Động 1-Click](#4-kích-hoạt-khởi-tạo-csdl-tự-động-1-click)
+5. [Tạo Tài Khoản Cán Bộ & Phân Quyền Truy Cập](#5-tạo-tài-khoản-cán-bộ--phân-quyền-truy-cập)
+6. [Cấu Trúc Modular & Khả Năng Mở Rộng Dài Hạn (Chấm Công, Lương)](#6-cấu-trúc-modular--khả-năng-mở-rộng-dài-hạn)
 
 ---
 
@@ -42,13 +43,11 @@ graph TD
 
 ---
 
-## BƯỚC 1: TẠO DỰ ÁN FIREBASE MỚI (MIỄN PHÍ)
+## 2. CẤU HÌNH XÁC THỰC AUTHENTICATION (EMAIL & GOOGLE)
 
-1. Truy cập vào **[Google Firebase Console](https://console.firebase.google.com/)** bằng tài khoản Google của Quỹ.
-2. Nhấn nút **"Add project"** (Thêm dự án).
-3. Đặt tên dự án: `qtd-yentho-hrm` (hoặc tên tùy chọn theo đơn vị).
-4. Nhấn **Continue** (ở bước Google Analytics có thể bật hoặc tắt tùy nhu cầu), sau đó nhấn **Create project**.
-5. Chờ 30 giây để Google thiết lập môi trường đám mây hoàn tất.
+Dự án đã được kích hoạt đồng thời 2 phương thức xác thực chuẩn doanh nghiệp:
+1. **Email / Mật khẩu (Email/Password)**: Dành cho cán bộ đăng nhập bằng tài khoản nội bộ cấp bởi Quỹ (ví dụ: `canbo@qtdyentho.vn`).
+2. **Đăng nhập với Google (Google Sign-In)**: Hỗ trợ cán bộ sử dụng tài khoản Gmail công vụ/cá nhân để đăng nhập an toàn 1 chạm qua cửa sổ pop-up. Khi đăng nhập lần đầu, hệ thống tự động khởi tạo hồ sơ trong collection `users` trên Firestore.
 
 ---
 

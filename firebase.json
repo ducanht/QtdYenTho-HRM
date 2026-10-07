@@ -32,5 +32,18 @@
         ]
       }
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "QTDND Yen Tho HRM",
+        "supportEmail": "ducanht.gemini@gmail.com"
+      }
+    }
   }
 }
