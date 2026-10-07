@@ -1,75 +1,88 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
+import Spinner from './components/common/Spinner';
 
-// Pages
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import TrustEvaluation from './pages/TrustEvaluation';
-import KpiEvaluation from './pages/KpiEvaluation';
-import PlanningVote from './pages/PlanningVote';
-import Employees from './pages/Employees';
-import NotFound from './pages/NotFound';
+// Pages - Code Splitting (Lazy Loading) để tối ưu dung lượng Bundle & Tốc độ tải
+const Login = lazy(() => import('./pages/Login'));
+const PortalLauncher = lazy(() => import('./pages/PortalLauncher'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const TrustEvaluation = lazy(() => import('./pages/TrustEvaluation'));
+const KpiEvaluation = lazy(() => import('./pages/KpiEvaluation'));
+const PlanningVote = lazy(() => import('./pages/PlanningVote'));
+const Employees = lazy(() => import('./pages/Employees'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Loading Fallback Component
+const PageLoadingFallback = () => (
+  <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3">
+    <Spinner size="lg" />
+    <span className="text-xs text-slate-500 font-medium">Đang tải phân hệ...</span>
+  </div>
+);
 
 // Component điều hướng thông minh tại trang chủ "/"
+// Sau khi đăng nhập luôn đưa người dùng về Cổng Phân Hệ Ô Lưới (/portal)
 const RootRedirect = () => {
-  const { currentUser, role, canAccessDashboard, loading } = useAuth();
+  const { currentUser, loading } = useAuth();
 
   if (loading) return null;
   if (!currentUser) return <Navigate to="/login" replace />;
 
-  if (canAccessDashboard) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <Navigate to="/trust-evaluation" replace />;
+  return <Navigate to="/portal" replace />;
 };
 
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Route công khai: Đăng nhập */}
-      <Route path="/login" element={<Login />} />
+    <Suspense fallback={<PageLoadingFallback />}>
+      <Routes>
+        {/* Route công khai: Đăng nhập */}
+        <Route path="/login" element={<Login />} />
 
-      {/* Routes được bảo vệ bên trong MainLayout */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<RootRedirect />} />
-
-        {/* Dashboard: Chỉ cho phép manager và chairman */}
+        {/* Routes được bảo vệ bên trong MainLayout */}
         <Route
-          path="dashboard"
+          path="/"
           element={
-            <ProtectedRoute allowedRoles={['manager', 'chairman']}>
-              <Dashboard />
+            <ProtectedRoute>
+              <MainLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<RootRedirect />} />
 
-        {/* Module A: Đánh giá tín nhiệm */}
-        <Route path="trust-evaluation" element={<TrustEvaluation />} />
+          {/* Cổng Phân Hệ Ô Lưới (Application Grid Hub) - Màn hình chính sau đăng nhập */}
+          <Route path="portal" element={<PortalLauncher />} />
 
-        {/* Module B: Chấm điểm KPI */}
-        <Route path="kpi-evaluation" element={<KpiEvaluation />} />
+          {/* Module A: Đánh giá tín nhiệm 10 tiêu chí (Trọng tâm) */}
+          <Route path="trust-evaluation" element={<TrustEvaluation />} />
 
-        {/* Module C: Bỏ phiếu quy hoạch */}
-        <Route path="planning-vote" element={<PlanningVote />} />
+          {/* Module B: Chấm điểm KPI 3 cấp */}
+          <Route path="kpi-evaluation" element={<KpiEvaluation />} />
 
-        {/* Danh bạ nhân sự */}
-        <Route path="employees" element={<Employees />} />
+          {/* Module C: Bỏ phiếu quy hoạch cán bộ */}
+          <Route path="planning-vote" element={<PlanningVote />} />
 
-        {/* 404 Route */}
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+          {/* Module D: Danh bạ & Quá trình luân chuyển cán bộ */}
+          <Route path="employees" element={<Employees />} />
+
+          {/* Module E: Dashboard & Giám sát (Chỉ cho phép manager và chairman) */}
+          <Route
+            path="dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['manager', 'chairman']}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 404 Route */}
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 

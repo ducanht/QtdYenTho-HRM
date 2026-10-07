@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Menu, 
   Bell, 
@@ -7,7 +9,8 @@ import {
   Building, 
   Award,
   RefreshCw,
-  Database
+  Database,
+  Layers
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS, ROLES } from '../../lib/mockData';
@@ -32,22 +35,32 @@ const Navbar = ({ onToggleSidebar }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          <div>
+          <Link to="/portal" className="group text-left">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[#0f766e] uppercase tracking-wider hidden sm:inline">
+              <span className="text-xs font-semibold text-[#047857] uppercase tracking-wider hidden sm:inline group-hover:underline">
                 Quỹ Tín Dụng Nhân Dân Yên Thọ
               </span>
               <span className="text-slate-300 hidden sm:inline">•</span>
-              <span className="text-xs text-slate-500 font-medium">Hệ Thống HRM 2026</span>
+              <span className="text-xs text-slate-500 font-medium">HRM Portal 2026</span>
             </div>
-            <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+            <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight group-hover:text-[#047857] transition-colors">
               Cổng Đánh Giá Tín Nhiệm & Quản Trị Nhân Sự
             </h1>
-          </div>
+          </Link>
         </div>
 
-        {/* Right: Tự động CSDL + Quick Switch Role + User Profile */}
+        {/* Right: Cổng Phân Hệ + Tự động CSDL + Quick Switch Role + User Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Nút Cổng Phân Hệ Ô Lưới */}
+          <Link
+            to="/portal"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50/60 text-slate-700 hover:text-[#047857] text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+            title="Về Trang Cổng Phân Hệ Ô Lưới"
+          >
+            <Layers className="w-3.5 h-3.5 text-[#047857]" />
+            <span className="hidden md:inline">Cổng Phân Hệ</span>
+          </Link>
+
           {/* Nút Khởi tạo & Cập nhật CSDL Tự Động */}
           <button
             type="button"

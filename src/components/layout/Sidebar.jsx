@@ -1,5 +1,3 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShieldCheck, 
@@ -10,7 +8,8 @@ import {
   LogOut, 
   ChevronRight,
   Sparkles,
-  Award
+  Award,
+  Layers
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS } from '../../lib/mockData';
@@ -22,6 +21,16 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   // Danh sách các mục điều hướng dựa theo Role
   const navItems = [
+    // 0. Cổng phân hệ Ô lưới (Hub) - Luôn hiển thị cho mọi vai trò
+    {
+      path: '/portal',
+      label: 'Cổng Phân Hệ (Hub)',
+      icon: Layers,
+      desc: 'Danh mục Ô lưới',
+      badge: 'Chính',
+      roles: ['staff', 'manager', 'chairman'],
+    },
+
     // 1. Dashboard: Chỉ dành cho manager & chairman
     ...(canAccessDashboard
       ? [
@@ -35,7 +44,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         ]
       : []),
 
-    // 2. Module A: Đánh giá tín nhiệm
+    // 2. Module A: Đánh giá tín nhiệm (Trọng tâm)
     {
       path: '/trust-evaluation',
       label: 'Đánh giá tín nhiệm',
