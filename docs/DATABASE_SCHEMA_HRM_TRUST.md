@@ -1,9 +1,12 @@
-# THIẾT KẾ CƠ SỞ DỮ LIỆU: HỒ SƠ CBNV & PHÂN HỆ ĐÁNH GIÁ TÍN NHIỆM
+# THIẾT KẾ CƠ SỞ DỮ LIỆU: HỒ SƠ CBNV, LUÂN CHUYỂN CÔNG TÁC & ĐÁNH GIÁ TÍN NHIỆM
 ## QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ
 
 > **Đơn vị áp dụng**: Quỹ Tín dụng Nhân dân Yên Thọ  
 > **Địa bàn hoạt động**: Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa  
-> **Cơ sở pháp lý**: Luật Các tổ chức tín dụng, Thông tư của NHNN quy định về tổ chức và hoạt động của Quỹ tín dụng nhân dân, Điều lệ và Quy chế quản trị nội bộ QTDND Yên Thọ.
+> **Cơ sở pháp lý**: 
+> - Luật Các tổ chức tín dụng.
+> - Quy định của Thống đốc NHNN về luân chuyển cán bộ nhằm phòng ngừa rủi ro đạo đức trong hệ thống tín dụng (đặc biệt đối với cán bộ tín dụng, kế toán, thủ quỹ).
+> - Quy chế quản trị nhân sự & Quy chế bỏ phiếu tín nhiệm nội bộ QTDND Yên Thọ.
 
 ---
 
@@ -11,247 +14,198 @@
 
 ```mermaid
 erDiagram
+    EMPLOYEE ||--o{ WORK_HISTORY : "có quá trình luân chuyển"
     EMPLOYEE ||--o{ TRUST_EVALUATION : "thực hiện đánh giá (người chấm)"
     EMPLOYEE ||--o{ TRUST_EVALUATION : "nhận đánh giá (người được chấm)"
     EVALUATION_PERIOD ||--o{ TRUST_EVALUATION : "thuộc kỳ đánh giá"
     TRUST_CRITERIA ||--o{ EVALUATION_SCORE_DETAIL : "tiêu chí đánh giá"
-    TRUST_EVALUATION ||--|{ EVALUATION_SCORE_DETAIL : "chứa chi tiết điểm"
+    TRUST_EVALUATION ||--|{ EVALUATION_SCORE_DETAIL : "chứa chi tiết điểm 10 tiêu chí"
     EMPLOYEE ||--o{ TRUST_SUMMARY : "tổng hợp kết quả"
     EVALUATION_PERIOD ||--o{ TRUST_SUMMARY : "tổng hợp theo kỳ"
 
     EMPLOYEE {
         string id PK "Mã định danh duy nhất (UID / EMP_ID)"
-        string ma_cbnv UK "Mã cán bộ (VD: CB01, CB02)"
-        string ho_ten "Họ và tên đầy đủ"
-        string gioi_tinh "Nam / Nữ"
-        string ngay_sinh "YYYY-MM-DD"
-        string so_cccd "Số CCCD (12 chữ số)"
-        string dien_thoai "Số điện thoại di động"
+        string code UK "Mã cán bộ (VD: CB01, CB02)"
+        string name "Họ và tên đầy đủ theo CCCD"
+        string gender "Nam / Nữ"
+        string birthDate "YYYY-MM-DD"
+        string cccd "Số CCCD (12 chữ số)"
+        string phone "Số điện thoại di động"
         string email UK "Email công vụ nội bộ"
-        string phong_ban "Phòng Tín dụng / Kế toán / BKS / HĐQT / BĐH"
-        string chuc_vu "Chủ tịch HĐQT, Giám đốc, Kế toán trưởng, CBTD..."
-        string chuc_danh_dang_doan "Bí thư Chi bộ, Chủ tịch Công đoàn..."
-        string trinh_do_chuyen_mon "Đại học Tài chính, Kế toán, Luật..."
-        string ngay_vao_quy "Ngày bắt đầu công tác tại Quỹ"
-        string loai_hop_dong "Không xác định thời hạn, Theo nhiệm kỳ..."
-        string role "staff | manager | chairman | admin"
-        string trang_thai "DANG_CONG_TAC | NGHI_THAI_SAN | DA_NGHI_VIEC"
-        string avatar_url "Link ảnh đại diện"
-        timestamp created_at "Thời điểm tạo hồ sơ"
-        timestamp updated_at "Thời điểm cập nhật"
+        string department "Phòng Tín dụng / Kế toán / BKS / HĐQT / BĐH"
+        string position "Chủ tịch HĐQT, Giám đốc, Kế toán trưởng, CBTD..."
+        string assignedArea "Địa bàn phụ trách hiện tại (Xã Quý Lộc, Yên Thọ...)"
+        string politicalRole "Bí thư Chi bộ, Chủ tịch Công đoàn..."
+        string education "Trình độ chuyên môn (Đại học Ngân hàng, Luật...)"
+        string joinDate "Ngày bắt đầu công tác tại Quỹ"
+        string contractType "Không xác định thời hạn, Theo nhiệm kỳ..."
+        string role "staff | manager | chairman"
+        string status "ACTIVE | LEAVE | INACTIVE"
+        string avatar "Link ảnh đại diện"
+    }
+
+    WORK_HISTORY {
+        string id PK "Mã bản ghi luân chuyển (TRANS_ID)"
+        string employeeId FK "Mã cán bộ (FK -> users.id)"
+        string employeeCode "Mã cán bộ (CB01, CB02...)"
+        string employeeName "Họ tên cán bộ"
+        string decisionNumber "Số quyết định (VD: 15/QĐ-HĐQT-2024)"
+        date decisionDate "Ngày ký quyết định"
+        date effectiveDate "Ngày quyết định có hiệu lực"
+        string transferType "LUAN_CHUYEN_DINH_KY | BO_NHIEM | DIEU_DONG | THAY_DOI_DIA_BAN"
+        string fromDepartment "Phòng ban cũ"
+        string toDepartment "Phòng ban mới"
+        string fromPosition "Chức vụ cũ"
+        string toPosition "Chức vụ mới"
+        string fromAssignedArea "Địa bàn phụ trách cũ"
+        string toAssignedArea "Địa bàn phụ trách mới"
+        string signer "Người ký quyết định (Chủ tịch HĐQT / Giám đốc)"
+        string reason "Căn cứ & lý do luân chuyển"
+        string notes "Ghi chú quá trình bàn giao công việc"
+        string attachmentUrl "Đường dẫn file scan quyết định (PDF/Image)"
+        timestamp createdAt "Thời điểm ghi nhận hệ thống"
     }
 
     EVALUATION_PERIOD {
         string id PK "Mã kỳ đánh giá (VD: PERIOD-2026-Q3)"
-        string ten_ky "Tên đợt đánh giá tín nhiệm"
-        string loai_ky "DINH_KY_QUY | DINH_KY_NAM | QUY_HOACH_BO_NHIEM"
-        int nam "Năm đánh giá (VD: 2026)"
-        int quy "Quý đánh giá (1, 2, 3, 4 hoặc null)"
-        date ngay_bat_dau "Ngày mở cổng bỏ phiếu"
-        date ngay_ket_thuc "Ngày đóng cổng bỏ phiếu"
-        string trang_thai "DANG_MO | DA_KHOA | DA_PHE_DUYET"
-        string nguoi_tao_id FK "Cán bộ lập đợt đánh giá"
-        timestamp created_at "Thời điểm khởi tạo"
+        string name "Tên đợt đánh giá tín nhiệm"
+        string votingMode "ANONYMOUS_ONLY | IDENTIFIED_ONLY | OPTIONAL"
+        int year "Năm đánh giá (VD: 2026)"
+        int quarter "Quý đánh giá (1, 2, 3, 4 hoặc null)"
+        date startDate "Ngày mở cổng bỏ phiếu"
+        date endDate "Ngày đóng cổng bỏ phiếu"
+        string status "ACTIVE | CLOSED | LOCKED"
     }
 
     TRUST_CRITERIA {
         int id PK "Mã số tiêu chí (1 đến 10)"
-        string ma_tieu_chi UK "TC01 đến TC10"
-        string ten_tieu_chi "Tên tiêu chí đánh giá"
-        string nhom_tieu_chi "Đạo đức / Nghiệp vụ / Tác phong / Trách nhiệm"
-        string mo_ta_huong_dan "Hướng dẫn thang điểm và căn cứ chấm"
-        int diem_toi_da "10 điểm"
-        int diem_toi_thieu "0 điểm"
-        int thu_tu_hien_thi "1 .. 10"
-        boolean bat_buoc "true"
+        string code UK "TC01 đến TC10"
+        string group "Nhóm tiêu chuẩn (Đạo đức / Nghiệp vụ / Tác phong...)"
+        string title "Tên tiêu chí đánh giá"
+        string description "Hướng dẫn thang điểm và căn cứ chấm"
+        int minScore "0 điểm"
+        int maxScore "10 điểm"
     }
 
     TRUST_EVALUATION {
         string id PK "Mã phiếu đánh giá (Firestore Auto-ID)"
-        string period_id FK "Kỳ đánh giá tham chiếu"
-        string evaluator_id FK "Mã người đánh giá (CBNV chấm)"
-        string evaluator_name "Họ tên người đánh giá"
-        string evaluator_role "Vai trò (staff | manager | chairman)"
-        string target_employee_id FK "Mã cán bộ được đánh giá"
-        string target_employee_name "Họ tên cán bộ được đánh giá"
-        string target_department "Phòng ban của cán bộ được đánh giá"
-        json scores "Map điểm 10 tiêu chí: { '1': 9, '2': 10, ... }"
-        int total_score "Tổng điểm số (0 - 100)"
+        string periodId FK "Mã kỳ đánh giá tham chiếu"
+        boolean isAnonymous "Cờ ẩn danh: true (Ẩn danh) | false (Công khai)"
+        string evaluatorId FK "ID cán bộ chấm điểm (Bảo mật nghiêm ngặt)"
+        string evaluatorName "Tên hiển thị: 'Cán bộ Quỹ (Ẩn danh)' hoặc Họ tên thật"
+        string evaluatorRole "staff | manager | chairman"
+        string targetEmployeeId FK "Mã cán bộ được đánh giá"
+        string targetEmployeeName "Họ tên cán bộ được đánh giá"
+        string targetDepartment "Phòng ban của cán bộ được đánh giá"
+        map scores "Map 10 tiêu chí: { 1: 9, 2: 10, ..., 10: 9 }"
+        int totalScore "Tổng điểm số (0 - 100)"
         string classification "Xuất sắc | Tốt | Hoàn thành | Không hoàn thành"
         string notes "Ý kiến nhận xét, ưu điểm, hạn chế"
-        timestamp created_at "Thời gian nộp phiếu"
+        timestamp createdAt "Thời gian gửi phiếu"
     }
 
     TRUST_SUMMARY {
-        string id PK "Mã bảng tổng hợp (PERIOD_ID + EMP_ID)"
-        string period_id FK "Kỳ đánh giá"
-        string employee_id FK "Cán bộ được đánh giá"
-        string employee_name "Họ tên cán bộ"
-        string department "Phòng ban"
-        int tong_so_phieu "Số lượng phiếu đánh giá đã nhận"
-        float diem_trung_binh "Điểm TB cộng các phiếu (Thang 100)"
-        string xep_loai_chung "Xếp loại chung cuộc"
-        json chi_tiet_tieu_chi "Điểm TB từng tiêu chí 1..10"
-        string y_kien_hdqt "Kết luận của Hội đồng thi đua / HĐQT"
-        string trang_thai "CHOT_KET_QUA | LUU_HO_SO"
-        timestamp updated_at "Thời điểm chốt kết quả"
+        string id PK "Mã bảng tổng hợp: {periodId}_{employeeId}"
+        string periodId FK "Kỳ đánh giá"
+        string employeeId FK "Cán bộ được đánh giá"
+        int totalVotes "Tổng số phiếu đã nhận"
+        int anonymousVotes "Số phiếu bỏ ẩn danh"
+        int identifiedVotes "Số phiếu công khai"
+        float avgScore "Điểm trung bình cộng (Thang 100)"
+        string finalClassification "Xếp loại chung cuộc"
+        string boardConclusion "Ý kiến phê chuẩn của Hội đồng thi đua / HĐQT"
     }
 ```
 
 ---
 
-## 📑 2. Từ Điển Dữ Liệu Chi Tiết (Data Dictionary)
+## 📑 2. Chi Tiết Thực Thể Mới: Quá Trình Luân Chuyển Công Tác (`work_history`)
 
-### BẢNG 1: `users` / `employees` (Hồ Sơ Cán Bộ Nhân Viên)
-Collection Firestore: `users`  
-Lưu trữ toàn bộ hồ sơ trích ngang, chức danh nghiệp vụ và tài khoản đăng nhập của nhân sự Quỹ TDND Yên Thọ.
+Collection Firestore: `work_history` (hoặc Sub-collection `users/{userId}/work_history`)  
+Theo chỉ đạo của Ngân hàng Nhà nước, các vị trí nhạy cảm tại Quỹ tín dụng nhân dân (CBTD, Kế toán, Thủ quỹ, BKS) **bắt buộc phải thực hiện luân chuyển định kỳ** từ 2 đến 3 năm một lần để triệt tiêu rủi ro câu kết và tiêu cực tín dụng.
 
-| Tên trường (Field) | Kiểu dữ liệu | Bắt buộc | Ràng buộc / Giá trị mẫu | Ý nghĩa nghiệp vụ |
-| :--- | :--- | :---: | :--- | :--- |
-| `id` / `uid` | `string` | **Có** | Firebase Auth UID hoặc `emp-xxx` | Khóa chính duy nhất định danh người dùng. |
-| `ma_cbnv` / `code` | `string` | **Có** | `CB01`, `CB02`... | Mã định danh nội bộ trong hồ sơ nhân sự. |
-| `ho_ten` / `name` | `string` | **Có** | Max 100 ký tự (VD: "Lê Đình Hải") | Họ và tên đầy đủ theo CCCD. |
-| `gioi_tinh` | `string` | Không | `'Nam'`, `'Nữ'` | Giới tính cán bộ. |
-| `ngay_sinh` | `string` | Không | `YYYY-MM-DD` (VD: `1982-05-18`) | Ngày tháng năm sinh. |
-| `so_cccd` | `string` | Không | 12 chữ số | Số thẻ CCCD / Mã định danh công dân. |
-| `email` | `string` | **Có** | Chuẩn RFC 5322 (VD: `canbo@qtdyentho.vn`) | Email công vụ dùng để đăng nhập. |
-| `dien_thoai` / `phone` | `string` | Không | 10 số (VD: `0912.345.678`) | Số điện thoại liên hệ công tác. |
-| `phong_ban` / `department` | `string` | **Có** | Thuộc danh mục 5 phòng ban | Bộ phận công tác tại QTDND Yên Thọ. |
-| `chuc_vu` / `position` | `string` | **Có** | VD: "Cán bộ Tín dụng chính" | Chức vụ chuyên môn được bổ nhiệm. |
-| `chuc_danh_dang_doan` | `string` | Không | VD: "Bí thư Chi bộ", "Chủ tịch CĐ" | Chức vụ đoàn thể, chính trị. |
-| `trinh_do_chuyen_mon` | `string` | Không | VD: "Đại học Ngân hàng" | Bằng cấp chuyên môn cao nhất. |
-| `ngay_vao_quy` | `string` | Không | `YYYY-MM-DD` | Ngày bắt đầu làm việc tại Quỹ. |
-| `role` | `string` | **Có** | `'staff'`, `'manager'`, `'chairman'` | Phân quyền truy cập hệ thống (RBAC). |
-| `trang_thai` / `status` | `string` | **Có** | `'ACTIVE'`, `'INACTIVE'`, `'LEAVE'` | Trạng thái công tác hiện tại. |
-| `avatar` | `string` | Không | URL hình ảnh | Đường dẫn ảnh chân dung cán bộ. |
-| `created_at` | `timestamp` | **Có** | Thời gian máy chủ | Thời điểm tạo hồ sơ. |
-
----
-
-### BẢNG 2: `trust_criteria` (Danh Mục 10 Tiêu Chí Đánh Giá Chuẩn)
-Collection Firestore: `trust_criteria` (hoặc cấu hình tĩnh chuẩn hóa)  
-Quy chuẩn hóa 10 tiêu chí theo Thông tư NHNN & Tiêu chuẩn thi đua nội bộ:
-
-| Mã | Tên Tiêu Chí | Nhóm Tiêu Chuẩn | Thang Điểm | Nội Dung Hướng Dẫn & Căn Cứ Đánh Giá |
-| :---: | :--- | :--- | :---: | :--- |
-| **TC01** | Tinh thần trách nhiệm & Đạo đức nghề nghiệp | Phẩm chất đạo đức | $0 - 10$ | Tận tụy với công việc, trung thực, có tinh thần trách nhiệm cao, giữ gìn uy tín thương hiệu của Quỹ tín dụng. |
-| **TC02** | Chấp hành Quy chế, Nội quy & Pháp luật NHNN | Tuân thủ pháp luật | $0 - 10$ | Chấp hành nghiêm ngặt quy trình nghiệp vụ tín dụng, kế toán, an toàn kho quỹ và các văn bản chỉ đạo của NHNN. |
-| **TC03** | Năng lực chuyên môn & Nghiệp vụ chuyên sâu | Chuyên môn nghiệp vụ | $0 - 10$ | Am hiểu quy trình tác nghiệp, xử lý hồ sơ nhanh chóng, chuẩn xác, hạn chế tối đa sai sót rủi ro vận hành. |
-| **TC04** | Tác phong giao dịch & Văn hóa phục vụ thành viên | Văn hóa giao dịch | $0 - 10$ | Ân cần, niềm nở, lịch thiệp khi tiếp xúc thành viên và khách hàng vay/gửi vốn, không quan liêu, hách dịch. |
-| **TC05** | Tinh thần đoàn kết & Phối hợp phòng ban | Xây dựng tập thể | $0 - 10$ | Tương trợ đồng nghiệp, phối hợp nhịp nhàng giữa Tín dụng, Kế toán, Kiểm soát và Ban điều hành. |
-| **TC06** | Kỷ luật giờ giấc & Bảo mật thông tin tài chính | Kỷ luật nội bộ | $0 - 10$ | Chấp hành thời giờ làm việc, bảo quản tài liệu lưu trữ, giữ bí mật tuyệt đối số dư tiền gửi và hồ sơ khách hàng. |
-| **TC07** | Đổi mới sáng tạo & Chuyển đổi số | Đổi mới & Cải tiến | $0 - 10$ | Chủ động làm chủ phần mềm quản lý, ứng dụng công nghệ trong tác nghiệp, có giải pháp cải tiến hiệu quả. |
-| **TC08** | Liêm chính tài chính & Phòng ngừa rủi ro đạo đức | Liêm chính tài chính | $0 - 10$ | Minh bạch tiền tệ, tuyệt đối không vòi vĩnh chi phí ngoài quy định, không thông đồng trục lợi tín dụng. |
-| **TC09** | Đóng góp phong trào & Văn hóa tổ chức | Phong trào đơn vị | $0 - 10$ | Nhiệt tình tham gia các hoạt động an sinh xã hội, phong trào công đoàn, xây dựng đơn vị vững mạnh. |
-| **TC10** | Hiệu quả hoàn thành chỉ tiêu công việc | Kết quả công tác | $0 - 10$ | Hoàn thành và hoàn thành vượt mức các chỉ tiêu được giao về dư nợ, huy động vốn, kiểm soát nợ quá hạn. |
-
----
-
-### BẢNG 3: `evaluations_trust` (Phiếu Đánh Giá Tín Nhiệm Chi Tiết)
-Collection Firestore: `evaluations_trust`  
-Lưu trữ từng phiếu bầu / phiếu chấm điểm thực tế do một cán bộ thực hiện đối với một cán bộ khác.
-
-| Tên trường (Field) | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
+### Cấu trúc dữ liệu:
+| Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
 | :--- | :--- | :--- | :--- |
-| `id` | `string` | Khóa chính tự sinh Firestore | Mã phiếu đánh giá. |
-| `period_id` | `string` | Tham chiếu đợt (VD: `2026-Q3`) | Đợt đánh giá áp dụng. |
-| `evaluator_id` | `string` | ID cán bộ chấm (khác `target_employee_id`) | Không được tự chấm điểm chính mình ở phân hệ này. |
-| `evaluator_name` | `string` | Họ tên người chấm | Lưu snapshot hiển thị nhanh. |
-| `evaluator_role` | `string` | `'staff'`, `'manager'`, `'chairman'` | Cấp bậc của người chấm điểm. |
-| `target_employee_id`| `string` | ID cán bộ được đánh giá | Cán bộ thuộc danh sách nhân sự QTDND. |
-| `target_employee_name`| `string` | Họ tên cán bộ nhận đánh giá | Lưu snapshot. |
-| `target_department` | `string` | Phòng ban của cán bộ nhận đánh giá | Phục vụ lọc và tổng hợp báo cáo. |
-| `scores` | `Map<string, number>` | 10 cặp key-value (`1` đến `10`), mỗi giá trị $\in [0, 10]$ | Điểm số cụ thể của từng tiêu chí. |
-| `total_score` | `number` | Tính tự động $= \sum_{i=1}^{10} \text{scores}[i]$ (Phạm vi $0 - 100$) | Tổng điểm tín nhiệm của phiếu. |
-| `classification` | `string` | Tự động phân loại dựa trên `total_score` | `'Xuất sắc'`, `'Tốt'`, `'Hoàn thành'`, `'Không hoàn thành'`. |
-| `notes` | `string` | Tối đa 1.000 ký tự | Ý kiến nhận xét, đóng góp riêng. |
-| `created_at` | `string` / `timestamp` | ISO 8601 String & Firestore ServerTimestamp | Thời điểm ghi nhận phiếu. |
+| `id` | `string` | **PK** | Mã định danh bản ghi luân chuyển (VD: `trans-001`). |
+| `employeeId` | `string` | **FK -> users.id** | Cán bộ được điều động, luân chuyển. |
+| `employeeCode` | `string` | Snapshot | Mã cán bộ (VD: `CB03`). |
+| `employeeName` | `string` | Snapshot | Họ tên cán bộ. |
+| `decisionNumber` | `string` | **Not Null** | Số Quyết định chính thức (VD: `18/QĐ-HĐQT-2025`). |
+| `decisionDate` | `string` | `YYYY-MM-DD` | Ngày Chủ tịch HĐQT hoặc Giám đốc ký quyết định. |
+| `effectiveDate` | `string` | `YYYY-MM-DD` | Ngày quyết định chính thức có hiệu lực áp dụng. |
+| `transferType` | `string` | Enum chuẩn | - `LUAN_CHUYEN_DINH_KY`: Luân chuyển định kỳ phòng ngừa rủi ro NHNN<br>- `BO_NHIEM`: Bổ nhiệm chức danh mới<br>- `DIEU_DONG`: Điều động công tác giữa các phòng ban<br>- `THAY_DOI_DIA_BAN`: Luân chuyển địa bàn phụ trách tín dụng các xã |
+| `fromDepartment` | `string` | Nullable | Phòng ban trước khi luân chuyển. |
+| `toDepartment` | `string` | **Not Null** | Phòng ban mới tiếp nhận. |
+| `fromPosition` | `string` | Nullable | Chức vụ trước khi luân chuyển. |
+| `toPosition` | `string` | **Not Null** | Chức vụ mới được phân công. |
+| `fromAssignedArea`| `string` | Nullable | Địa bàn tín dụng cũ (VD: "Thôn Tân Lộc, xã Quý Lộc"). |
+| `toAssignedArea` | `string` | Nullable | Địa bàn tín dụng mới (VD: "Cụm 3 thôn xã Yên Thọ"). |
+| `signer` | `string` | Not Null | Người ký quyết định (Chủ tịch HĐQT / Giám đốc Quỹ). |
+| `reason` | `string` | Text | Căn cứ điều động (Nghị quyết HĐQT, Kế hoạch luân chuyển NHNN). |
+| `handoverStatus` | `string` | Enum | `'DA_BAN_GIAO'`, `'DANG_BAN_GIAO'`, `'CHUA_BAN_GIAO'`. |
+| `attachmentUrl` | `string` | Nullable | Link tệp PDF/ảnh scan quyết định lưu trữ điện tử. |
+| `createdAt` | `timestamp` | Server Time | Thời điểm cập nhật vào hệ thống. |
 
 ---
 
-### BẢNG 4: `trust_evaluation_summaries` (Bảng Tổng Hợp Tín Nhiệm Định Kỳ)
-Collection Firestore: `trust_summaries`  
-Bảng tổng hợp tự động phục vụ Hội đồng Quản trị và Ban Điều hành xem xét thi đua khen thưởng cuối kỳ.
+## 🔒 3. Cơ Chế Đánh Giá Tín Nhiệm: Ẩn Danh vs Không Ẩn Danh
 
-| Tên trường (Field) | Kiểu dữ liệu | Ý nghĩa nghiệp vụ |
-| :--- | :--- | :--- |
-| `id` | `string` | Khóa chính ghép: `{period_id}_{employee_id}` |
-| `period_id` | `string` | Kỳ đánh giá (VD: `2026-NAM`) |
-| `employee_id` | `string` | ID cán bộ được tổng hợp |
-| `employee_name` | `string` | Họ tên cán bộ |
-| `department` | `string` | Phòng ban công tác |
-| `so_luong_phieu` | `number` | Tổng số phiếu đánh giá đã thu về |
-| `diem_trung_binh` | `number` | Điểm trung bình cộng: $\frac{\sum \text{total\_score}}{\text{so\_luong\_phieu}}$ |
-| `diem_theo_nhom` | `Map<string, number>` | Điểm trung bình theo từng nhóm người chấm (BĐH chấm, Đồng nghiệp chấm) |
-| `xep_loai_de_xuat` | `string` | Xếp loại gợi ý dựa trên điểm trung bình chung cuộc |
-| `y_kien_hoi_dong` | `string` | Ý kiến phê chuẩn của Chủ tịch HĐQT / Hội đồng thi đua |
-| `trang_thai` | `string` | `'DANG_TONG_HOP'`, `'DA_CHOT_SO'`, `'CONG_BO'` |
+Hệ thống hỗ trợ song song cả **Bỏ phiếu kín (Ẩn danh)** và **Bỏ phiếu định danh (Công khai)** để phục vụ các mục đích quản trị khác nhau:
+
+### 3.1. Phân biệt theo mục đích quản trị:
+1. **Chế độ Ẩn Danh (`isAnonymous = true`)**:
+   - **Mục đích**: Bỏ phiếu tín nhiệm thường niên, lấy phiếu tín nhiệm cán bộ nguồn để bổ nhiệm/tái bổ nhiệm chức danh HĐQT, Ban Giám đốc, Ban Kiểm soát.
+   - **Tác dụng**: Cán bộ cấp dưới và đồng nghiệp tuyệt đối an tâm bày tỏ quan điểm trung thực, thẳng thắn về đạo đức và năng lực mà không sợ trù dập hoặc e dè va chạm nội bộ.
+   - **Giao diện hiển thị**:
+     - Người nhận đánh giá và toàn thể cán bộ **chỉ nhìn thấy nhãn**: `Cán bộ Quỹ (Ẩn danh)`.
+     - Ẩn hoàn toàn `evaluatorId`, `evaluatorRole`, `evaluatorName`.
+2. **Chế độ Không Ẩn Danh (`isAnonymous = false`)**:
+   - **Mục đích**: Đánh giá đa chiều định kỳ hàng quý, đánh giá chéo giữa các phòng ban (Tín dụng <-> Kế toán), cấp trên đánh giá cấp dưới trực tiếp.
+   - **Tác dụng**: Nêu cao tinh thần trách nhiệm của người chấm, bảo đảm tính minh bạch, có thể đối thoại và phản hồi xây dựng trực tiếp.
+   - **Giao diện hiển thị**: Hiển thị rõ ràng họ tên, chức danh và phòng ban của người chấm điểm.
+
+### 3.2. Cơ chế Bảo Mật Kép & Chống Gian Lận (Audit Trail & Double-Vote Prevention):
+Một thách thức lớn của bỏ phiếu ẩn danh là: **Làm sao vừa bảo mật danh tính người chấm, vừa không cho 1 người bỏ phiếu 2 lần cho cùng 1 người?**
+
+Cơ sở dữ liệu giải quyết triệt để vấn đề này qua kiến trúc **Bảo mật 2 tầng**:
+1. **Tầng Lưu trữ & Kiểm toán (Backend Data Layer)**:
+   - Bản ghi vẫn lưu trường `evaluatorId` nhưng có gắn cờ `isAnonymous: true`.
+   - Cơ chế này phục vụ duy nhất 2 mục đích:
+     - **Chống bỏ phiếu trùng**: Trước khi lưu phiếu mới, hệ thống truy vấn kiểm tra: `evaluatorId == currentUser.id && targetEmployeeId == target.id && periodId == period.id`. Nếu đã tồn tại thì báo lỗi *"Đồng chí đã gửi phiếu đánh giá cho nhân sự này trong kỳ hiện tại!"*.
+     - **Kiểm toán tối cao (Super Audit)**: Chỉ Ban Kiểm soát độc lập hoặc Đoàn thanh tra NHNN mới có thẩm quyền giải mã khi có khiếu nại tố cáo vi phạm quy chế.
+2. **Tầng Hiển thị & Truy xuất (Presentation & Query Layer)**:
+   - Khi API / hàm truy vấn (`subscribeTrustEvaluations`) nạp dữ liệu:
+     ```javascript
+     const sanitizedList = snapshot.docs.map(doc => {
+       const data = doc.data();
+       if (data.isAnonymous) {
+         return {
+           ...data,
+           id: doc.id,
+           evaluatorName: "Cán bộ Quỹ (Ẩn danh)",
+           evaluatorRole: "Ẩn danh",
+           evaluatorId: null // Bóc tách hoàn toàn ID trước khi đẩy ra UI
+         };
+       }
+       return { id: doc.id, ...data };
+     });
+     ```
+   - Người được đánh giá, đồng nghiệp và màn hình Dashboard chỉ nhận được dữ liệu đã được làm sạch danh tính (anonymized payload).
 
 ---
 
-## 🔒 3. Quy Tắc Bảo Mật Firestore (Security Rules)
+## 📐 4. Cập Nhật Cấu Hình Đợt Đánh Giá (`evaluation_periods.votingMode`)
 
-Đề xuất quy tắc áp dụng cho tệp `firestore.rules`:
+Người quản trị (Chủ tịch HĐQT hoặc Giám đốc) có thể thiết lập quy chế bỏ phiếu cho từng đợt:
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Hàm trợ giúp kiểm tra đăng nhập & quyền hạn
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    function isManagerOrChairman() {
-      return isAuthenticated() && (getUserRole() == 'manager' || getUserRole() == 'chairman');
-    }
-
-    // 1. Bộ sưu tập Người dùng (users)
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isManagerOrChairman();
-    }
-
-    // 2. Bộ sưu tập Đánh giá tín nhiệm (evaluations_trust)
-    match /evaluations_trust/{evaluationId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() 
-                    && request.resource.data.evaluator_id == request.auth.uid
-                    && request.resource.data.target_employee_id != request.auth.uid
-                    && request.resource.data.total_score >= 0 
-                    && request.resource.data.total_score <= 100;
-      allow update, delete: if isManagerOrChairman();
-    }
-
-    // 3. Bộ sưu tập Chấm điểm KPI (evaluations_kpi)
-    match /evaluations_kpi/{kpiId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-    }
-
-    // 4. Bộ sưu tập Bỏ phiếu quy hoạch (evaluations_planning)
-    match /evaluations_planning/{voteId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if isManagerOrChairman();
-    }
-  }
-}
+```typescript
+type VotingMode = 
+  | 'ANONYMOUS_ONLY'   // Bắt buộc 100% phiếu gửi lên đều ẩn danh (Bỏ phiếu kín)
+  | 'IDENTIFIED_ONLY'  // Bắt buộc 100% phiếu gửi lên phải công khai tên
+  | 'OPTIONAL';        // Cho phép từng cán bộ tự tích chọn: "Ẩn danh tên tôi trên phiếu"
 ```
 
----
-
-## 📐 4. Thang Điểm & Phân Hạng Tín Nhiệm (Classification Matrix)
-
-$$\begin{cases} 
-\text{Tổng điểm} \ge 90 & \longrightarrow \mathbf{Xuất\ sắc} \quad \text{(Đề nghị khen thưởng cấp Quỹ / Liên minh HTX / NHNN)} \\
-70 \le \text{Tổng điểm} < 90 & \longrightarrow \mathbf{Tốt} \quad \text{(Hoàn thành tốt nhiệm vụ, đủ điều kiện quy hoạch)} \\
-50 \le \text{Tổng điểm} < 70 & \longrightarrow \mathbf{Hoàn\ thành} \quad \text{(Đạt yêu cầu định mức, cần bồi dưỡng thêm)} \\
-\text{Tổng điểm} < 50 & \longrightarrow \mathbf{Không\ hoàn\ thành} \quad \text{(Kiểm điểm trách nhiệm, xem xét điều chuyển)}
-\end{cases}$$
+Khi ở chế độ `OPTIONAL`, trên form biểu mẫu [TrustEvaluation.jsx](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/src/pages/TrustEvaluation.jsx) sẽ hiển thị một nút gạt:
+> 🔘 **"Bỏ phiếu ẩn danh (Bảo mật danh tính người chấm điểm)"**  
+> *Khi bật, họ tên và chức danh của bạn sẽ không xuất hiện trên phiếu đánh giá hay kết quả công bố.*

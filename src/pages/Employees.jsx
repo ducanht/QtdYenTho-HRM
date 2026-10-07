@@ -8,17 +8,30 @@ import {
   Building2, 
   ShieldCheck, 
   UserCheck,
-  Briefcase
+  Briefcase,
+  History,
+  FileText,
+  ArrowRightLeft,
+  Calendar,
+  CheckCircle2,
+  MapPin,
+  Award
 } from 'lucide-react';
 import { INITIAL_EMPLOYEES, DEPARTMENTS, ROLE_LABELS } from '../lib/mockData';
-import { subscribeEmployees } from '../lib/services';
+import { subscribeEmployees, subscribeWorkHistory } from '../lib/services';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
+import Button from '../components/common/Button';
+import Modal from '../components/common/Modal';
 
 const Employees = () => {
   const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
+
+  // Quản lý Modal xem Lịch sử luân chuyển công tác
+  const [selectedEmpHistory, setSelectedEmpHistory] = useState(null);
+  const [empWorkHistory, setEmpWorkHistory] = useState([]);
 
   useEffect(() => {
     const unsub = subscribeEmployees((list) => {
@@ -26,6 +39,15 @@ const Employees = () => {
     });
     return () => unsub();
   }, []);
+
+  // Lắng nghe lịch sử luân chuyển khi mở modal cho 1 cán bộ
+  useEffect(() => {
+    if (!selectedEmpHistory) return;
+    const unsub = subscribeWorkHistory(selectedEmpHistory.id, (list) => {
+      setEmpWorkHistory(list || []);
+    });
+    return () => unsub();
+  }, [selectedEmpHistory]);
 
   const filtered = useMemo(() => {
     return employees.filter((emp) => {
@@ -52,7 +74,7 @@ const Employees = () => {
             Danh Bạ Cán Bộ QTDND Yên Thọ
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Danh sách nhân sự trực thuộc các phòng ban và chức danh chuyên môn
+            Danh sách nhân sự trực thuộc các phòng ban, chức danh và hồ sơ luân chuyển công tác
           </p>
         </div>
 
@@ -134,10 +156,16 @@ const Employees = () => {
                   {emp.code} • {emp.position}
                 </div>
                 <div className="text-xs text-slate-500">{emp.department}</div>
+                {emp.assignedArea && (
+                  <div className="text-[11px] text-slate-600 flex items-center gap-1 pt-1">
+                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span className="truncate">{emp.assignedArea}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
+            <div className="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-600">
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
                 <span className="truncate">{emp.email}</span>
@@ -148,10 +176,124 @@ const Employees = () => {
                   <span>{emp.phone}</span>
                 </div>
               )}
+
+              {/* Nút Xem Quá trình Luân chuyển công tác */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEmpHistory(emp)}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl border border-teal-200 bg-teal-50/70 hover:bg-teal-100/70 text-[#0f766e] font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  <History className="w-3.5 h-3.5 text-[#0f766e]" />
+                  <span>Lịch sử luân chuyển công tác</span>
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Modal Xem Quá trình Luân chuyển công tác (work_history) */}
+      <Modal
+        isOpen={Boolean(selectedEmpHistory)}
+        onClose={() => setSelectedEmpHistory(null)}
+        title="Lịch Sử Luân Chuyển & Điều Động Công Tác"
+        subtitle={`Cán bộ: ${selectedEmpHistory?.name} (${selectedEmpHistory?.code}) • ${selectedEmpHistory?.position}`}
+        maxWidth="max-w-2xl"
+        footer={
+          <Button variant="outline" onClick={() => setSelectedEmpHistory(null)}>
+            Đóng cửa sổ
+          </Button>
+        }
+      >
+        {selectedEmpHistory && (
+          <div className="space-y-4">
+            {/* Header info card */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+              <div>
+                <span className="text-slate-400 block text-[10px]">Đơn vị hiện tại:</span>
+                <span className="font-bold text-slate-900">{selectedEmpHistory.department}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-400 block text-[10px]">Ngày vào Quỹ:</span>
+                <span className="font-semibold text-slate-800">
+                  {selectedEmpHistory.joinDate || '2015-09-01'}
+                </span>
+              </div>
+            </div>
+
+            {/* Timeline of Job Transfers */}
+            {empWorkHistory.length === 0 ? (
+              <div className="text-center py-8 text-xs text-slate-400">
+                Chưa có ghi nhận luân chuyển điều động nào cho cán bộ này.
+              </div>
+            ) : (
+              <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-teal-200">
+                {empWorkHistory.map((item, idx) => (
+                  <div key={item.id || idx} className="relative group text-xs">
+                    {/* Timeline bullet dot */}
+                    <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#0f766e] text-white flex items-center justify-center text-[10px] shadow-sm">
+                      <ArrowRightLeft className="w-2.5 h-2.5" />
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-slate-200 bg-white hover:border-teal-300 transition-all shadow-xs space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-slate-100">
+                        <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-[#0f766e]" />
+                          <span>QĐ số: {item.decisionNumber}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Hiệu lực: {item.effectiveDate}</span>
+                        </div>
+                      </div>
+
+                      {/* Transfer Type Badge */}
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                          {item.transferTypeLabel || item.transferType}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          Người ký: {item.signer}
+                        </span>
+                      </div>
+
+                      {/* Transition Box */}
+                      <div className="p-2.5 rounded-lg bg-slate-50 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Trước điều chuyển:</span>
+                          <span className="font-semibold text-slate-700">
+                            {item.fromPosition} ({item.fromAssignedArea})
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-teal-900 font-bold">
+                          <span>Vị trí / Địa bàn mới:</span>
+                          <span className="text-[#0f766e]">
+                            {item.toPosition} ({item.toAssignedArea})
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Reason & handover */}
+                      {item.reason && (
+                        <div className="text-[11px] text-slate-600">
+                          <span className="font-semibold text-slate-700">Căn cứ: </span>
+                          <span>{item.reason}</span>
+                        </div>
+                      )}
+                      {item.notes && (
+                        <div className="text-[11px] text-slate-500 italic">
+                          "{item.notes}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

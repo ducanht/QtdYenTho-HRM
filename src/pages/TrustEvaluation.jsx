@@ -9,6 +9,7 @@ import {
   Search, 
   Filter, 
   Eye, 
+  EyeOff,
   Clock, 
   Building,
   HelpCircle
@@ -42,6 +43,7 @@ const TrustEvaluation = () => {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [notes, setNotes] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   // 10 tiêu chí mặc định điểm là 8
   const [scores, setScores] = useState(() => {
@@ -117,8 +119,8 @@ const TrustEvaluation = () => {
     try {
       const payload = {
         evaluatorId: currentUser.uid || currentUser.id,
-        evaluatorName: currentUser.name,
-        evaluatorRole: role,
+        evaluatorName: isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : currentUser.name,
+        evaluatorRole: isAnonymous ? 'Ẩn danh' : role,
         targetEmployeeId,
         targetEmployeeName: selectedEmployee.name,
         targetDepartment: selectedEmployee.department,
@@ -126,16 +128,20 @@ const TrustEvaluation = () => {
         totalScore,
         classification: classification.label,
         notes: notes.trim(),
+        isAnonymous,
       };
 
       await saveTrustEvaluation(payload);
       toast.success(
-        `Đã lưu đánh giá tín nhiệm cho đ/c ${selectedEmployee.name} (${totalScore} điểm - ${classification.label})!`
+        `Đã lưu đánh giá tín nhiệm cho đ/c ${selectedEmployee.name} (${totalScore} điểm - ${classification.label}) ${
+          isAnonymous ? '[Chế độ Ẩn danh]' : ''
+        }!`
       );
 
       // Reset form
       setTargetEmployeeId('');
       setNotes('');
+      setIsAnonymous(false);
       const resetScores = {};
       TRUST_CRITERIA.forEach((c) => {
         resetScores[c.id] = 8;
@@ -286,6 +292,26 @@ const TrustEvaluation = () => {
                   placeholder="Ghi nhận các mặt ưu điểm nổi bật, tinh thần trách nhiệm hoặc các điểm cần đồng chí tiếp tục phát huy..."
                   className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 focus:border-[#0f766e]"
                 />
+              </div>
+
+              {/* Tùy chọn Bỏ phiếu Ẩn danh (Bảo mật danh tính) */}
+              <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="anonymous-vote-toggle"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-[#0f766e] focus:ring-[#0f766e] accent-[#0f766e] cursor-pointer"
+                />
+                <label htmlFor="anonymous-vote-toggle" className="cursor-pointer select-none">
+                  <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                    <EyeOff className="w-3.5 h-3.5 text-[#0f766e]" />
+                    Bỏ phiếu tín nhiệm ẩn danh (Bảo mật danh tính người chấm)
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                    Khi kích hoạt, hệ thống sẽ ẩn hoàn toàn tên và chức vụ của bạn trên phiếu (hiển thị "Cán bộ Quỹ (Ẩn danh)"), giúp bạn an tâm bày tỏ ý kiến khách quan và trung thực.
+                  </div>
+                </label>
               </div>
 
               {/* Submit Button */}
@@ -484,9 +510,22 @@ const TrustEvaluation = () => {
                       </Badge>
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">
-                      <div className="font-medium text-slate-800">{item.evaluatorName}</div>
-                      <div className="text-[10px] text-slate-400 capitalize">
-                        {item.evaluatorRole}
+                      <div className="font-medium text-slate-800 flex items-center gap-1.5">
+                        {item.isAnonymous ? (
+                          <span className="inline-flex items-center gap-1 text-slate-500 font-semibold italic">
+                            <EyeOff className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            {item.evaluatorName}
+                          </span>
+                        ) : (
+                          item.evaluatorName
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {item.isAnonymous ? (
+                          <span className="text-[#0f766e] font-medium">Bỏ phiếu kín</span>
+                        ) : (
+                          `Vai trò: ${item.evaluatorRole}`
+                        )}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-slate-400">

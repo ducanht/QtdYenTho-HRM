@@ -1,4 +1,4 @@
-// Danh mục dữ liệu chuẩn hóa: Nhân sự, Phòng ban & Tiêu chí Đánh giá Tín nhiệm
+// Danh mục dữ liệu chuẩn hóa: Nhân sự, Phòng ban, Luân chuyển công tác & Tiêu chí Đánh giá Tín nhiệm
 // Áp dụng cho Quỹ Tín Dụng Nhân Dân Yên Thọ (Thanh Hóa)
 
 export const DEPARTMENTS = [
@@ -126,7 +126,8 @@ export const EVALUATION_PERIODS = [
     name: 'Đánh giá tín nhiệm Quý III / 2026',
     year: 2026,
     quarter: 3,
-    status: 'ACTIVE', // 'ACTIVE' | 'CLOSED' | 'LOCKED'
+    votingMode: 'OPTIONAL', // 'ANONYMOUS_ONLY' | 'IDENTIFIED_ONLY' | 'OPTIONAL'
+    status: 'ACTIVE',
     startDate: '2026-09-15',
     endDate: '2026-10-15',
   },
@@ -135,6 +136,7 @@ export const EVALUATION_PERIODS = [
     name: 'Đánh giá tín nhiệm & Thi đua Quý IV / 2026',
     year: 2026,
     quarter: 4,
+    votingMode: 'ANONYMOUS_ONLY', // Bỏ phiếu kín 100%
     status: 'UPCOMING',
     startDate: '2026-12-01',
     endDate: '2026-12-31',
@@ -156,6 +158,7 @@ export const INITIAL_EMPLOYEES = [
     role: ROLES.CHAIRMAN,
     department: 'Ban Quản trị (HĐQT)',
     position: 'Chủ tịch Hội đồng Quản trị',
+    assignedArea: 'Chỉ đạo toàn diện hoạt động Quỹ',
     politicalRole: 'Bí thư Chi bộ',
     education: 'Thạc sĩ Tài chính - Ngân hàng',
     joinDate: '2008-03-01',
@@ -175,6 +178,7 @@ export const INITIAL_EMPLOYEES = [
     role: ROLES.MANAGER,
     department: 'Ban Điều hành',
     position: 'Giám đốc Điều hành',
+    assignedArea: 'Điều hành tác nghiệp kinh doanh & vốn',
     politicalRole: 'Phó Bí thư Chi bộ',
     education: 'Cử nhân Kinh tế Tín dụng',
     joinDate: '2010-06-15',
@@ -194,6 +198,7 @@ export const INITIAL_EMPLOYEES = [
     role: ROLES.STAFF,
     department: 'Phòng Tín dụng',
     position: 'Cán bộ Tín dụng chính',
+    assignedArea: 'Xã Yên Thọ & Cụm Tân Lộc (Quý Lộc)',
     politicalRole: 'Đảng viên, Chi ủy viên',
     education: 'Đại học Tài chính - Doanh nghiệp',
     joinDate: '2015-09-01',
@@ -213,6 +218,7 @@ export const INITIAL_EMPLOYEES = [
     role: ROLES.STAFF,
     department: 'Phòng Tín dụng',
     position: 'Cán bộ Thẩm định',
+    assignedArea: 'Thẩm định hồ sơ 3 xã liên kết',
     politicalRole: 'Đoàn viên thanh niên',
     education: 'Đại học Ngân hàng',
     joinDate: '2019-02-15',
@@ -232,6 +238,7 @@ export const INITIAL_EMPLOYEES = [
     role: ROLES.STAFF,
     department: 'Phòng Kế toán - Ngân quỹ',
     position: 'Kế toán trưởng',
+    assignedArea: 'Quản lý tài chính, kho quỹ & kế toán',
     politicalRole: 'Chủ tịch Công đoàn',
     education: 'Đại học Kế toán - Kiểm toán',
     joinDate: '2012-04-01',
@@ -251,6 +258,7 @@ export const INITIAL_EMPLOYEES = [
     role: ROLES.STAFF,
     department: 'Phòng Kế toán - Ngân quỹ',
     position: 'Thủ quỹ kiêm Giao dịch viên',
+    assignedArea: 'Giao dịch tiền mặt tại quầy',
     politicalRole: 'Bí thư Chi đoàn thanh niên',
     education: 'Cử nhân Tài chính - Kế toán',
     joinDate: '2020-08-01',
@@ -270,6 +278,7 @@ export const INITIAL_EMPLOYEES = [
     role: ROLES.STAFF,
     department: 'Ban Kiểm soát',
     position: 'Trưởng Ban Kiểm soát',
+    assignedArea: 'Kiểm soát nội bộ toàn diện',
     politicalRole: 'Chi ủy viên',
     education: 'Đại học Luật Kinh tế',
     joinDate: '2011-01-10',
@@ -277,6 +286,117 @@ export const INITIAL_EMPLOYEES = [
     status: 'ACTIVE',
     phone: '0962.334.455',
     avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+  },
+];
+
+// ============================================================================
+// 4. QUÁ TRÌNH LUÂN CHUYỂN CÔNG TÁC CỦA CÁN BỘ (WORK_HISTORY)
+// ============================================================================
+export const INITIAL_WORK_HISTORY = [
+  {
+    id: 'trans-001',
+    employeeId: 'emp-003',
+    employeeCode: 'CB03',
+    employeeName: 'Nguyễn Văn An',
+    decisionNumber: '24/QĐ-HĐQT-2022',
+    decisionDate: '2022-08-10',
+    effectiveDate: '2022-08-15',
+    transferType: 'LUAN_CHUYEN_DINH_KY', // Luân chuyển định kỳ phòng ngừa rủi ro NHNN
+    transferTypeLabel: 'Luân chuyển định kỳ địa bàn tín dụng',
+    fromDepartment: 'Phòng Tín dụng',
+    toDepartment: 'Phòng Tín dụng',
+    fromPosition: 'Cán bộ Tín dụng phụ trách Quý Lộc',
+    toPosition: 'Cán bộ Tín dụng chính phụ trách Yên Thọ',
+    fromAssignedArea: 'Cụm 5 thôn xã Quý Lộc',
+    toAssignedArea: 'Toàn địa bàn xã Yên Thọ & Tân Lộc',
+    signer: 'Lê Đình Hải (Chủ tịch HĐQT)',
+    reason: 'Thực hiện quy định của NHNN về luân chuyển định kỳ cán bộ tín dụng sau 3 năm quản lý địa bàn.',
+    handoverStatus: 'DA_BAN_GIAO',
+    notes: 'Đã hoàn tất bàn giao 142 hợp đồng tín dụng và hồ sơ thế chấp sang cho đ/c Hoàng Minh Tuấn.',
+  },
+  {
+    id: 'trans-002',
+    employeeId: 'emp-003',
+    employeeCode: 'CB03',
+    employeeName: 'Nguyễn Văn An',
+    decisionNumber: '12/QĐ-HĐQT-2018',
+    decisionDate: '2018-05-20',
+    effectiveDate: '2018-06-01',
+    transferType: 'BO_NHIEM',
+    transferTypeLabel: 'Bổ nhiệm chức danh',
+    fromDepartment: 'Phòng Tín dụng',
+    toDepartment: 'Phòng Tín dụng',
+    fromPosition: 'Cán bộ Tín dụng tập sự',
+    toPosition: 'Cán bộ Tín dụng chính thức',
+    fromAssignedArea: 'Tập sự nghiệp vụ',
+    toAssignedArea: 'Phụ trách hồ sơ vay vốn xã Quý Lộc',
+    signer: 'Lê Đình Hải (Chủ tịch HĐQT)',
+    reason: 'Hoàn thành thời gian thử thách, đạt kết quả xuất sắc trong kỳ kiểm tra nghiệp vụ tín dụng.',
+    handoverStatus: 'DA_BAN_GIAO',
+    notes: 'Bổ nhiệm ngạch cán bộ chuyên môn.',
+  },
+  {
+    id: 'trans-003',
+    employeeId: 'emp-005',
+    employeeCode: 'CB05',
+    employeeName: 'Phạm Thị Lan',
+    decisionNumber: '08/QĐ-HĐQT-2020',
+    decisionDate: '2020-03-12',
+    effectiveDate: '2020-04-01',
+    transferType: 'BO_NHIEM',
+    transferTypeLabel: 'Bổ nhiệm chức vụ lãnh đạo',
+    fromDepartment: 'Phòng Kế toán - Ngân quỹ',
+    toDepartment: 'Phòng Kế toán - Ngân quỹ',
+    fromPosition: 'Phó Trưởng phòng Kế toán',
+    toPosition: 'Kế toán trưởng Quỹ TDND',
+    fromAssignedArea: 'Kế toán tổng hợp',
+    toAssignedArea: 'Quản lý toàn diện công tác kế toán & ngân quỹ',
+    signer: 'Lê Đình Hải (Chủ tịch HĐQT)',
+    reason: 'Đạt chuẩn chức danh Kế toán trưởng QTDND theo văn bản phê chuẩn số 412/NHNN-THA của NHNN Chi nhánh tỉnh.',
+    handoverStatus: 'DA_BAN_GIAO',
+    notes: 'Tiếp nhận bàn giao chứng từ và chữ ký số kế toán trưởng.',
+  },
+  {
+    id: 'trans-004',
+    employeeId: 'emp-006',
+    employeeCode: 'CB06',
+    employeeName: 'Bùi Thị Thanh',
+    decisionNumber: '14/QĐ-HĐQT-2023',
+    decisionDate: '2023-06-15',
+    effectiveDate: '2023-07-01',
+    transferType: 'LUAN_CHUYEN_DINH_KY',
+    transferTypeLabel: 'Luân chuyển định kỳ vị trí kho quỹ',
+    fromDepartment: 'Phòng Kế toán - Ngân quỹ',
+    toDepartment: 'Phòng Kế toán - Ngân quỹ',
+    fromPosition: 'Giao dịch viên tiền gửi',
+    toPosition: 'Thủ quỹ kiêm Giao dịch viên',
+    fromAssignedArea: 'Quầy giao dịch tiết kiệm',
+    toAssignedArea: 'Quản lý kho tiền & điều quỹ',
+    signer: 'Trần Thị Mai (Giám đốc Điều hành)',
+    reason: 'Quy chế luân phiên cán bộ ngân quỹ nhằm đảm bảo an toàn tuyệt đối tiền mặt và tài sản bảo đảm.',
+    handoverStatus: 'DA_BAN_GIAO',
+    notes: 'Kiểm kê bàn giao két sắt và sổ theo dõi kho tiền an toàn 100%.',
+  },
+  {
+    id: 'trans-005',
+    employeeId: 'emp-004',
+    employeeCode: 'CB04',
+    employeeName: 'Hoàng Minh Tuấn',
+    decisionNumber: '11/QĐ-HĐQT-2024',
+    decisionDate: '2024-03-01',
+    effectiveDate: '2024-03-15',
+    transferType: 'THAY_DOI_DIA_BAN',
+    transferTypeLabel: 'Luân chuyển địa bàn công tác',
+    fromDepartment: 'Phòng Tín dụng',
+    toDepartment: 'Phòng Tín dụng',
+    fromPosition: 'Cán bộ Thẩm định',
+    toPosition: 'Cán bộ Thẩm định kiêm Tín dụng địa bàn',
+    fromAssignedArea: 'Nội nghiệp thẩm định hồ sơ',
+    toAssignedArea: 'Mở rộng thẩm định khách hàng xã Quý Lộc',
+    signer: 'Trần Thị Mai (Giám đốc Điều hành)',
+    reason: 'Tăng cường nhân sự thẩm định thực địa tài sản thế chấp đất nông nghiệp và phương án kinh doanh.',
+    handoverStatus: 'DA_BAN_GIAO',
+    notes: 'Bàn giao khu vực thẩm định.',
   },
 ];
 
@@ -294,12 +414,13 @@ export const PLANNING_POSITIONS = [
 ];
 
 // ============================================================================
-// 4. PHIẾU ĐÁNH GIÁ TÍN NHIỆM MẪU (EVALUATIONS_TRUST)
+// 5. PHIẾU ĐÁNH GIÁ TÍN NHIỆM MẪU (EVALUATIONS_TRUST) - HỖ TRỢ ẨN DANH / CÔNG KHAI
 // ============================================================================
 export const INITIAL_TRUST_EVALUATIONS = [
   {
     id: 'trust-001',
     periodId: 'PERIOD-2026-Q3',
+    isAnonymous: false, // Bỏ phiếu công khai
     evaluatorId: 'emp-001',
     evaluatorName: 'Lê Đình Hải',
     evaluatorRole: 'chairman',
@@ -315,9 +436,10 @@ export const INITIAL_TRUST_EVALUATIONS = [
   {
     id: 'trust-002',
     periodId: 'PERIOD-2026-Q3',
+    isAnonymous: true, // Bỏ phiếu ẩn danh (Kín)
     evaluatorId: 'emp-002',
-    evaluatorName: 'Trần Thị Mai',
-    evaluatorRole: 'manager',
+    evaluatorName: 'Cán bộ Quỹ (Ẩn danh)',
+    evaluatorRole: 'Ẩn danh',
     targetEmployeeId: 'emp-005',
     targetEmployeeName: 'Phạm Thị Lan',
     targetDepartment: 'Phòng Kế toán - Ngân quỹ',
@@ -330,9 +452,10 @@ export const INITIAL_TRUST_EVALUATIONS = [
   {
     id: 'trust-003',
     periodId: 'PERIOD-2026-Q3',
-    evaluatorId: 'emp-002',
-    evaluatorName: 'Trần Thị Mai',
-    evaluatorRole: 'manager',
+    isAnonymous: true, // Bỏ phiếu ẩn danh (Kín)
+    evaluatorId: 'emp-003',
+    evaluatorName: 'Cán bộ Quỹ (Ẩn danh)',
+    evaluatorRole: 'Ẩn danh',
     targetEmployeeId: 'emp-004',
     targetEmployeeName: 'Hoàng Minh Tuấn',
     targetDepartment: 'Phòng Tín dụng',
@@ -345,6 +468,7 @@ export const INITIAL_TRUST_EVALUATIONS = [
   {
     id: 'trust-004',
     periodId: 'PERIOD-2026-Q3',
+    isAnonymous: false,
     evaluatorId: 'emp-001',
     evaluatorName: 'Lê Đình Hải',
     evaluatorRole: 'chairman',
@@ -360,9 +484,10 @@ export const INITIAL_TRUST_EVALUATIONS = [
   {
     id: 'trust-005',
     periodId: 'PERIOD-2026-Q3',
-    evaluatorId: 'emp-001',
-    evaluatorName: 'Lê Đình Hải',
-    evaluatorRole: 'chairman',
+    isAnonymous: true,
+    evaluatorId: 'emp-005',
+    evaluatorName: 'Cán bộ Quỹ (Ẩn danh)',
+    evaluatorRole: 'Ẩn danh',
     targetEmployeeId: 'emp-007',
     targetEmployeeName: 'Vũ Đức Nam',
     targetDepartment: 'Ban Kiểm soát',
@@ -375,7 +500,7 @@ export const INITIAL_TRUST_EVALUATIONS = [
 ];
 
 // ============================================================================
-// 5. DỮ LIỆU KPI MẪU (EVALUATIONS_KPI)
+// 6. DỮ LIỆU KPI MẪU (EVALUATIONS_KPI)
 // ============================================================================
 export const INITIAL_KPI_EVALUATIONS = [
   {
@@ -449,7 +574,7 @@ export const INITIAL_KPI_EVALUATIONS = [
 ];
 
 // ============================================================================
-// 6. DỮ LIỆU BỎ PHIẾU QUY HOẠCH MẪU (EVALUATIONS_PLANNING)
+// 7. DỮ LIỆU BỎ PHIẾU QUY HOẠCH MẪU (EVALUATIONS_PLANNING)
 // ============================================================================
 export const INITIAL_PLANNING_VOTES = [
   {

@@ -10,11 +10,13 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
+  where,
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { 
   INITIAL_EMPLOYEES, 
+  INITIAL_WORK_HISTORY,
   INITIAL_TRUST_EVALUATIONS, 
   INITIAL_KPI_EVALUATIONS, 
   INITIAL_PLANNING_VOTES 
@@ -38,6 +40,7 @@ const initLocalStore = (key, defaultData) => {
 // Đăng ký listener cục bộ cho LocalStorage khi ở chế độ Demo
 const demoListeners = {
   users: new Set(),
+  work_history: new Set(),
   evaluations_trust: new Set(),
   evaluations_kpi: new Set(),
   evaluations_planning: new Set(),
@@ -113,11 +116,91 @@ export const subscribeEmployees = (callback) => {
 };
 
 // ============================================================================
-// 2. MODULE A: ĐÁNH GIÁ TÍN NHIỆM (evaluations_trust collection)
+// 2. QUÁ TRÌNH LUÂN CHUYỂN CÔNG TÁC (work_history collection)
+// ============================================================================
+export const subscribeWorkHistory = (employeeId = null, callback) => {
+  if (isFirebaseConfigured && db) {
+    try {
+      let q = collection(db, 'work_history');
+      if (employeeId) {
+        q = query(q, where('employeeId', '==', employeeId), orderBy('effectiveDate', 'desc'));
+      } else {
+        q = query(q, orderBy('effectiveDate', 'desc'));
+      }
+
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          callback(list);
+        },
+        (error) => {
+          console.error('Lỗi onSnapshot work_history:', error);
+          const localList = initLocalStore('qtd_hrm_work_history', INITIAL_WORK_HISTORY);
+          callback(employeeId ? localList.filter((w) => w.employeeId === employeeId) : localList);
+        }
+      );
+    } catch (err) {
+      console.warn('Lỗi query work_history, dùng demo:', err);
+    }
+  }
+
+  // Demo fallback
+  const allHistory = initLocalStore('qtd_hrm_work_history', INITIAL_WORK_HISTORY);
+  const filtered = employeeId ? allHistory.filter((w) => w.employeeId === employeeId) : allHistory;
+  callback(filtered);
+
+  const wrapper = (data) => {
+    const list = employeeId ? data.filter((w) => w.employeeId === employeeId) : data;
+    callback(list);
+  };
+  demoListeners.work_history.add(wrapper);
+  return () => demoListeners.work_history.delete(wrapper);
+};
+
+export const saveWorkHistory = async (transferRecord) => {
+  const payload = {
+    ...transferRecord,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = await addDoc(collection(db, 'work_history'), {
+        ...payload,
+        serverTime: serverTimestamp(),
+      });
+      return { success: true, id: docRef.id };
+    } catch (error) {
+      console.error('Lỗi Firestore addDoc work_history:', error);
+      throw error;
+    }
+  }
+
+  // Demo fallback
+  const list = initLocalStore('qtd_hrm_work_history', INITIAL_WORK_HISTORY);
+  const newRecord = {
+    id: `trans-${Date.now()}`,
+    ...payload,
+  };
+  const updated = [newRecord, ...list];
+  localStorage.setItem('qtd_hrm_work_history', JSON.stringify(updated));
+  notifyDemoListeners('work_history');
+  return { success: true, id: newRecord.id };
+};
+
+// ============================================================================
+// 3. MODULE A: ĐÁNH GIÁ TÍN NHIỆM (evaluations_trust collection)
+// Hỗ trợ cả Ẩn danh (isAnonymous: true) và Định danh (isAnonymous: false)
 // ============================================================================
 export const saveTrustEvaluation = async (evaluationData) => {
+  const isAnon = Boolean(evaluationData.isAnonymous);
   const payload = {
     ...evaluationData,
+    isAnonymous: isAnon,
+    // Nếu chọn ẩn danh thì tên hiển thị sẽ được bảo vệ
+    evaluatorName: isAnon ? 'Cán bộ Quỹ (Ẩn danh)' : evaluationData.evaluatorName,
+    evaluatorRole: isAnon ? 'Ẩn danh' : evaluationData.evaluatorRole,
     createdAt: new Date().toISOString(),
   };
 
@@ -153,7 +236,16 @@ export const subscribeTrustEvaluations = (callback) => {
       return onSnapshot(
         q,
         (snapshot) => {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          const list = snapshot.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ...data,
+              // Xử lý bảo mật ẩn danh
+              evaluatorName: data.isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : data.evaluatorName,
+              evaluatorRole: data.isAnonymous ? 'Ẩn danh' : data.evaluatorRole,
+            };
+          });
           callback(list);
         },
         (error) => {
@@ -167,17 +259,28 @@ export const subscribeTrustEvaluations = (callback) => {
   }
 
   // Demo fallback
-  callback(initLocalStore('qtd_hrm_evaluations_trust', INITIAL_TRUST_EVALUATIONS));
-  demoListeners.evaluations_trust.add(callback);
-  return () => demoListeners.evaluations_trust.delete(callback);
+  const raw = initLocalStore('qtd_hrm_evaluations_trust', INITIAL_TRUST_EVALUATIONS);
+  const sanitized = raw.map((item) => ({
+    ...item,
+    evaluatorName: item.isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : item.evaluatorName,
+    evaluatorRole: item.isAnonymous ? 'Ẩn danh' : item.evaluatorRole,
+  }));
+  callback(sanitized);
+
+  const wrapper = (data) => {
+    const s = data.map((item) => ({
+      ...item,
+      evaluatorName: item.isAnonymous ? 'Cán bộ Quỹ (Ẩn danh)' : item.evaluatorName,
+      evaluatorRole: item.isAnonymous ? 'Ẩn danh' : item.evaluatorRole,
+    }));
+    callback(s);
+  };
+  demoListeners.evaluations_trust.add(wrapper);
+  return () => demoListeners.evaluations_trust.delete(wrapper);
 };
 
 // ============================================================================
-// 3. MODULE B: CHẤM ĐIỂM KPI (evaluations_kpi collection)
-// Multi-step scoring system:
-// Step 1: Staff submits scoreSelf (40% weight) -> status: pending_manager
-// Step 2: Manager inputs scoreManager (30% weight) -> status: pending_chairman
-// Step 3: Chairman inputs scoreChairman (30% weight) -> status: completed, auto-calc finalScore
+// 4. MODULE B: CHẤM ĐIỂM KPI (evaluations_kpi collection)
 // ============================================================================
 export const calculateKpiFinal = (scoreSelf, scoreManager, scoreChairman) => {
   if (
@@ -328,7 +431,7 @@ export const subscribeKpiEvaluations = (callback) => {
 };
 
 // ============================================================================
-// 4. MODULE C: BỎ PHIẾU QUY HOẠCH (evaluations_planning collection)
+// 5. MODULE C: BỎ PHIẾU QUY HOẠCH (evaluations_planning collection)
 // ============================================================================
 export const savePlanningVote = async (voteData) => {
   const payload = {
@@ -387,13 +490,15 @@ export const subscribePlanningVotes = (callback) => {
   return () => demoListeners.evaluations_planning.delete(callback);
 };
 
-// Hàm khôi phục dữ liệu mẫu Demo về ban đầu nếu cần
+// Hàm khôi phục dữ liệu mẫu Demo
 export const resetDemoData = () => {
   localStorage.setItem('qtd_hrm_users', JSON.stringify(INITIAL_EMPLOYEES));
+  localStorage.setItem('qtd_hrm_work_history', JSON.stringify(INITIAL_WORK_HISTORY));
   localStorage.setItem('qtd_hrm_evaluations_trust', JSON.stringify(INITIAL_TRUST_EVALUATIONS));
   localStorage.setItem('qtd_hrm_evaluations_kpi', JSON.stringify(INITIAL_KPI_EVALUATIONS));
   localStorage.setItem('qtd_hrm_evaluations_planning', JSON.stringify(INITIAL_PLANNING_VOTES));
   notifyDemoListeners('users');
+  notifyDemoListeners('work_history');
   notifyDemoListeners('evaluations_trust');
   notifyDemoListeners('evaluations_kpi');
   notifyDemoListeners('evaluations_planning');
