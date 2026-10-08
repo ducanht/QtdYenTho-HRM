@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  TrendingUp, 
   CheckCircle2, 
   Clock, 
   UserCheck, 
@@ -234,29 +233,15 @@ const KpiEvaluation = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#0f766e] uppercase tracking-wider mb-1">
-            <TrendingUp className="w-4 h-4" />
-            <span>Phân hệ Nghiệp vụ B</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Chấm Điểm KPI 3 Cấp (40% - 30% - 30%)
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Hệ thống quy trình đánh giá kết quả công tác: Tự chấm (40%) → Ban điều hành (30%) → Chủ tịch HĐQT (30%)
-          </p>
-        </div>
-
-        {/* Period Selector */}
-        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200/80 shadow-xs self-start md:self-auto">
+      {/* Action Bar & Period Selector (Thanh tác vụ gọn gàng, không lặp tiêu đề phân hệ) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-[#0f766e]" />
           <span className="text-xs font-bold text-slate-700">Kỳ đánh giá:</span>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="text-xs font-bold text-[#0f766e] bg-transparent focus:outline-none cursor-pointer"
+            className="text-xs font-bold text-[#0f766e] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#0f766e] cursor-pointer"
           >
             {periodOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -265,14 +250,21 @@ const KpiEvaluation = () => {
             ))}
           </select>
         </div>
+
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+          <span>Quy trình 3 cấp:</span>
+          <span className="bg-teal-50 text-[#0f766e] font-bold px-2 py-0.5 rounded border border-teal-200">
+            Cán bộ 40% → BĐH 30% → HĐQT 30%
+          </span>
+        </div>
       </div>
 
       {/* Formula & Weighting Banner */}
-      <Card className="bg-gradient-to-r from-teal-900 via-[#0f766e] to-emerald-800 text-white border-none shadow-lg">
+      <Card className="bg-gradient-to-r from-teal-900 via-[#0f766e] to-emerald-800 text-white border-none shadow-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold tracking-wider uppercase backdrop-blur-xs">
-              Công thức tự động hóa
+              Quy định đánh giá nội bộ
             </div>
             <h3 className="text-lg font-bold">
               Công Thức Tính Điểm KPI Tổng Kết (Final Score)

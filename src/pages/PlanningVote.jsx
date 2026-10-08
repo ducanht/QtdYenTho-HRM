@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Vote, 
   UserCheck, 
   Send, 
   CheckCircle2, 
@@ -179,31 +178,18 @@ const PlanningVote = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#0f766e] uppercase tracking-wider mb-1">
-            <Vote className="w-4 h-4" />
-            <span>Phân hệ Nghiệp vụ C</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Bỏ Phiếu Quy Hoạch Cán Bộ Nguồn
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Lấy ý kiến tín nhiệm bổ nhiệm và quy hoạch nhân sự cấp ủy, HĐQT, BKS và Ban điều hành
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+      {/* Action Bar & Filter (Thanh tác vụ gọn gàng, không lặp tiêu đề phân hệ) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
           {periods.length > 0 && (
-            <div className="bg-white px-3 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 text-xs">
               <span className="font-bold text-slate-700">Kỳ quy hoạch:</span>
               <select
                 value={selectedPeriodId}
                 onChange={(e) => setSelectedPeriodId(e.target.value)}
-                className="font-bold text-[#0f766e] bg-transparent focus:outline-none cursor-pointer"
+                className="font-bold text-[#0f766e] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#0f766e] cursor-pointer"
               >
-                <option value="ALL">-- Tất cả các đợt --</option>
+                <option value="ALL">-- Tất cả các đợt quy hoạch --</option>
                 {periods.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} {p.status === 'ACTIVE' ? '(Đang diễn ra)' : ''}
@@ -212,12 +198,12 @@ const PlanningVote = () => {
               </select>
             </div>
           )}
+        </div>
 
-          <div className="bg-white px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 text-xs">
-            <Award className="w-4 h-4 text-[#0f766e]" />
-            <span className="font-bold text-slate-700">Tổng phiếu đã phát:</span>
-            <span className="font-black text-[#0f766e] text-sm">{votes.length}</span>
-          </div>
+        <div className="flex items-center gap-2 bg-teal-50 text-[#0f766e] px-3 py-1.5 rounded-xl border border-teal-200 text-xs font-bold">
+          <Award className="w-4 h-4 text-[#0f766e]" />
+          <span>Tổng phiếu đã phát:</span>
+          <span className="font-black text-sm">{votes.length}</span>
         </div>
       </div>
 

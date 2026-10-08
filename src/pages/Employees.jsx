@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Users, 
   Search, 
   Filter, 
   Phone, 
@@ -78,32 +77,10 @@ const Employees = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#0f766e] uppercase tracking-wider mb-1">
-            <Users className="w-4 h-4" />
-            <span>Hệ Thống Nhân Sự</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Danh Bạ Cán Bộ QTDND Yên Thọ
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Danh sách nhân sự trực thuộc các phòng ban, chức danh và hồ sơ luân chuyển công tác
-          </p>
-        </div>
-
-        <div className="text-xs bg-white px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 self-start md:self-auto">
-          <Building2 className="w-4 h-4 text-[#0f766e]" />
-          <span className="text-slate-500">Quy mô nhân sự:</span>
-          <span className="font-bold text-[#0f766e]">{employees.length} cán bộ</span>
-        </div>
-      </div>
-
-      {/* Filter toolbar */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-80">
+      {/* Filter toolbar & Action Bar (Gọn gàng, không lặp tiêu đề phân hệ) */}
+      <Card className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 sm:max-w-md">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -114,22 +91,29 @@ const Employees = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
-              Phòng ban:
-            </span>
-            <select
-              value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none"
-            >
-              <option value="ALL">Tất cả phòng ban</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+                Phòng ban:
+              </span>
+              <select
+                value={selectedDept}
+                onChange={(e) => setSelectedDept(e.target.value)}
+                className="text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20 cursor-pointer"
+              >
+                <option value="ALL">Tất cả phòng ban</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="text-xs bg-teal-50 px-3 py-2 rounded-xl border border-teal-200 flex items-center gap-1.5 font-bold text-[#0f766e]">
+              <Building2 className="w-4 h-4" />
+              <span>{employees.length} cán bộ</span>
+            </div>
           </div>
         </div>
       </Card>

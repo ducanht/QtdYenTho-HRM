@@ -16,7 +16,6 @@ import {
   Globe,
   Settings2,
   Lock,
-  ShieldAlert,
   CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -55,7 +54,7 @@ import Modal from '../components/common/Modal';
 
 const AdminSettings = () => {
   const toast = useToast();
-  const { isSuperAdmin, isAdmin, canToggleModules, canConfigureWebapp, currentUser } = useAuth();
+  const { canToggleModules, canConfigureWebapp } = useAuth();
 
   // Nhóm tab lớn: 'GLOBAL' (Cấu hình chung) hoặc 'SUBSYSTEM' (Cấu hình từng phân hệ)
   const [activeGroup, setActiveGroup] = useState('SUBSYSTEM');
@@ -388,26 +387,17 @@ const AdminSettings = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. Header Trang Quản Trị */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-[#0f766e] uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200">
-              Quản Trị Hệ Thống 2 Tầng
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-xs text-slate-500 font-medium">QTDND Yên Thọ</span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-            Cấu Hình Hệ Thống Chung & Chuyên Sâu Từng Phân Hệ
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Phân định rõ ràng giữa Cấu hình dùng chung toàn Quỹ và Cấu hình đặc thù của từng phân hệ nghiệp vụ.
-          </p>
+      {/* 1. Thanh Tác Vụ & Chuyển Đổi Khu Vực Cấu Hình (Không lặp tiêu đề phân hệ) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+          <span className="font-bold text-slate-900">Phạm vi cấu hình:</span>
+          <span className="text-[#0f766e] bg-teal-50 px-2 py-0.5 rounded border border-teal-200 font-bold">
+            {activeGroup === 'GLOBAL' ? 'Khu Vực 1: Cấu hình chung toàn Quỹ' : 'Khu Vực 2: Cấu hình chuyên sâu từng phân hệ'}
+          </span>
         </div>
 
         {/* Nút chuyển đổi nhanh 2 Khu Vực Cấu Hình */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
+        <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => {

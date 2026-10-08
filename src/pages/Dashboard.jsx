@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  LayoutDashboard, 
   ShieldCheck, 
   TrendingUp, 
   Vote, 
@@ -203,29 +202,20 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      {/* Dashboard Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#0f766e] uppercase tracking-wider mb-1">
-            <LayoutDashboard className="w-4 h-4" />
-            <span>Phân Hệ Báo Cáo Thời Gian Thực (onSnapshot)</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Báo Cáo & Điều Hành Nhân Sự QTDND
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Dành riêng cho Ban điều hành & Chủ tịch HĐQT • Cập nhật trực tiếp từ Firestore
-          </p>
+      {/* Action Bar & Live Status Indicator (Không lặp tiêu đề phân hệ) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <span className="font-bold text-slate-800">Dữ liệu điều hành:</span>
+          <span>Ban điều hành & Chủ tịch HĐQT</span>
         </div>
 
-        {/* Live Status indicator */}
-        <div className="flex items-center gap-2.5 bg-white px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs self-start md:self-auto text-xs">
+        <div className="flex items-center gap-2.5 text-xs bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
           <span className="flex h-2.5 w-2.5 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
           </span>
-          <span className="font-bold text-slate-700">Firebase Real-time:</span>
-          <span className="text-[#0f766e] font-semibold">Đang đồng bộ</span>
+          <span className="font-bold text-slate-700">Trạng thái kết nối:</span>
+          <span className="text-[#0f766e] font-semibold">Đồng bộ trực tuyến</span>
         </div>
       </div>
 
