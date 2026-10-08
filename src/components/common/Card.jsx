@@ -8,9 +8,11 @@ const Card = ({
   title = '',
   subtitle = '',
   action = null,
+  headerRight = null,
   hoverEffect = false,
   ...props
 }) => {
+  const actionElement = action || headerRight;
   return (
     <div
       className={`bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden ${
@@ -28,7 +30,7 @@ const Card = ({
               {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
             </div>
           )}
-          {action && <div className="shrink-0">{action}</div>}
+          {actionElement && <div className="shrink-0">{actionElement}</div>}
         </div>
       )}
 

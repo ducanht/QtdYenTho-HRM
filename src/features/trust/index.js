@@ -1,6 +1,8 @@
 export { default as TrustEvaluationContainer } from './TrustEvaluationContainer';
 export { default } from './TrustEvaluationContainer';
-export * from './components/TrustActionBar';
+export * from './components/PeriodMasterSidebar';
+export * from './components/TrustModuleTabsNav';
+export * from './components/DeletePeriodConfirmModal';
 export * from './components/CriteriaTabsNav';
 export * from './components/CriteriaScoringTable';
 export * from './components/TrustProgressBanner';

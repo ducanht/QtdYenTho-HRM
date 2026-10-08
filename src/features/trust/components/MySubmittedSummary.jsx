@@ -33,6 +33,13 @@ const MySubmittedSummary = ({
   // Bộ lọc theo đợt đánh giá (mặc định là đợt hiện hành, hoặc 'ALL' cho tất cả)
   const [filterPeriodId, setFilterPeriodId] = useState(currentPeriod?.id || 'ALL');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Tự động đồng bộ đợt đánh giá khi người dùng chọn từ Cột Trái (Sidebar)
+  React.useEffect(() => {
+    if (currentPeriod?.id) {
+      setFilterPeriodId(currentPeriod.id);
+    }
+  }, [currentPeriod?.id]);
   
   // Modal xem chi tiết điểm từng tiêu chí của 1 phiếu đã nộp
   const [selectedSubmissionForDetail, setSelectedSubmissionForDetail] = useState(null);

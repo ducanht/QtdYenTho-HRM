@@ -26,7 +26,9 @@ import {
   DEFAULT_ROLE_PERMISSIONS 
 } from '../../lib/permissions';
 
-import TrustActionBar from './components/TrustActionBar';
+import PeriodMasterSidebar from './components/PeriodMasterSidebar';
+import TrustModuleTabsNav from './components/TrustModuleTabsNav';
+import DeletePeriodConfirmModal from './components/DeletePeriodConfirmModal';
 import CriteriaTabsNav from './components/CriteriaTabsNav';
 import CriteriaScoringTable from './components/CriteriaScoringTable';
 import TrustProgressBanner from './components/TrustProgressBanner';
@@ -80,6 +82,7 @@ const TrustEvaluationContainer = () => {
   // Quản lý Modal in A4 & Modal đợt Admin
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
+  const [periodToDelete, setPeriodToDelete] = useState(null);
   const [periodFormMode, setPeriodFormMode] = useState('CREATE');
   const [submittingPeriod, setSubmittingPeriod] = useState(false);
   const [periodFormData, setPeriodFormData] = useState({
@@ -683,9 +686,6 @@ const TrustEvaluationContainer = () => {
   };
 
   const handleDeletePeriod = async (periodId, periodName) => {
-    if (!window.confirm(`Xác nhận xóa đợt đánh giá tín nhiệm: "${periodName}"?\nLưu ý: Không thể hoàn tác thao tác này!`)) {
-      return;
-    }
     try {
       await deleteEvaluationPeriod(periodId);
       toast.success(`Đã xóa đợt đánh giá "${periodName}" thành công.`);
@@ -742,124 +742,243 @@ const TrustEvaluationContainer = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-200">
-      {/* 1. Thanh tác vụ chính: Chọn đợt, trạng thái, đếm ngược và các nút chức năng (KHÔNG lặp lại tên phân hệ) */}
-      <TrustActionBar
-        periods={periods}
-        selectedPeriodId={selectedPeriodId}
-        onSelectPeriod={setSelectedPeriodId}
-        currentPeriod={currentPeriod}
-        timeRemainingBadge={timeRemainingBadge}
-        canManagePeriods={canManagePeriods}
-        canManageCriteria={canManageCriteria}
-        canPrintReport={canPrintReport}
-        canViewOverview={canViewOverview}
-        canViewSubmitted={canViewSubmitted}
-        canViewOwnResults={canViewOwnResults}
-        canVote={canVote}
-        currentUser={currentUser}
-        onOpenCreatePeriod={handleOpenCreatePeriod}
-        onOpenEditPeriod={handleOpenEditPeriod}
-        onDeletePeriod={handleDeletePeriod}
-        onOpenPrintModal={() => setIsPrintModalOpen(true)}
+      {/* 1. Thanh Menu Tab tinh gọn chuyển nhanh trên Desktop / iPad (Không còn Header rườm rà) */}
+      <TrustModuleTabsNav
         activeTab={activeTab}
         onChangeTab={setActiveTab}
+        canVote={canVote}
+        canViewSubmitted={canViewSubmitted}
+        canViewOwnResults={canViewOwnResults}
+        canViewOverview={canViewOverview}
+        canManageCriteria={canManageCriteria}
+        canManagePeriods={canManagePeriods}
       />
 
-      {/* 2. Nội dung theo từng Tab */}
+      {/* 2. Nội dung theo từng Tab - 100% bố cục 2 phần kiểu iPad (Master - Detail) */}
+      
+      {/* Tab 1: ĐÁNH GIÁ (Bên trái: Chọn đợt - Bên phải: Bảng chấm điểm cán bộ) */}
       {activeTab === 'SCORING' && (
-        <div className="space-y-4 sm:space-y-6">
-          {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm) */}
-          <TrustProgressBanner
-            totalEmployeesCount={evaluatableEmployees.length}
-            completedCriteriaCount={completedCriteriaCount}
-            totalCriteriaCount={activeCriteria.length}
-            overallPercent={overallPercent}
-            isFullyReadyToSubmit={isFullyReadyToSubmit}
-            onSubmitOfficial={handleSubmitOfficial}
-            isSubmitting={isSubmitting}
-          />
-
-          {/* Thanh chuyển nhanh 10 tiêu chí & Chế độ xem */}
-          <CriteriaTabsNav
-            criteria={activeCriteria}
-            activeIndex={activeCriterionIndex}
-            onSelectIndex={setActiveCriterionIndex}
-            completionByCriteria={completionByCriteria}
-            totalEmployeesCount={evaluatableEmployees.length}
-            viewMode={viewMode}
-            onToggleViewMode={() => setViewMode((prev) => (prev === 'STEPPER' ? 'ALL' : 'STEPPER'))}
-          />
-
-          {/* Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10) */}
-          {viewMode === 'STEPPER' ? (
-            <CriteriaScoringTable
-              criterion={currentCriterion}
-              criterionIndex={activeCriterionIndex}
-              employees={evaluatableEmployees}
-              scores={matrixScores}
-              notes={matrixNotes}
-              onSetScore={handleSetScore}
-              onSetNote={handleSetNote}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              showTitle={true}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* CỘT TRÁI (MASTER): Danh sách đợt đánh giá kèm bộ lọc năm */}
+          <div className="lg:col-span-4 xl:col-span-3">
+            <PeriodMasterSidebar
+              periods={periods}
+              selectedPeriodId={selectedPeriodId}
+              onSelectPeriod={setSelectedPeriodId}
+              title="Đợt Đánh Giá"
+              badgeRenderer={(p) => {
+                const mySubmitted = evaluations.filter(
+                  (ev) =>
+                    ev.periodId === p.id &&
+                    (ev.evaluatorId === currentUser?.uid ||
+                      ev.evaluatorId === currentUser?.id ||
+                      ev.evaluatorEmail === currentUser?.email) &&
+                    !ev.isDraft
+                );
+                if (mySubmitted.length > 0) {
+                  return (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Đã nộp ({mySubmitted.length})
+                    </span>
+                  );
+                }
+                if (p.id === selectedPeriodId && overallPercent > 0) {
+                  return (
+                    <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                      Tiến độ: {overallPercent}%
+                    </span>
+                  );
+                }
+                return (
+                  <span className="text-[10px] text-slate-400">
+                    {p.status === 'ACTIVE' ? 'Đang mở' : 'Đã đóng'}
+                  </span>
+                );
+              }}
             />
-          ) : (
-            <div className="space-y-8">
-              {activeCriteria.map((crit, idx) => (
-                <CriteriaScoringTable
-                  key={crit.id || idx}
-                  criterion={crit}
-                  criterionIndex={idx}
-                  employees={evaluatableEmployees}
-                  scores={matrixScores}
-                  notes={matrixNotes}
-                  onSetScore={handleSetScore}
-                  onSetNote={handleSetNote}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  showTitle={true}
-                />
-              ))}
-            </div>
-          )}
+          </div>
+
+          {/* CỘT PHẢI (DETAIL): Banner tiến độ & Bảng chấm điểm cán bộ */}
+          <div className="lg:col-span-8 xl:col-span-9 space-y-4">
+            {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm) */}
+            <TrustProgressBanner
+              totalEmployeesCount={evaluatableEmployees.length}
+              completedCriteriaCount={completedCriteriaCount}
+              totalCriteriaCount={activeCriteria.length}
+              overallPercent={overallPercent}
+              isFullyReadyToSubmit={isFullyReadyToSubmit}
+              onSubmitOfficial={handleSubmitOfficial}
+              isSubmitting={isSubmitting}
+            />
+
+            {/* Thanh chuyển nhanh 10 tiêu chí & Chế độ xem */}
+            <CriteriaTabsNav
+              criteria={activeCriteria}
+              activeIndex={activeCriterionIndex}
+              onSelectIndex={setActiveCriterionIndex}
+              completionByCriteria={completionByCriteria}
+              totalEmployeesCount={evaluatableEmployees.length}
+              viewMode={viewMode}
+              onToggleViewMode={() => setViewMode((prev) => (prev === 'STEPPER' ? 'ALL' : 'STEPPER'))}
+            />
+
+            {/* Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10) */}
+            {viewMode === 'STEPPER' ? (
+              <CriteriaScoringTable
+                criterion={currentCriterion}
+                criterionIndex={activeCriterionIndex}
+                employees={evaluatableEmployees}
+                scores={matrixScores}
+                notes={matrixNotes}
+                onSetScore={handleSetScore}
+                onSetNote={handleSetNote}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                showTitle={true}
+              />
+            ) : (
+              <div className="space-y-8">
+                {activeCriteria.map((crit, idx) => (
+                  <CriteriaScoringTable
+                    key={crit.id || idx}
+                    criterion={crit}
+                    criterionIndex={idx}
+                    employees={evaluatableEmployees}
+                    scores={matrixScores}
+                    notes={matrixNotes}
+                    onSetScore={handleSetScore}
+                    onSetNote={handleSetNote}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    showTitle={true}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Tab 2: Lịch sử phiếu chính mình đã chấm cho đồng nghiệp */}
+      {/* Tab 2: LỊCH SỬ (Bên trái: Chọn đợt - Bên phải: Phiếu cá nhân đã nộp) */}
       {activeTab === 'MY_VOTES' && (
-        <MySubmittedSummary
-          evaluations={evaluations}
-          currentUser={currentUser}
-          currentPeriod={currentPeriod}
-          periods={periods}
-          criteria={activeCriteria}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* CỘT TRÁI (MASTER): Chọn đợt kèm số lượng phiếu đã nộp */}
+          <div className="lg:col-span-4 xl:col-span-3">
+            <PeriodMasterSidebar
+              periods={periods}
+              selectedPeriodId={selectedPeriodId}
+              onSelectPeriod={setSelectedPeriodId}
+              title="Đợt Đánh Giá"
+              badgeRenderer={(p) => {
+                const count = evaluations.filter(
+                  (ev) =>
+                    ev.periodId === p.id &&
+                    (ev.evaluatorId === currentUser?.uid ||
+                      ev.evaluatorId === currentUser?.id ||
+                      ev.evaluatorEmail === currentUser?.email) &&
+                    !ev.isDraft
+                ).length;
+                return (
+                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {count} phiếu
+                  </span>
+                );
+              }}
+            />
+          </div>
+
+          {/* CỘT PHẢI (DETAIL): Bảng danh sách phiếu cá nhân đã nộp */}
+          <div className="lg:col-span-8 xl:col-span-9">
+            <MySubmittedSummary
+              evaluations={evaluations}
+              currentUser={currentUser}
+              currentPeriod={currentPeriod}
+              periods={periods}
+              criteria={activeCriteria}
+            />
+          </div>
+        </div>
       )}
 
-      {/* Tab 3: Xem điểm tín nhiệm cá nhân của bản thân sau khi hoàn tất */}
+      {/* Tab 3: CÁ NHÂN (Bên trái: Chọn đợt - Bên phải: Kết quả điểm tín nhiệm của mình) */}
       {activeTab === 'MY_RESULTS' && (
-        <MySelfResults
-          evaluations={evaluations}
-          currentUser={currentUser}
-          currentPeriod={currentPeriod}
-          criteria={activeCriteria}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* CỘT TRÁI (MASTER): Chọn đợt */}
+          <div className="lg:col-span-4 xl:col-span-3">
+            <PeriodMasterSidebar
+              periods={periods}
+              selectedPeriodId={selectedPeriodId}
+              onSelectPeriod={setSelectedPeriodId}
+              title="Đợt Đánh Giá"
+              badgeRenderer={(p) => (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  p.status === 'CLOSED'
+                    ? 'bg-slate-100 text-slate-600'
+                    : 'bg-teal-50 text-teal-700 border border-teal-200'
+                }`}>
+                  {p.status === 'CLOSED' ? 'Đã công bố' : 'Đang mở'}
+                </span>
+              )}
+            />
+          </div>
+
+          {/* CỘT PHẢI (DETAIL): Kết quả tín nhiệm cá nhân */}
+          <div className="lg:col-span-8 xl:col-span-9">
+            <MySelfResults
+              evaluations={evaluations}
+              currentUser={currentUser}
+              currentPeriod={currentPeriod}
+              criteria={activeCriteria}
+            />
+          </div>
+        </div>
       )}
 
-      {/* Tab 4: Báo cáo tổng quan toàn Quỹ */}
+      {/* Tab 4: TỔNG QUAN (Bên trái: Chọn đợt + Quản trị đợt - Bên phải: Báo cáo & Xuất In) */}
       {activeTab === 'OVERVIEW' && (
-        <TrustOverviewReport
-          evaluations={evaluations}
-          employees={employees}
-          currentPeriod={currentPeriod}
-          criteria={activeCriteria}
-          isAdmin={canManagePeriods}
-          onOpenPrintModal={() => setIsPrintModalOpen(true)}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* CỘT TRÁI (MASTER): Chọn đợt & Thao tác đợt của Lãnh đạo */}
+          <div className="lg:col-span-4 xl:col-span-3">
+            <PeriodMasterSidebar
+              periods={periods}
+              selectedPeriodId={selectedPeriodId}
+              onSelectPeriod={setSelectedPeriodId}
+              title="Đợt Đánh Giá"
+              showAdminControls={canManagePeriods}
+              onOpenCreatePeriod={handleOpenCreatePeriod}
+              onOpenEditPeriod={handleOpenEditPeriod}
+              onDeletePeriodClick={(p) => setPeriodToDelete(p)}
+              badgeRenderer={(p) => {
+                const voterSet = new Set(
+                  evaluations
+                    .filter((ev) => ev.periodId === p.id && !ev.isDraft)
+                    .map((ev) => ev.evaluatorId)
+                );
+                const percent = employees.length > 0 ? Math.round((voterSet.size / employees.length) * 100) : 0;
+                return (
+                  <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                    {percent}% cử tri
+                  </span>
+                );
+              }}
+            />
+          </div>
+
+          {/* CỘT PHẢI (DETAIL): Báo cáo tổng thể, Danh sách cử tri & Nút In A4, Xuất Excel */}
+          <div className="lg:col-span-8 xl:col-span-9">
+            <TrustOverviewReport
+              evaluations={evaluations}
+              employees={employees}
+              currentPeriod={currentPeriod}
+              criteria={activeCriteria}
+              isAdmin={canManagePeriods}
+              onOpenPrintModal={() => setIsPrintModalOpen(true)}
+            />
+          </div>
+        </div>
       )}
 
-      {/* Tab 5: Cấu hình Tiêu chí & Thang điểm tín nhiệm theo TỪNG ĐỢT ĐÁNH GIÁ (Giao diện 2 cột kiểu iPad) */}
+      {/* Tab 5: CẤU HÌNH (Bên trái: Chọn đợt - Bên phải: Cấu hình đợt + Nút Lưu) */}
       {activeTab === 'CRITERIA_SETTINGS' && (
         <TrustCriteriaSettings
           periods={periods}
@@ -873,12 +992,15 @@ const TrustEvaluationContainer = () => {
           canManagePeriods={canManagePeriods}
           onOpenCreatePeriod={handleOpenCreatePeriod}
           onOpenEditPeriod={handleOpenEditPeriod}
-          onDeletePeriod={handleDeletePeriod}
+          onDeletePeriod={(id, name) => {
+            const p = periods.find((item) => item.id === id);
+            setPeriodToDelete(p || { id, name });
+          }}
           currentUser={currentUser}
         />
       )}
 
-      {/* Tab 6: Ma trận Phân quyền chuyên biệt Phân hệ Tín nhiệm */}
+      {/* Tab 6: PHÂN QUYỀN (Ma trận Phân quyền RBAC chuyên biệt Phân hệ Tín nhiệm) */}
       {activeTab === 'PERMISSIONS_SETTINGS' && (
         <TrustPermissionsMatrix
           permissions={trustPermissions}
@@ -889,7 +1011,7 @@ const TrustEvaluationContainer = () => {
         />
       )}
 
-      {/* 3. Modals */}
+      {/* 3. Modals quản lý đợt & in ấn */}
       <TrustPeriodModal
         isOpen={isPeriodModalOpen}
         onClose={() => setIsPeriodModalOpen(false)}
@@ -915,6 +1037,15 @@ const TrustEvaluationContainer = () => {
             classification: 'Tốt',
           };
         })}
+      />
+
+      {/* Modal bảo mật xác nhận xóa đợt đánh giá (Bắt buộc nhập mật khẩu quản trị) */}
+      <DeletePeriodConfirmModal
+        isOpen={Boolean(periodToDelete)}
+        onClose={() => setPeriodToDelete(null)}
+        period={periodToDelete}
+        onConfirmDelete={handleDeletePeriod}
+        currentUser={currentUser}
       />
 
       {/* 4. Bottom Navigation Menu (Chuyên dụng cho thiết bị di động - Truy cập nhanh 1 chạm) */}

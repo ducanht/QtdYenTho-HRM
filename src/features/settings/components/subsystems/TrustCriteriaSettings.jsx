@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Save, 
   Plus, 
@@ -7,25 +7,23 @@ import {
   RotateCcw, 
   CheckSquare, 
   Users, 
-  Calendar, 
-  ShieldCheck,
-  PlusCircle,
-  Clock,
-  Filter
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
 import Card from '../../../../components/common/Card';
 import Button from '../../../../components/common/Button';
 import Input from '../../../../components/common/Input';
 import Modal from '../../../../components/common/Modal';
 import StatusBadge from '../../../../components/common/StatusBadge';
+import PeriodMasterSidebar from '../../../trust/components/PeriodMasterSidebar';
 import DeletePeriodConfirmModal from '../../../trust/components/DeletePeriodConfirmModal';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../../../lib/constants';
 
 /**
- * TrustCriteriaSettings: Giao diện Cấu hình Đợt Đánh Giá 2 cột kiểu iPad (Master - Detail)
- * - Cột trái (Master): Danh sách các đợt đánh giá kèm bộ lọc theo năm, tạo đợt, sửa/xóa đợt có bảo mật
- * - Cột phải (Detail): Cấu hình độc lập cho đợt được chọn (Quy chế, Ngưỡng điểm, Cán bộ áp dụng, Bộ tiêu chí)
- * - Tối ưu 100% gọn gàng, loại bỏ các label và giải thích rườm rà không cần thiết
+ * TrustCriteriaSettings: Cấu hình Đợt Đánh Giá 2 cột kiểu iPad (Master - Detail)
+ * - Cột trái (Master): Dùng PeriodMasterSidebar kèm nút Tạo đợt, Sửa, Xóa đợt (bảo mật mật khẩu)
+ * - Cột phải (Detail): Cấu hình cho đợt được chọn (Quy chế, Ngưỡng điểm, Cán bộ áp dụng, Bộ tiêu chí)
+ * - Nút Lưu Cấu Hình hiển thị 100% rõ ràng ở cả Header Card và Sticky Toolbar đáy màn hình
  */
 const TrustCriteriaSettings = ({
   periods = [],
@@ -42,9 +40,6 @@ const TrustCriteriaSettings = ({
   onDeletePeriod,
   currentUser,
 }) => {
-  // Bộ lọc theo năm cho cột danh sách đợt (Cột trái)
-  const [filterYear, setFilterYear] = useState('ALL');
-
   // Modal xác nhận xóa đợt có nhập mật khẩu quản trị
   const [periodToDelete, setPeriodToDelete] = useState(null);
 
@@ -107,19 +102,6 @@ const TrustCriteriaSettings = ({
       });
     }
   }, [periodConfig, currentPeriod, employees]);
-
-  // Danh sách các năm duy nhất có trong dữ liệu đợt
-  const availableYears = useMemo(() => {
-    const yearSet = new Set(periods.map((p) => p.year).filter(Boolean));
-    yearSet.add(2026);
-    return Array.from(yearSet).sort((a, b) => b - a);
-  }, [periods]);
-
-  // Danh sách đợt sau khi lọc theo năm
-  const filteredPeriods = useMemo(() => {
-    if (filterYear === 'ALL') return periods;
-    return periods.filter((p) => p.year === Number(filterYear));
-  }, [periods, filterYear]);
 
   // Handler: Chọn nhanh cán bộ theo phòng ban
   const handleSelectEmployeesByDept = (dept) => {
@@ -240,138 +222,22 @@ const TrustCriteriaSettings = ({
         {/* ===================================================================== */}
         {/* CỘT TRÁI (MASTER): DANH SÁCH CÁC ĐỢT ĐÁNH GIÁ (4/12 CỘT)              */}
         {/* ===================================================================== */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 space-y-3.5">
-          {/* Header Cột Trái */}
-          <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#0f766e]" />
-              <h3 className="font-bold text-slate-900 text-sm">Đợt Đánh Giá</h3>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                {filteredPeriods.length}
+        <div className="lg:col-span-4">
+          <PeriodMasterSidebar
+            periods={periods}
+            selectedPeriodId={selectedPeriodId}
+            onSelectPeriod={onSelectPeriod}
+            showAdminControls={canManagePeriods}
+            onOpenCreatePeriod={onOpenCreatePeriod}
+            onOpenEditPeriod={onOpenEditPeriod}
+            onDeletePeriodClick={(p) => setPeriodToDelete(p)}
+            title="Đợt Đánh Giá"
+            badgeRenderer={(p) => (
+              <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                {(p.targetEmployeeIds || employees).length} cán bộ
               </span>
-            </div>
-
-            {canManagePeriods && onOpenCreatePeriod && (
-              <Button
-                variant="primary"
-                size="sm"
-                icon={Plus}
-                onClick={onOpenCreatePeriod}
-                className="text-xs font-bold py-1 px-2.5"
-              >
-                Tạo đợt
-              </Button>
             )}
-          </div>
-
-          {/* Bộ lọc theo năm */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => setFilterYear('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                filterYear === 'ALL'
-                  ? 'bg-emerald-800 text-white shadow-2xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Tất cả
-            </button>
-            {availableYears.map((yr) => (
-              <button
-                key={yr}
-                type="button"
-                onClick={() => setFilterYear(yr)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                  filterYear === yr
-                    ? 'bg-emerald-800 text-white shadow-2xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Năm {yr}
-              </button>
-            ))}
-          </div>
-
-          {/* Danh sách thẻ các đợt đánh giá */}
-          <div className="space-y-2 max-h-[680px] overflow-y-auto pr-1">
-            {filteredPeriods.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-xs italic">
-                Chưa có đợt đánh giá nào trong năm {filterYear === 'ALL' ? 'này' : filterYear}
-              </div>
-            ) : (
-              filteredPeriods.map((p) => {
-                const isSelected = p.id === selectedPeriodId;
-                return (
-                  <div
-                    key={p.id}
-                    onClick={() => onSelectPeriod && onSelectPeriod(p.id)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer text-left relative group ${
-                      isSelected
-                        ? 'bg-teal-50/80 border-teal-600 ring-2 ring-teal-500/20 shadow-2xs'
-                        : 'bg-slate-50/60 border-slate-200 hover:bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h4 className={`text-xs font-bold line-clamp-2 ${isSelected ? 'text-teal-950' : 'text-slate-800'}`}>
-                          {p.name}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
-                          <span>Quý {p.quarter || 4}/{p.year || 2026}</span>
-                          {p.startDate && (
-                            <>
-                              <span>•</span>
-                              <span>{p.startDate}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Nút Sửa / Xóa đợt cho Lãnh đạo */}
-                      {canManagePeriods && (
-                        <div className="flex items-center gap-0.5 shrink-0 opacity-80 group-hover:opacity-100">
-                          {onOpenEditPeriod && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenEditPeriod(p);
-                              }}
-                              className="p-1 rounded text-slate-400 hover:text-teal-700 hover:bg-white transition-colors"
-                              title="Chỉnh sửa thông tin đợt"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {onDeletePeriod && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPeriodToDelete(p);
-                              }}
-                              className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                              title="Xóa đợt đánh giá này (Yêu cầu mật khẩu)"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-slate-200/60">
-                      <StatusBadge type="period_status" value={p.status} />
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {p.votingMode === 'ANONYMOUS' ? 'Bỏ phiếu kín' : 'Công khai'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          />
         </div>
 
         {/* ===================================================================== */}
@@ -382,7 +248,7 @@ const TrustCriteriaSettings = ({
             <Card
               title={`Cấu hình: ${currentPeriod.name}`}
               subtitle={`Quý ${currentPeriod.quarter || 4} / ${currentPeriod.year || 2026} • Mã đợt: ${currentPeriod.id}`}
-              headerRight={
+              action={
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -399,7 +265,7 @@ const TrustCriteriaSettings = ({
                     icon={Save}
                     isLoading={isSaving}
                     onClick={handleSaveCurrentPeriodConfig}
-                    className="font-bold text-xs"
+                    className="font-bold text-xs bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
                   >
                     Lưu cấu hình
                   </Button>
@@ -526,14 +392,14 @@ const TrustCriteriaSettings = ({
                     <button
                       type="button"
                       onClick={() => handleSelectEmployeesByDept('ALL')}
-                      className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200"
+                      className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 cursor-pointer"
                     >
                       Chọn tất cả
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSelectEmployeesByDept('NONE')}
-                      className="px-2 py-0.5 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-200"
+                      className="px-2 py-0.5 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-200 cursor-pointer"
                     >
                       Bỏ chọn
                     </button>
@@ -633,7 +499,7 @@ const TrustCriteriaSettings = ({
                                 <button
                                   type="button"
                                   onClick={() => handleOpenCritModal(crit, idx)}
-                                  className="p-1 rounded text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                                  className="p-1 rounded text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
                                   title="Sửa tiêu chí"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
@@ -641,7 +507,7 @@ const TrustCriteriaSettings = ({
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteCritFromPeriod(idx, crit.title)}
-                                  className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                  className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                                   title="Xóa tiêu chí"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -653,6 +519,34 @@ const TrustCriteriaSettings = ({
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+
+              {/* THANH ACTION DƯỚI CÙNG (STICKY ACTION BAR - ĐẢM BẢO LUÔN NHÌN THẤY NÚT LƯU) */}
+              <div className="sticky bottom-0 z-20 mt-6 pt-3.5 pb-2 border-t border-slate-200 bg-white/95 backdrop-blur-md flex items-center justify-between gap-3">
+                <span className="text-xs text-slate-500 hidden sm:inline">
+                  Đang cấu hình: <strong className="text-teal-900">{currentPeriod.name}</strong>
+                </span>
+                <div className="flex items-center gap-2.5 ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={RotateCcw}
+                    onClick={handleResetStandard}
+                    className="text-xs font-bold border-slate-300 text-slate-700"
+                  >
+                    Chuẩn NHNN
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    icon={Save}
+                    isLoading={isSaving}
+                    onClick={handleSaveCurrentPeriodConfig}
+                    className="font-bold text-xs bg-emerald-700 hover:bg-emerald-800 text-white shadow-md px-5"
+                  >
+                    Lưu Cấu Hình Đợt Này
+                  </Button>
                 </div>
               </div>
             </Card>
