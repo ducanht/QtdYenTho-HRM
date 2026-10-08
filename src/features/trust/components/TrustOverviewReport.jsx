@@ -127,6 +127,41 @@ const TrustOverviewReport = ({
     };
   }, [evaluations, employees, currentPeriod, criteria]);
 
+  // Handler: Xuất dữ liệu bảng điểm ra file CSV Excel chuẩn UTF-8
+  const handleExportCsv = () => {
+    if (!reportData.leaderboard.length) return;
+    const headers = [
+      'Hạng',
+      'Họ và tên cán bộ',
+      'Chức vụ',
+      'Phòng ban',
+      'Số phiếu nhận',
+      'Điểm TB (Thang 10)',
+      'Điểm quy đổi (Thang 100)',
+      'Xếp loại',
+    ];
+    const rows = reportData.leaderboard.map((row, idx) => [
+      idx + 1,
+      `"${row.name}"`,
+      `"${row.position || 'Cán bộ'}"`,
+      `"${row.department || ''}"`,
+      row.evaluationsCount,
+      row.avgScore10,
+      row.avgScore100,
+      `"${row.classification.label}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Ket_Qua_Tin_Nhiem_${currentPeriod?.name?.replace(/\s+/g, '_') || 'Ky'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Nếu là cán bộ thường và đợt chưa kết thúc
   if (!isAdmin && !isPeriodClosed) {
     return (
@@ -250,7 +285,29 @@ const TrustOverviewReport = ({
       {(isAdmin || isPeriodClosed) && (
         <Card
           title="Kết quả tín nhiệm toàn Quỹ"
-          subtitle={`Kỳ: ${currentPeriod?.name}`}
+          subtitle={`Kỳ: ${currentPeriod?.name || 'Hiện hành'}`}
+          headerRight={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={TrendingUp}
+                onClick={handleExportCsv}
+                className="text-xs font-bold border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+              >
+                Xuất Excel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Printer}
+                onClick={onOpenPrintModal}
+                className="text-xs font-bold"
+              >
+                In biên bản A4
+              </Button>
+            </div>
+          }
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">

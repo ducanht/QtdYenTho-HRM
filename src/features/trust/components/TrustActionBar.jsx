@@ -43,89 +43,42 @@ const TrustActionBar = ({
     <div className="space-y-3 sm:space-y-4">
       {/* 1. Thanh điều khiển chính (ActionBar Toolbar) */}
       <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-        {/* Hàng 1: Bộ chọn kỳ đánh giá và thao tác quản lý */}
+        {/* Hàng 1: Bộ chọn kỳ đánh giá gọn gàng */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Ô chọn kỳ đánh giá */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 min-w-0">
-            <div className="flex items-center justify-between sm:justify-start gap-1.5 shrink-0">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
-                <Calendar className="w-4 h-4 text-[#0f766e] shrink-0" />
-                <span>Kỳ đánh giá:</span>
-              </span>
-
-              {/* Nút Sửa / Xóa đợt cho Lãnh đạo trên Mobile */}
-              {canManagePeriods && currentPeriod && (
-                <div className="flex sm:hidden items-center gap-1 pl-1">
-                  <button
-                    type="button"
-                    onClick={() => onOpenEditPeriod(currentPeriod)}
-                    className="p-1 rounded-lg text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
-                    title="Sửa thông tin đợt này"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeletePeriod(currentPeriod.id, currentPeriod.name)}
-                    className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                    title="Xóa đợt này"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1 min-w-0">
+            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider shrink-0">
+              <Calendar className="w-4 h-4 text-[#0f766e] shrink-0" />
+              <span>Kỳ đánh giá:</span>
+            </span>
 
             <select
               value={selectedPeriodId}
               onChange={(e) => onSelectPeriod(e.target.value)}
-              className="w-full sm:max-w-md text-xs sm:text-sm font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 shadow-2xs cursor-pointer hover:border-teal-500"
+              className="w-full sm:max-w-md text-xs sm:text-sm font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 shadow-2xs cursor-pointer hover:border-teal-500"
             >
-              {periods.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {p.status === 'CLOSED' ? '(Đã kết thúc)' : p.status === 'UPCOMING' ? '(Sắp diễn ra)' : '(Đang lấy phiếu)'}
-                </option>
-              ))}
+              {periods
+                .filter((p) => p && (p.name || p.id))
+                .map((p) => {
+                  const displayName = p.name ? p.name.trim() : `Đánh giá tín nhiệm Quý ${p.quarter || 4}/${p.year || 2026}`;
+                  const statusText =
+                    p.status === 'CLOSED'
+                      ? '(Đã kết thúc)'
+                      : p.status === 'UPCOMING'
+                      ? '(Sắp diễn ra)'
+                      : '(Đang lấy phiếu)';
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {displayName} {statusText}
+                    </option>
+                  );
+                })}
             </select>
-
-            {/* Nút Sửa / Xóa đợt cho Lãnh đạo trên Desktop */}
-            {canManagePeriods && currentPeriod && (
-              <div className="hidden sm:flex items-center gap-1 border-l border-slate-200 pl-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onOpenEditPeriod(currentPeriod)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
-                  title="Sửa thông tin đợt này"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDeletePeriod(currentPeriod.id, currentPeriod.name)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                  title="Xóa đợt này"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Cụm nút In & Tạo đợt */}
-          <div className="flex items-center gap-2 shrink-0 justify-end">
-            {canPrintReport && (
-              <Button
-                variant="outline"
-                size="sm"
-                icon={Printer}
-                onClick={onOpenPrintModal}
-                className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50"
-              >
-                In biên bản
-              </Button>
-            )}
-
-            {canManagePeriods && (
+          {/* Nút Tạo đợt mới (Nếu có quyền Quản trị) */}
+          {canManagePeriods && onOpenCreatePeriod && (
+            <div className="flex items-center gap-2 shrink-0 justify-end">
               <Button
                 variant="outline"
                 size="sm"
@@ -135,8 +88,8 @@ const TrustActionBar = ({
               >
                 Tạo đợt mới
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Hàng 2: Trạng thái đợt, Đếm ngược thời gian và Người dùng */}

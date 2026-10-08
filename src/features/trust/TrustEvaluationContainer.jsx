@@ -859,7 +859,7 @@ const TrustEvaluationContainer = () => {
         />
       )}
 
-      {/* Tab 5: Cấu hình Tiêu chí & Thang điểm tín nhiệm theo TỪNG ĐỢT ĐÁNH GIÁ */}
+      {/* Tab 5: Cấu hình Tiêu chí & Thang điểm tín nhiệm theo TỪNG ĐỢT ĐÁNH GIÁ (Giao diện 2 cột kiểu iPad) */}
       {activeTab === 'CRITERIA_SETTINGS' && (
         <TrustCriteriaSettings
           periods={periods}
@@ -870,6 +870,11 @@ const TrustEvaluationContainer = () => {
           employees={employees}
           onSavePeriodConfig={handleSavePeriodConfig}
           isSaving={savingPeriodConfig}
+          canManagePeriods={canManagePeriods}
+          onOpenCreatePeriod={handleOpenCreatePeriod}
+          onOpenEditPeriod={handleOpenEditPeriod}
+          onDeletePeriod={handleDeletePeriod}
+          currentUser={currentUser}
         />
       )}
 
