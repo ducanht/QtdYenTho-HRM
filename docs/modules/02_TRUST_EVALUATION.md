@@ -51,10 +51,30 @@ Thang điểm từ $0$ đến $10$ điểm cho mỗi tiêu chí (Tổng điểm 
 
 ---
 
-## 🛠️ 4. CHỨC NĂNG QUẢN TRỊ ĐỢT ĐÁNH GIÁ (ADMIN / HĐQT)
+---
 
-Dành cho Chủ tịch HĐQT và Ban Giám đốc:
-- Xem danh sách các đợt đánh giá tín nhiệm.
-- **Nút chuyển đổi nhanh 1-Click**: Đổi giữa **Bỏ phiếu kín (Ẩn danh)** $\leftrightarrow$ **Công khai (Định danh)**.
-- **Nút đóng / mở đợt**: Kích hoạt đợt (`ACTIVE`) hoặc Đóng đợt (`CLOSED`).
-- **Ban hành đợt mới**: Nhập tên đợt, năm, quý, hình thức bỏ phiếu, thời hạn và căn cứ nghị quyết HĐQT.
+## 🏛️ 5. CHUẨN MỰC THIẾT KẾ BỐ CỤC IPAD 2 PHẦN (MASTER - DETAIL) & 100% RESPONSIVE
+
+Toàn bộ các phân hệ con của Module Tín nhiệm tuân thủ nghiêm ngặt **Kiến trúc Bố cục iPad 2 Phần**:
+- **Cột Trái (Master List - 3 đến 4/12 cột trên màn hình Desktop/Tablet)**:
+  - Component chuẩn mực dùng chung: `PeriodMasterSidebar.jsx`.
+  - Bộ lọc năm dạng Chips (`[Tất cả]`, `[Năm 2026]`...) giúp lọc đợt cực nhanh.
+  - Danh sách thẻ đợt đánh giá trực quan, highlight đợt đang chọn, tự động render badge theo ngữ cảnh từng tab (Tiến độ chấm %, Số phiếu đã nộp, Trạng thái đợt, Tỷ lệ cử tri tham gia).
+  - Tích hợp công cụ quản trị đợt: Nút **Tạo đợt**, **Sửa đợt**, **Xóa đợt** (bảo mật mật khẩu quản trị).
+- **Cột Phải (Detail Content - 8 đến 9/12 cột trên Desktop/Tablet)**:
+  - **Tab 1: Đánh giá (`SCORING`)**: Banner tiến độ + Bộ chuyển tiêu chí + Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10, tự động lưu ngầm).
+  - **Tab 2: Lịch sử (`MY_VOTES`)**: Danh sách chi tiết các phiếu cá nhân người dùng đã nộp cho đồng nghiệp theo từng đợt (kèm xem chi tiết điểm từng tiêu chí).
+  - **Tab 3: Cá nhân (`MY_RESULTS`)**: Bảng điểm tổng kết cá nhân của chính mình (chỉ hiển thị khi đợt đã đóng/công bố theo quy chế).
+  - **Tab 4: Tổng quan (`OVERVIEW`)**: Báo cáo tổng thể phân bổ xếp loại toàn Quỹ, danh sách cử tri đã nộp / chưa nộp, tích hợp trọn vẹn nút **In biên bản A4** và **Xuất Excel**.
+  - **Tab 5: Cấu hình (`CRITERIA_SETTINGS`)**: Cấu hình độc lập cho từng đợt đánh giá (`period_configs`), nút Lưu cấu hình nổi bật ở Header Card và **Sticky Bottom Action Toolbar** cố định đáy màn hình.
+  - **Tab 6: Phân quyền (`PERMISSIONS_SETTINGS`)**: Ma trận phân quyền RBAC chuyên biệt của Phân hệ Tín nhiệm.
+- **Thanh Menu Tinh Gọn**:
+  - Desktop/iPad: Thanh tab ngang tinh gọn `TrustModuleTabsNav.jsx`, triệt tiêu 100% header rườm rà.
+  - Mobile: Thanh Bottom Navigation `TrustBottomNav.jsx` cho phép chuyển tab 1 chạm, tự động xếp chồng (stack) dọc mượt mà.
+
+---
+
+## 🔒 6. BẢO MẬT XÁC THỰC MẬT KHẨU QUẢN TRỊ KHI XÓA ĐỢT
+- Khi Lãnh đạo/Admin thực hiện xóa đợt đánh giá, hệ thống kích hoạt modal bảo mật `DeletePeriodConfirmModal.jsx`.
+- Bắt buộc nhập **Mật khẩu quản trị** và xác thực qua hàm `verifyAdminPassword(email, password)`.
+- Chỉ khi mật khẩu chính xác mới được phép xóa đợt khỏi Firestore, bảo đảm tuyệt đối an toàn dữ liệu và phòng ngừa thao tác nhầm lẫn.

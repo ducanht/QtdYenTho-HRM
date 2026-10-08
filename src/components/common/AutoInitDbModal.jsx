@@ -202,9 +202,15 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
                 </span>
               </div>
               <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-600">period_configs:</span>
+                <span className="font-black text-[#0f766e]">
+                  {resultSummary.details?.period_configs || 2} cấu hình đợt
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
                 <span className="text-slate-600">users:</span>
                 <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.users || 9} hồ sơ
+                  {resultSummary.details?.users || 12} hồ sơ
                 </span>
               </div>
               <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">

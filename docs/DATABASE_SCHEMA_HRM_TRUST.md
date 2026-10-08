@@ -246,3 +246,42 @@ Dữ liệu thực tế 12 CBNV đã được chuẩn hóa và nạp thành côn
 
 > **Ghi chú về các thông tin còn thiếu**: Các trường ngày sinh chi tiết, trình độ học vấn, ảnh chân dung thực tế và hồ sơ gia đình sẽ được bổ sung trực tiếp trên màn hình Quản lý hồ sơ cán bộ khi có đầy đủ hồ sơ văn bản.
 
+---
+
+## 🗄️ 6. Bảng Cấu Hình Riêng Biệt Cho Từng Đợt Đánh Giá (`period_configs`)
+
+Để đảm bảo tính độc lập tuyệt đối giữa các đợt đánh giá tín nhiệm (**Zero Shared Config Drift**), mỗi đợt khi được tạo hoặc tinh chỉnh sẽ sở hữu một bản ghi cấu hình riêng trong collection `period_configs` tương ứng với `periodId`:
+
+### Cấu trúc collection: `period_configs/{periodId}`
+| Trường dữ liệu | Kiểu | Ý nghĩa nghiệp vụ |
+| :--- | :--- | :--- |
+| `id` / `periodId` | `string` (PK) | Mã đợt đánh giá tham chiếu (VD: `PERIOD-2026-Q4-8848`). |
+| `periodName` | `string` | Tên hiển thị của đợt đánh giá. |
+| `votingMode` | `string` | `'ANONYMOUS'` (Bỏ phiếu kín) hoặc `'IDENTIFIED'` (Công khai). |
+| `allowSelfEvaluation` | `boolean` | Cho phép cán bộ tự đánh giá chính mình hay không (Mặc định: `false`). |
+| `excellentThreshold` | `number` | Ngưỡng điểm đạt Xuất sắc (Mặc định: 90 điểm). |
+| `goodThreshold` | `number` | Ngưỡng điểm đạt Tốt (Mặc định: 70 điểm). |
+| `passThreshold` | `number` | Ngưỡng điểm Hoàn thành (Mặc định: 50 điểm). |
+| `scale` | `number` | Thang điểm quy đổi chuẩn (100). |
+| `targetEmployeeIds` | `string[]` | Danh sách các cán bộ áp dụng lấy phiếu tín nhiệm trong đợt này. |
+| `criteria` | `Array<Criterion>` | Bộ tiêu chí và thang điểm áp dụng riêng cho đợt này. |
+| `updatedAt` | `timestamp` | Thời gian cập nhật cấu hình lần gần nhất. |
+
+---
+
+## ⚙️ 7. Module Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động (`autoInitDb.js`)
+
+Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động tại `src/lib/autoInitDb.js` và giao diện điều khiển `AutoInitDbModal.jsx`:
+
+### 7.1. Cơ chế Tự Động Chữa Lành & Đồng Bộ Phiên Bản (Self-Healing Schema):
+- **Cơ chế hoạt động**: Mỗi khi ứng dụng khởi chạy, hàm `autoSyncDatabaseSchema()` tự động kiểm tra `CURRENT_SCHEMA_VERSION` với `system_metadata/schema`.
+- **Đồng bộ tự động**: Nếu phát hiện thiếu bảng mới (ví dụ: `period_configs`, `system_settings`), hệ thống tự động khởi tạo và nạp dữ liệu chuẩn mực mà **không làm mất dữ liệu hiện hữu** (merge: true).
+- **Phân hệ điều khiển**: Người quản trị có thể kích hoạt thủ công từ Navbar hoặc Launcher qua modal *"Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động"* để ép buộc đồng bộ (`force = true`).
+
+### 7.2. Quy Định Cập Nhật CSDL Bắt Buộc (Mandatory In-Sync Documentation):
+- Mỗi khi có sự thay đổi về cấu trúc bảng hoặc thêm bảng mới trong Firestore:
+  1. **Cập nhật mã nguồn**: Khai báo bảng mới trong `CORE_COLLECTIONS`, bổ sung logic vào cả `autoSyncDatabaseSchema` và `autoInitializeFirebaseDatabase` trong `src/lib/autoInitDb.js`.
+  2. **Nâng phiên bản**: Tăng `CURRENT_SCHEMA_VERSION` (VD: `2026.10.09_v3.4_...`).
+  3. **Cập nhật tài liệu**: Bổ sung đặc tả schema chi tiết vào `docs/DATABASE_SCHEMA_HRM_TRUST.md` trong cùng phiên làm việc và cùng commit Git.
+
+

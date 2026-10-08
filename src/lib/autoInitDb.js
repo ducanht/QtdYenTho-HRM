@@ -34,7 +34,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.08_v3.3_period_configs_table';
+export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.4_period_configs_and_subsystems';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ
@@ -366,13 +366,30 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       await setDoc(doc(db, 'positions', pos.id), { ...pos, updatedAt: serverTimestamp() }, { merge: true });
     }
 
-    onProgress('Bước 5/8: Thiết lập Cấu hình Tham số Hệ thống (system_settings)...');
+    onProgress('Bước 5/9: Thiết lập Cấu hình Tham số Hệ thống & Phân hệ (system_settings)...');
     await setDoc(doc(db, 'system_settings', 'general'), {
       ...DEFAULT_SYSTEM_SETTINGS,
       updatedAt: serverTimestamp(),
     }, { merge: true });
 
-    onProgress('Bước 6/8: Chuẩn hóa 10 Tiêu chí đánh giá tín nhiệm (trust_criteria)...');
+    // Khởi tạo cấu hình mặc định cho từng phân hệ nghiệp vụ
+    const subsystemDefaults = [
+      { id: 'module_trust', data: DEFAULT_MODULE_TRUST_SETTINGS },
+      { id: 'module_hr', data: DEFAULT_MODULE_HR_SETTINGS },
+      { id: 'module_kpi', data: DEFAULT_MODULE_KPI_SETTINGS },
+      { id: 'module_planning', data: DEFAULT_MODULE_PLANNING_SETTINGS },
+      { id: 'module_attendance', data: DEFAULT_MODULE_ATTENDANCE_SETTINGS },
+      { id: 'module_payroll', data: DEFAULT_MODULE_PAYROLL_SETTINGS },
+      { id: 'module_awards', data: DEFAULT_MODULE_AWARDS_SETTINGS },
+    ];
+    for (const sub of subsystemDefaults) {
+      await setDoc(doc(db, 'system_settings', sub.id), {
+        ...sub.data,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 6/9: Chuẩn hóa 10 Tiêu chí đánh giá tín nhiệm (trust_criteria)...');
     for (const crit of DEFAULT_TRUST_CRITERIA) {
       await setDoc(doc(db, 'trust_criteria', crit.code), {
         ...crit,
@@ -380,15 +397,41 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 7/8: Cấu hình Đợt đánh giá tín nhiệm (evaluation_periods)...');
+    onProgress('Bước 7/9: Cấu hình Đợt đánh giá tín nhiệm & Bảng Cấu Hình Riêng (evaluation_periods & period_configs)...');
     for (const period of DEFAULT_EVALUATION_PERIODS) {
       await setDoc(doc(db, 'evaluation_periods', period.id), {
         ...period,
+        configId: period.id,
+        thresholds: { excellent: 90, good: 70, pass: 50 },
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      // Khởi tạo bảng cấu hình riêng biệt cho từng đợt đánh giá
+      await setDoc(doc(db, 'period_configs', period.id), {
+        id: period.id,
+        periodId: period.id,
+        periodName: period.name,
+        votingMode: period.votingMode || 'ANONYMOUS',
+        allowSelfEvaluation: false,
+        excellentThreshold: 90,
+        goodThreshold: 70,
+        passThreshold: 50,
+        scale: 100,
+        targetEmployeeIds: OFFICIAL_EMPLOYEES.map((e) => e.id),
+        criteria: DEFAULT_TRUST_CRITERIA,
         updatedAt: serverTimestamp(),
       }, { merge: true });
     }
 
-    onProgress('Bước 8/8: Cập nhật Hồ sơ 12 Cán bộ Nhân viên chính thức (users)...');
+    onProgress('Bước 8/9: Cập nhật Lịch sử luân chuyển công tác (work_history)...');
+    for (const trans of OFFICIAL_WORK_HISTORY) {
+      await setDoc(doc(db, 'work_history', trans.id), {
+        ...trans,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 9/9: Cập nhật Hồ sơ 12 Cán bộ Nhân viên chính thức (users)...');
     for (const emp of OFFICIAL_EMPLOYEES) {
       await setDoc(doc(db, 'users', emp.id), {
         ...emp,
