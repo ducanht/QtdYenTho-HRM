@@ -27,6 +27,7 @@ const TrustActionBar = ({
   currentPeriod,
   timeRemainingBadge,
   canManagePeriods = false,
+  canManageCriteria = false,
   canPrintReport = true,
   canViewOverview = true,
   canViewSubmitted = true,
@@ -212,6 +213,34 @@ const TrustActionBar = ({
             }`}
           >
             4. Tổng Quan Kết Quả Toàn Quỹ
+          </button>
+        )}
+
+        {canManageCriteria && (
+          <button
+            type="button"
+            onClick={() => onChangeTab('CRITERIA_SETTINGS')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'CRITERIA_SETTINGS'
+                ? 'bg-[#0f766e] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+            }`}
+          >
+            5. Tiêu Chí & Thang Điểm
+          </button>
+        )}
+
+        {(canManageCriteria || canManagePeriods) && (
+          <button
+            type="button"
+            onClick={() => onChangeTab('PERMISSIONS_SETTINGS')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'PERMISSIONS_SETTINGS'
+                ? 'bg-[#0f766e] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+            }`}
+          >
+            6. Phân Quyền Phân Hệ
           </button>
         )}
       </div>

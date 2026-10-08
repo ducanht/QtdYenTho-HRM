@@ -10,10 +10,14 @@ import {
   saveTrustEvaluation,
   saveEvaluationPeriod,
   deleteEvaluationPeriod,
-  subscribeSubsystemConfig
+  subscribeSubsystemConfig,
+  saveSubsystemConfig,
+  saveTrustCriterion,
+  deleteTrustCriterion
 } from '../../lib/services';
 import { classifyTrustScore } from '../../lib/schema';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../lib/constants';
+import { DEFAULT_MODULE_TRUST_SETTINGS } from '../../lib/systemDefaults';
 import { 
   checkUserPermission, 
   TRUST_PERMISSIONS, 
@@ -29,6 +33,10 @@ import MySelfResults from './components/MySelfResults';
 import TrustOverviewReport from './components/TrustOverviewReport';
 import TrustPeriodModal from './components/TrustPeriodModal';
 import TrustA4PrintModal from './components/TrustA4PrintModal';
+
+// Components Cấu hình & Phân quyền chuyên biệt của Phân hệ Tín nhiệm
+import TrustCriteriaSettings from '../settings/components/subsystems/TrustCriteriaSettings';
+import TrustPermissionsMatrix from '../settings/components/subsystems/TrustPermissionsMatrix';
 
 /**
  * TrustEvaluationContainer: Bộ điều phối kiến trúc phân hệ Lấy phiếu Tín nhiệm
@@ -88,11 +96,17 @@ const TrustEvaluationContainer = () => {
 
   // Quản lý Phân quyền theo ma trận RBAC Phân hệ Tín nhiệm
   const [trustPermissions, setTrustPermissions] = useState(DEFAULT_ROLE_PERMISSIONS.trust);
+  const [trustConfig, setTrustConfig] = useState(DEFAULT_MODULE_TRUST_SETTINGS);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [savingPermissions, setSavingPermissions] = useState(false);
 
   useEffect(() => {
     const unsubConfig = subscribeSubsystemConfig('trust', (cfg) => {
-      if (cfg?.permissions) {
-        setTrustPermissions(cfg.permissions);
+      if (cfg) {
+        setTrustConfig((prev) => ({ ...prev, ...cfg }));
+        if (cfg.permissions) {
+          setTrustPermissions(cfg.permissions);
+        }
       }
     });
     return () => unsubConfig();
@@ -131,10 +145,82 @@ const TrustEvaluationContainer = () => {
   useEffect(() => {
     if (activeTab === 'OVERVIEW' && !canViewOverview) {
       setActiveTab('SCORING');
+    } else if (activeTab === 'CRITERIA_SETTINGS' && !canManageCriteria) {
+      setActiveTab('SCORING');
+    } else if (activeTab === 'PERMISSIONS_SETTINGS' && !(canManageCriteria || canManagePeriods)) {
+      setActiveTab('SCORING');
     } else if (activeTab === 'SCORING' && !canVote) {
       setActiveTab(canViewOwnResults ? 'MY_RESULTS' : 'MY_VOTES');
     }
-  }, [activeTab, canViewOverview, canVote, canViewOwnResults]);
+  }, [activeTab, canViewOverview, canManageCriteria, canManagePeriods, canVote, canViewOwnResults]);
+
+  // Handler: Lưu cấu hình tiêu chí & tham số phân hệ Tín nhiệm
+  const handleSaveTrustConfig = async (newConfig) => {
+    setSavingConfig(true);
+    try {
+      await saveSubsystemConfig('trust', {
+        ...newConfig,
+        permissions: trustPermissions,
+      });
+      toast.success('Đã lưu cấu hình tham số Tín nhiệm lên Firestore thành công!');
+    } catch (err) {
+      toast.error('Lỗi khi lưu cấu hình tín nhiệm: ' + err.message);
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  // Handler: Thêm/Sửa tiêu chí tín nhiệm
+  const handleSaveCriterion = async (critForm, editingCrit) => {
+    try {
+      await saveTrustCriterion({
+        ...(editingCrit ? { id: editingCrit.id } : { id: Date.now() }),
+        code: critForm.code.trim().toUpperCase(),
+        title: critForm.title.trim(),
+        group: critForm.group.trim(),
+        description: critForm.description.trim(),
+        maxScore: Number(critForm.maxScore) || 10,
+        minScore: Number(critForm.minScore) || 0,
+        weight: Number(critForm.weight) || 10,
+      });
+      toast.success(`${editingCrit ? 'Cập nhật' : 'Thêm mới'} tiêu chí thành công!`);
+      return true;
+    } catch (err) {
+      toast.error('Lỗi lưu tiêu chí: ' + err.message);
+      return false;
+    }
+  };
+
+  // Handler: Xóa tiêu chí tín nhiệm
+  const handleDeleteCriterion = async (code, title) => {
+    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa tiêu chí [${title}] (${code})?`)) return;
+    try {
+      await deleteTrustCriterion(code);
+      toast.success(`Đã xóa tiêu chí [${title}].`);
+    } catch (err) {
+      toast.error('Lỗi khi xóa tiêu chí: ' + err.message);
+    }
+  };
+
+  // Handler: Lưu phân quyền chuyên biệt phân hệ Tín nhiệm
+  const handleSaveTrustPermissions = async () => {
+    setSavingPermissions(true);
+    try {
+      await saveSubsystemConfig('trust', {
+        ...trustConfig,
+        permissions: trustPermissions,
+      });
+      toast.success('Đã lưu phân quyền phân hệ Tín nhiệm lên Firestore thành công!');
+    } catch (err) {
+      toast.error('Lỗi lưu phân quyền tín nhiệm: ' + err.message);
+    } finally {
+      setSavingPermissions(false);
+    }
+  };
+
+  const handleResetTrustPermissions = () => {
+    setTrustPermissions(DEFAULT_ROLE_PERMISSIONS.trust);
+  };
 
   // 1. Subscribe Tiêu chí gốc
   useEffect(() => {
@@ -527,6 +613,7 @@ const TrustEvaluationContainer = () => {
         currentPeriod={currentPeriod}
         timeRemainingBadge={timeRemainingBadge}
         canManagePeriods={canManagePeriods}
+        canManageCriteria={canManageCriteria}
         canPrintReport={canPrintReport}
         canViewOverview={canViewOverview}
         canViewSubmitted={canViewSubmitted}
@@ -637,6 +724,30 @@ const TrustEvaluationContainer = () => {
           criteria={activeCriteria}
           isAdmin={canManagePeriods}
           onOpenPrintModal={() => setIsPrintModalOpen(true)}
+        />
+      )}
+
+      {/* Tab 5: Cấu hình Tiêu chí & Thang điểm tín nhiệm */}
+      {activeTab === 'CRITERIA_SETTINGS' && (
+        <TrustCriteriaSettings
+          trustConfig={trustConfig}
+          setTrustConfig={setTrustConfig}
+          trustCriteria={globalCriteria}
+          onSaveConfig={handleSaveTrustConfig}
+          isSaving={savingConfig}
+          onSaveCriterion={handleSaveCriterion}
+          onDeleteCriterion={handleDeleteCriterion}
+        />
+      )}
+
+      {/* Tab 6: Ma trận Phân quyền chuyên biệt Phân hệ Tín nhiệm */}
+      {activeTab === 'PERMISSIONS_SETTINGS' && (
+        <TrustPermissionsMatrix
+          permissions={trustPermissions}
+          onChangePermissions={(newPerms) => setTrustPermissions(newPerms)}
+          onResetDefault={handleResetTrustPermissions}
+          onSavePermissions={handleSaveTrustPermissions}
+          isSaving={savingPermissions}
         />
       )}
 

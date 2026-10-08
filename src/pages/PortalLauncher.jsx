@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ShieldCheck, 
@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { SYSTEM_MODULES, canAccessModule } from '../lib/permissions';
+import { subscribeSystemModules } from '../lib/services';
 import { ROLE_LABELS } from '../lib/constants';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -47,17 +48,52 @@ const PortalLauncher = () => {
   const { currentUser, role } = useAuth();
   const toast = useToast();
   const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [firestoreModules, setFirestoreModules] = useState([]);
 
-  // Danh sách các phân hệ (Data-Driven: chuyển đổi từ object SYSTEM_MODULES)
-  const modulesList = Object.values(SYSTEM_MODULES);
+  // Lắng nghe trạng thái cấu hình Bật/Tắt các phân hệ Realtime từ Cloud Firestore
+  useEffect(() => {
+    const unsub = subscribeSystemModules((list) => {
+      setFirestoreModules(list || []);
+    });
+    return () => unsub();
+  }, []);
+
+  // Hợp nhất danh sách mặc định với cấu hình thực tế từ Firestore
+  const modulesList = useMemo(() => {
+    const defaults = Object.values(SYSTEM_MODULES);
+    if (!firestoreModules || firestoreModules.length === 0) {
+      return defaults;
+    }
+    const fsMap = new Map();
+    firestoreModules.forEach((m) => {
+      if (m.code) fsMap.set(m.code, m);
+      if (m.id) fsMap.set(m.id, m);
+    });
+
+    return defaults.map((def) => {
+      const fsData = fsMap.get(def.code);
+      if (!fsData) return def;
+
+      // Module Cốt lõi SETTINGS luôn luôn ACTIVE
+      if (def.code === 'MODULE_SETTINGS') {
+        return { ...def, ...fsData, status: 'ACTIVE' };
+      }
+
+      return {
+        ...def,
+        ...fsData,
+        status: fsData.status || def.status,
+      };
+    });
+  }, [firestoreModules]);
 
   const activeModulesCount = modulesList.filter((m) => m.status === 'ACTIVE').length;
-  const plannedModulesCount = modulesList.filter((m) => m.status === 'PLANNED').length;
+  const plannedModulesCount = modulesList.filter((m) => m.status !== 'ACTIVE').length;
 
   const handleModuleClick = (mod) => {
     if (mod.status !== 'ACTIVE') {
       toast.info(
-        `Phân hệ [${mod.name}] đang trong kế hoạch nâng cấp giai đoạn 2. Cơ sở dữ liệu đã sẵn sàng kết nối!`
+        `Phân hệ [${mod.name}] đang trong kế hoạch nâng cấp hoặc tạm bảo trì. Cơ sở dữ liệu đã sẵn sàng kết nối!`
       );
       return;
     }
@@ -197,7 +233,7 @@ const PortalLauncher = () => {
                           : 'bg-amber-100 text-amber-800 border border-amber-200'
                       }`}
                     >
-                      {mod.code === 'MODULE_SETTINGS' || mod.isCore ? 'Hệ thống Cốt lõi' : isActive ? 'Đang vận hành' : 'Sẵn sàng CSDL'}
+                      {mod.code === 'MODULE_SETTINGS' || mod.isCore ? 'Hệ thống Cốt lõi' : isActive ? 'Đang vận hành' : 'Kế hoạch triển khai'}
                     </span>
                     {mod.badge && (
                       <span className="text-[10px] font-semibold text-slate-400">
@@ -238,7 +274,7 @@ const PortalLauncher = () => {
                   {!isActive ? (
                     <span className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
-                      Quy hoạch GĐ2
+                      Kế hoạch triển khai
                     </span>
                   ) : !hasAccess ? (
                     <span className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">

@@ -331,9 +331,9 @@ export const AuthProvider = ({ children }) => {
   const isBoardMember = isAdmin && (currentUser?.department?.includes('Hội đồng Quản trị') || currentUser?.position?.includes('HĐQT'));
   const isStaff = !isAdmin;
 
-  // 4. Đặc quyền độc nhất của SuperAdmin: Bật/tắt Module Webapp & Cấu hình Tham số Webapp
-  const canToggleModules = isSuperAdmin;
-  const canConfigureWebapp = isSuperAdmin;
+  // 4. Quyền Bật/tắt Module Webapp & Cấu hình Tham số Hệ thống (SuperAdmin & Ban Lãnh đạo Quỹ)
+  const canToggleModules = isSuperAdmin || isAdmin;
+  const canConfigureWebapp = isSuperAdmin || isAdmin;
   const canAccessDashboard = isAdmin;
 
   const value = {

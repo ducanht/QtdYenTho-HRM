@@ -20,7 +20,7 @@ const GeneralLegalSettings = ({
         <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
           <Lock className="w-4 h-4 text-amber-600 shrink-0" />
           <span>
-            <strong>Chế độ Xem (Read-only):</strong> Thông tin pháp nhân và Cấu hình hệ thống Webapp được bảo vệ. Chỉ Quản trị viên cấp cao duy nhất (<strong>qtdyentho@gmail.com</strong>) mới có quyền chỉnh sửa và lưu thay đổi.
+            <strong>Chế độ Xem (Read-only):</strong> Thông tin pháp nhân và Cấu hình hệ thống Webapp được bảo vệ. Chỉ Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền chỉnh sửa và lưu thay đổi.
           </span>
         </div>
       )}

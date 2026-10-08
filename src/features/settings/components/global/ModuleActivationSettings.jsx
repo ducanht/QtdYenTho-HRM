@@ -17,14 +17,14 @@ const ModuleActivationSettings = ({
         <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>
-            <strong>Đặc quyền SuperAdmin (qtdyentho@gmail.com):</strong> Đồng chí có toàn quyền kích hoạt hoặc tạm ẩn các phân hệ webapp theo tiến độ vận hành.
+            <strong>Quyền Quản trị viên & Ban Lãnh đạo Quỹ:</strong> Đồng chí có quyền kích hoạt hoặc tạm chuyển trạng thái các phân hệ webapp theo tiến độ vận hành.
           </span>
         </div>
       ) : (
         <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
           <Lock className="w-4 h-4 text-amber-600 shrink-0" />
           <span>
-            <strong>Phân định quyền hạn:</strong> Chỉ tài khoản Quản trị Cấp cao duy nhất (<strong>qtdyentho@gmail.com</strong>) mới có quyền bật/tắt các phân hệ webapp. Ban Quản trị & Điều hành đang ở chế độ xem trạng thái vận hành.
+            <strong>Phân định quyền hạn:</strong> Chỉ tài khoản Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền bật/tắt các phân hệ webapp.
           </span>
         </div>
       )}

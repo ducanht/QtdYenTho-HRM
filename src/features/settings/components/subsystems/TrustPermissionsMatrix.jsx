@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, RotateCcw } from 'lucide-react';
+import { ShieldCheck, RotateCcw, Save } from 'lucide-react';
 import Button from '../../../../components/common/Button';
 import { 
   TRUST_PERMISSIONS_CONFIG, 
@@ -15,6 +15,8 @@ const TrustPermissionsMatrix = ({
   permissions = DEFAULT_ROLE_PERMISSIONS.trust,
   onChangePermissions,
   onResetDefault,
+  onSavePermissions,
+  isSaving = false,
 }) => {
   const handleToggle = (roleCode, permKey) => {
     if (roleCode === 'superadmin') return; // SuperAdmin luôn có toàn quyền
@@ -34,28 +36,44 @@ const TrustPermissionsMatrix = ({
   };
 
   return (
-    <div className="border border-teal-200 rounded-2xl bg-white p-4 sm:p-5 shadow-xs space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+    <div className="border border-teal-200 rounded-3xl bg-white p-4 sm:p-6 shadow-sm space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
-          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
+          <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-[#0f766e]" />
             <span>Phân Quyền Chuyên Biệt Phân Hệ Bỏ Phiếu Tín Nhiệm (RBAC Matrix)</span>
           </h4>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            Cấu hình quyền thao tác chi tiết theo từng vai trò trong quy trình lấy phiếu tín nhiệm QTDND.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Cấu hình quyền thao tác chi tiết theo từng vai trò trong quy trình lấy phiếu tín nhiệm QTDND Yên Thọ.
           </p>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          icon={RotateCcw}
-          onClick={onResetDefault}
-          className="text-[11px] font-semibold text-slate-600 hover:text-teal-800 border-slate-300"
-        >
-          Khôi phục chuẩn mặc định
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            icon={RotateCcw}
+            onClick={onResetDefault}
+            className="text-xs font-semibold text-slate-600 hover:text-teal-800 border-slate-300"
+          >
+            Khôi phục chuẩn
+          </Button>
+
+          {onSavePermissions && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              icon={Save}
+              isLoading={isSaving}
+              onClick={onSavePermissions}
+              className="text-xs font-bold shadow-xs"
+            >
+              Lưu Phân Quyền Tín Nhiệm
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto">

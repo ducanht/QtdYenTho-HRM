@@ -8,62 +8,33 @@ import {
   subscribePositions,
   savePosition,
   deletePosition,
-  subscribeTrustCriteria,
-  saveTrustCriterion,
-  deleteTrustCriterion,
   subscribeSystemSettings,
   saveSystemSettings,
   subscribeSystemModules,
   updateSystemModule,
-  subscribeSubsystemConfig,
-  saveSubsystemConfig,
   subscribeRolePermissions,
   saveRolePermissions
 } from '../../lib/services';
-import {
-  DEFAULT_SYSTEM_SETTINGS,
-  DEFAULT_MODULE_TRUST_SETTINGS,
-  DEFAULT_MODULE_HR_SETTINGS,
-  DEFAULT_MODULE_KPI_SETTINGS,
-  DEFAULT_MODULE_PLANNING_SETTINGS,
-  DEFAULT_MODULE_ATTENDANCE_SETTINGS,
-  DEFAULT_MODULE_PAYROLL_SETTINGS,
-  DEFAULT_MODULE_AWARDS_SETTINGS
-} from '../../lib/systemDefaults';
+import { DEFAULT_SYSTEM_SETTINGS } from '../../lib/systemDefaults';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../lib/permissions';
 
-// Các components con phân rã sạch sẽ
-import SettingsScopeToggle from './components/SettingsScopeToggle';
+// Các components con Cấu hình chung
 import SettingsTabsNav from './components/SettingsTabsNav';
-
-// Khu vực 1: Cấu hình chung
 import GeneralLegalSettings from './components/global/GeneralLegalSettings';
 import OrganizationSettings from './components/global/OrganizationSettings';
 import ModuleActivationSettings from './components/global/ModuleActivationSettings';
 import GlobalRolePermissionsSettings from './components/global/GlobalRolePermissionsSettings';
 
-// Khu vực 2: Cấu hình chuyên sâu 7 phân hệ
-import TrustCriteriaSettings from './components/subsystems/TrustCriteriaSettings';
-import HrSubsystemSettings from './components/subsystems/HrSubsystemSettings';
-import KpiSubsystemSettings from './components/subsystems/KpiSubsystemSettings';
-import PlanningSubsystemSettings from './components/subsystems/PlanningSubsystemSettings';
-import AttendanceSubsystemSettings from './components/subsystems/AttendanceSubsystemSettings';
-import PayrollSubsystemSettings from './components/subsystems/PayrollSubsystemSettings';
-import AwardsSubsystemSettings from './components/subsystems/AwardsSubsystemSettings';
-
 /**
- * Container điều phối Cấu hình & Quản trị Hệ thống 2 Tầng
- * Phân định rành mạch giữa Cấu hình chung toàn Quỹ và Cấu hình đặc thù từng phân hệ
+ * Container Quản trị Cấu hình Hệ thống Chung (Global Settings)
+ * Quản lý Thông tin Pháp nhân, Cơ cấu Tổ chức, Bật/Tắt Phân hệ và Phân quyền Vai trò
  */
 const AdminSettingsContainer = () => {
   const toast = useToast();
   const { canToggleModules, canConfigureWebapp } = useAuth();
 
-  // Nhóm tab lớn: 'GLOBAL' (Cấu hình chung) hoặc 'SUBSYSTEM' (Cấu hình từng phân hệ)
-  const [activeGroup, setActiveGroup] = useState('SUBSYSTEM');
-
-  // Tab cụ thể đang chọn
-  const [activeTab, setActiveTab] = useState('SUB_TRUST');
+  // Tab cụ thể đang chọn trong Cấu hình chung toàn hệ thống
+  const [activeTab, setActiveTab] = useState('GENERAL_LEGAL');
 
   // Loading states
   const [savingSection, setSavingSection] = useState(null);
@@ -71,25 +42,14 @@ const AdminSettingsContainer = () => {
   // Dữ liệu Realtime Firestore: Cấu hình chung
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [trustCriteria, setTrustCriteria] = useState([]);
   const [systemSettings, setSystemSettings] = useState(DEFAULT_SYSTEM_SETTINGS);
   const [modulesList, setModulesList] = useState([]);
   const [rolePermissions, setRolePermissions] = useState(DEFAULT_ROLE_PERMISSIONS);
-
-  // Dữ liệu Realtime Firestore: Cấu hình chuyên biệt từng phân hệ
-  const [trustConfig, setTrustConfig] = useState(DEFAULT_MODULE_TRUST_SETTINGS);
-  const [hrConfig, setHrConfig] = useState(DEFAULT_MODULE_HR_SETTINGS);
-  const [kpiConfig, setKpiConfig] = useState(DEFAULT_MODULE_KPI_SETTINGS);
-  const [planningConfig, setPlanningConfig] = useState(DEFAULT_MODULE_PLANNING_SETTINGS);
-  const [attendanceConfig, setAttendanceConfig] = useState(DEFAULT_MODULE_ATTENDANCE_SETTINGS);
-  const [payrollConfig, setPayrollConfig] = useState(DEFAULT_MODULE_PAYROLL_SETTINGS);
-  const [awardsConfig, setAwardsConfig] = useState(DEFAULT_MODULE_AWARDS_SETTINGS);
 
   // 1. Subscribe Realtime Firestore
   useEffect(() => {
     const unsubDept = subscribeDepartments((list) => setDepartments(list));
     const unsubPos = subscribePositions((list) => setPositions(list));
-    const unsubCrit = subscribeTrustCriteria((list) => setTrustCriteria(list));
     const unsubMod = subscribeSystemModules((list) => setModulesList(list));
     const unsubSet = subscribeSystemSettings((data) => {
       if (data) setSystemSettings((prev) => ({ ...prev, ...data }));
@@ -98,43 +58,12 @@ const AdminSettingsContainer = () => {
       if (data) setRolePermissions((prev) => ({ ...prev, ...data }));
     });
 
-    // Subsystem configs
-    const unsubTrust = subscribeSubsystemConfig('trust', (data) => {
-      if (data) setTrustConfig((prev) => ({ ...prev, ...data }));
-    });
-    const unsubHr = subscribeSubsystemConfig('hr', (data) => {
-      if (data) setHrConfig((prev) => ({ ...prev, ...data }));
-    });
-    const unsubKpi = subscribeSubsystemConfig('kpi', (data) => {
-      if (data) setKpiConfig((prev) => ({ ...prev, ...data }));
-    });
-    const unsubPlanning = subscribeSubsystemConfig('planning', (data) => {
-      if (data) setPlanningConfig((prev) => ({ ...prev, ...data }));
-    });
-    const unsubAtt = subscribeSubsystemConfig('attendance', (data) => {
-      if (data) setAttendanceConfig((prev) => ({ ...prev, ...data }));
-    });
-    const unsubPay = subscribeSubsystemConfig('payroll', (data) => {
-      if (data) setPayrollConfig((prev) => ({ ...prev, ...data }));
-    });
-    const unsubAwards = subscribeSubsystemConfig('awards', (data) => {
-      if (data) setAwardsConfig((prev) => ({ ...prev, ...data }));
-    });
-
     return () => {
       unsubDept();
       unsubPos();
-      unsubCrit();
       unsubMod();
       unsubSet();
       unsubPerms();
-      unsubTrust();
-      unsubHr();
-      unsubKpi();
-      unsubPlanning();
-      unsubAtt();
-      unsubPay();
-      unsubAwards();
     };
   }, []);
 
@@ -142,7 +71,7 @@ const AdminSettingsContainer = () => {
   const handleSaveGeneralSettings = async (e) => {
     e?.preventDefault?.();
     if (!canConfigureWebapp) {
-      toast.error('Chỉ Quản trị viên cấp cao duy nhất (qtdyentho@gmail.com) mới có quyền lưu cấu hình tham số webapp!');
+      toast.error('Chỉ Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền lưu cấu hình tham số hệ thống!');
       return;
     }
     setSavingSection('GENERAL_LEGAL');
@@ -151,19 +80,6 @@ const AdminSettingsContainer = () => {
       toast.success('Đã lưu thông tin pháp nhân Quỹ lên Firestore thành công!');
     } catch (err) {
       toast.error('Lỗi lưu cấu hình: ' + err.message);
-    } finally {
-      setSavingSection(null);
-    }
-  };
-
-  // Handler: Lưu cấu hình từng phân hệ chuyên biệt
-  const handleSaveSubsystem = async (moduleKey, data) => {
-    setSavingSection(moduleKey);
-    try {
-      await saveSubsystemConfig(moduleKey, data);
-      toast.success(`Đã lưu cấu hình chuyên sâu Phân hệ [${moduleKey.toUpperCase()}] lên Firestore thành công!`);
-    } catch (err) {
-      toast.error(`Lỗi lưu cấu hình ${moduleKey}: ` + err.message);
     } finally {
       setSavingSection(null);
     }
@@ -232,41 +148,6 @@ const AdminSettingsContainer = () => {
     }
   };
 
-  // Handler: Tiêu chí tín nhiệm
-  const handleSaveCrit = async (critForm, editingCrit) => {
-    if (!critForm.title.trim()) {
-      toast.error('Tên tiêu chí không được để trống.');
-      return false;
-    }
-    try {
-      await saveTrustCriterion({
-        ...(editingCrit ? { id: editingCrit.id } : { id: Date.now() }),
-        code: critForm.code.trim().toUpperCase(),
-        title: critForm.title.trim(),
-        group: critForm.group.trim(),
-        description: critForm.description.trim(),
-        maxScore: Number(critForm.maxScore) || 10,
-        minScore: Number(critForm.minScore) || 0,
-        weight: Number(critForm.weight) || 10,
-      });
-      toast.success(`${editingCrit ? 'Cập nhật' : 'Thêm mới'} tiêu chí thành công!`);
-      return true;
-    } catch (err) {
-      toast.error('Lỗi lưu tiêu chí: ' + err.message);
-      return false;
-    }
-  };
-
-  const handleDeleteCrit = async (code, title) => {
-    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa tiêu chí [${title}] (${code})?`)) return;
-    try {
-      await deleteTrustCriterion(code);
-      toast.success(`Đã xóa tiêu chí [${title}].`);
-    } catch (err) {
-      toast.error('Lỗi khi xóa tiêu chí: ' + err.message);
-    }
-  };
-
   // Handler: Bật/Tắt module webapp
   const handleToggleModuleStatus = async (moduleCode, currentStatus) => {
     if (moduleCode === 'MODULE_SETTINGS') {
@@ -274,7 +155,7 @@ const AdminSettingsContainer = () => {
       return;
     }
     if (!canToggleModules) {
-      toast.error('Chỉ Quản trị viên cấp cao duy nhất (qtdyentho@gmail.com) mới có quyền bật/tắt các phân hệ webapp!');
+      toast.error('Chỉ Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền bật/tắt các phân hệ webapp!');
       return;
     }
     const newStatus = currentStatus === 'ACTIVE' ? 'PLANNED' : 'ACTIVE';
@@ -284,23 +165,6 @@ const AdminSettingsContainer = () => {
     } catch (err) {
       toast.error('Lỗi cập nhật phân hệ: ' + err.message);
     }
-  };
-
-  // Handler: Chức danh quy hoạch
-  const handleAddPlanningPos = (posName) => {
-    const currentList = systemSettings.planningPositions || [];
-    if (currentList.includes(posName)) {
-      toast.error('Chức danh này đã tồn tại trong danh mục quy hoạch.');
-      return;
-    }
-    const updated = [...currentList, posName];
-    setSystemSettings((prev) => ({ ...prev, planningPositions: updated }));
-  };
-
-  const handleRemovePlanningPos = (posName) => {
-    const currentList = systemSettings.planningPositions || [];
-    const updated = currentList.filter((p) => p !== posName);
-    setSystemSettings((prev) => ({ ...prev, planningPositions: updated }));
   };
 
   // Handler: Lưu phân quyền vai trò toàn hệ thống
@@ -318,19 +182,27 @@ const AdminSettingsContainer = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. Thanh Tác Vụ & Chuyển Đổi Khu Vực Cấu Hình */}
-      <SettingsScopeToggle
-        activeGroup={activeGroup}
-        onGroupChange={(group) => {
-          setActiveGroup(group);
-          if (group === 'GLOBAL') setActiveTab('GENERAL_LEGAL');
-          else setActiveTab('SUB_TRUST');
-        }}
-      />
+      {/* 1. Header giải thích chức năng Quản trị chung */}
+      <div className="bg-gradient-to-r from-teal-900 to-emerald-800 p-5 rounded-3xl text-white shadow-md border border-teal-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-1">
+            Hệ Thống Cốt Lõi • Ban Quản Trị Quỹ
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black">
+            Cấu Hình & Quản Trị Hệ Thống Chung
+          </h2>
+          <p className="text-xs text-teal-100 mt-1 max-w-2xl leading-relaxed">
+            Thiết lập pháp nhân, cơ cấu tổ chức, quản lý kích hoạt phân hệ nghiệp vụ và phân quyền vai trò toàn Quỹ.
+          </p>
+        </div>
+        <div className="text-xs bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 self-start sm:self-auto">
+          <span className="text-emerald-200">Phân quyền: </span>
+          <strong className="text-white">Admin & Lãnh đạo</strong>
+        </div>
+      </div>
 
-      {/* 2. Thanh Điều Hướng Tabs */}
+      {/* 2. Thanh Điều Hướng 4 Tabs Cấu Hình Chung */}
       <SettingsTabsNav
-        activeGroup={activeGroup}
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
         departmentsCount={departments.length}
@@ -338,8 +210,7 @@ const AdminSettingsContainer = () => {
       />
 
       {/* 3. Nội Dung Chi Tiết Theo Tab Đang Chọn */}
-      {/* KHU VỰC 1: CẤU HÌNH DÙNG CHUNG TOÀN QUỸ */}
-      {activeGroup === 'GLOBAL' && activeTab === 'GENERAL_LEGAL' && (
+      {activeTab === 'GENERAL_LEGAL' && (
         <GeneralLegalSettings
           systemSettings={systemSettings}
           setSystemSettings={setSystemSettings}
@@ -349,7 +220,7 @@ const AdminSettingsContainer = () => {
         />
       )}
 
-      {activeGroup === 'GLOBAL' && activeTab === 'GENERAL_ORG' && (
+      {activeTab === 'GENERAL_ORG' && (
         <OrganizationSettings
           departments={departments}
           positions={positions}
@@ -360,7 +231,7 @@ const AdminSettingsContainer = () => {
         />
       )}
 
-      {activeGroup === 'GLOBAL' && activeTab === 'GENERAL_MODULES' && (
+      {activeTab === 'GENERAL_MODULES' && (
         <ModuleActivationSettings
           modulesList={modulesList}
           onToggleStatus={handleToggleModuleStatus}
@@ -368,7 +239,7 @@ const AdminSettingsContainer = () => {
         />
       )}
 
-      {activeGroup === 'GLOBAL' && activeTab === 'GENERAL_PERMISSIONS' && (
+      {activeTab === 'GENERAL_PERMISSIONS' && (
         <GlobalRolePermissionsSettings
           globalPermissions={rolePermissions.global || DEFAULT_ROLE_PERMISSIONS.global}
           onChangeGlobalPermissions={(newGlobal) =>
@@ -379,75 +250,6 @@ const AdminSettingsContainer = () => {
             setRolePermissions((prev) => ({ ...prev, global: DEFAULT_ROLE_PERMISSIONS.global }))
           }
           isSaving={savingSection === 'ROLE_PERMS'}
-        />
-      )}
-
-      {/* KHU VỰC 2: CẤU HÌNH CHUYÊN SÂU TỪNG PHÂN HỆ */}
-      {activeGroup === 'SUBSYSTEM' && activeTab === 'SUB_TRUST' && (
-        <TrustCriteriaSettings
-          trustConfig={trustConfig}
-          setTrustConfig={setTrustConfig}
-          trustCriteria={trustCriteria}
-          onSaveConfig={(cfg) => handleSaveSubsystem('trust', cfg)}
-          isSaving={savingSection === 'trust'}
-          onSaveCriterion={handleSaveCrit}
-          onDeleteCriterion={handleDeleteCrit}
-        />
-      )}
-
-      {activeGroup === 'SUBSYSTEM' && activeTab === 'SUB_HR' && (
-        <HrSubsystemSettings
-          hrConfig={hrConfig}
-          setHrConfig={setHrConfig}
-          onSaveConfig={(cfg) => handleSaveSubsystem('hr', cfg)}
-          isSaving={savingSection === 'hr'}
-        />
-      )}
-
-      {activeGroup === 'SUBSYSTEM' && activeTab === 'SUB_KPI' && (
-        <KpiSubsystemSettings
-          kpiConfig={kpiConfig}
-          setKpiConfig={setKpiConfig}
-          onSaveConfig={(cfg) => handleSaveSubsystem('kpi', cfg)}
-          isSaving={savingSection === 'kpi'}
-        />
-      )}
-
-      {activeGroup === 'SUBSYSTEM' && activeTab === 'SUB_PLANNING' && (
-        <PlanningSubsystemSettings
-          planningConfig={planningConfig}
-          setPlanningConfig={setPlanningConfig}
-          planningPositions={systemSettings.planningPositions}
-          onSaveConfig={(cfg) => handleSaveSubsystem('planning', cfg)}
-          isSaving={savingSection === 'planning'}
-          onAddPlanningPos={handleAddPlanningPos}
-          onRemovePlanningPos={handleRemovePlanningPos}
-        />
-      )}
-
-      {activeGroup === 'SUBSYSTEM' && activeTab === 'SUB_ATTENDANCE' && (
-        <AttendanceSubsystemSettings
-          attendanceConfig={attendanceConfig}
-          setAttendanceConfig={setAttendanceConfig}
-          onSaveConfig={(cfg) => handleSaveSubsystem('attendance', cfg)}
-          isSaving={savingSection === 'attendance'}
-        />
-      )}
-
-      {activeGroup === 'SUBSYSTEM' && activeTab === 'SUB_PAYROLL' && (
-        <PayrollSubsystemSettings
-          payrollConfig={payrollConfig}
-          setPayrollConfig={setPayrollConfig}
-          onSaveConfig={(cfg) => handleSaveSubsystem('payroll', cfg)}
-          isSaving={savingSection === 'payroll'}
-        />
-      )}
-
-      {activeGroup === 'SUBSYSTEM' && activeTab === 'SUB_AWARDS' && (
-        <AwardsSubsystemSettings
-          awardsConfig={awardsConfig}
-          onSaveConfig={(cfg) => handleSaveSubsystem('awards', cfg)}
-          isSaving={savingSection === 'awards'}
         />
       )}
     </div>
