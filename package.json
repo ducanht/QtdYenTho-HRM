@@ -8,7 +8,11 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "deploy": "vite build && firebase deploy --only hosting",
+    "ship": "node scripts/ship.js",
+    "ship:all": "node scripts/ship.js --all",
+    "deploy": "node scripts/ship.js",
+    "deploy:hosting": "vite build && firebase deploy --only hosting",
+    "deploy:all": "vite build && firebase deploy",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
