@@ -399,8 +399,19 @@ export const saveKpiStep1Self = async (kpiData) => {
   }
 };
 
-export const updateKpiStep2Manager = async (kpiId, { scoreManager, managerNotes }) => {
+export const updateKpiStep2Manager = async (kpiId, arg2, arg3) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
+
+  let scoreManager = 0;
+  let managerNotes = '';
+
+  if (typeof arg2 === 'object' && arg2 !== null) {
+    scoreManager = arg2.scoreManager;
+    managerNotes = arg2.managerNotes || '';
+  } else {
+    scoreManager = arg2;
+    managerNotes = arg3 || '';
+  }
 
   try {
     await updateDoc(doc(db, 'evaluations_kpi', kpiId), {
@@ -418,9 +429,29 @@ export const updateKpiStep2Manager = async (kpiId, { scoreManager, managerNotes 
 
 export const updateKpiStep3Chairman = async (
   kpiId, 
-  { scoreChairman, chairmanNotes, scoreSelf, scoreManager }
+  arg2,
+  arg3,
+  arg4,
+  arg5
 ) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
+
+  let scoreChairman = 0;
+  let chairmanNotes = '';
+  let scoreSelf = 0;
+  let scoreManager = 0;
+
+  if (typeof arg2 === 'object' && arg2 !== null) {
+    scoreChairman = arg2.scoreChairman;
+    chairmanNotes = arg2.chairmanNotes || '';
+    scoreSelf = arg2.scoreSelf;
+    scoreManager = arg2.scoreManager;
+  } else {
+    scoreChairman = arg2;
+    chairmanNotes = arg3 || '';
+    scoreSelf = arg4;
+    scoreManager = arg5;
+  }
 
   const { finalScore, classification } = calculateKpiFinal(scoreSelf, scoreManager, scoreChairman);
 

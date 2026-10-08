@@ -22,7 +22,8 @@ import {
   updateKpiStep3Chairman, 
   subscribeKpiEvaluations, 
   calculateKpiFinal,
-  subscribeEmployees
+  subscribeEmployees,
+  subscribeEvaluationPeriods
 } from '../lib/services';
 import { ROLES } from '../lib/constants';
 import { formatDateVN, formatDateTimeVN } from '../lib/dateUtils';
@@ -41,6 +42,7 @@ const KpiEvaluation = () => {
 
   const [kpiList, setKpiList] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [periods, setPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('Quý III / 2026');
 
@@ -67,6 +69,24 @@ const KpiEvaluation = () => {
   }, []);
 
   useEffect(() => {
+    const unsubPeriods = subscribeEvaluationPeriods((list) => {
+      if (list && list.length > 0) {
+        setPeriods(list);
+        // Tự động chọn đợt ACTIVE nếu có
+        const active = list.find((p) => p.status === 'ACTIVE') || list[0];
+        if (active) {
+          const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+          const activeCode = active.quarter && active.year 
+            ? `Quý ${roman[active.quarter] || active.quarter} / ${active.year}` 
+            : active.name;
+          setPeriod((prev) => prev || activeCode);
+        }
+      }
+    });
+    return () => unsubPeriods();
+  }, []);
+
+  useEffect(() => {
     setLoading(true);
     const unsub = subscribeKpiEvaluations((data) => {
       setKpiList(data || []);
@@ -74,6 +94,46 @@ const KpiEvaluation = () => {
     });
     return () => unsub();
   }, []);
+
+  // Danh sách các kỳ đánh giá động từ Firestore (kết hợp đợt cấu hình và lịch sử đã có)
+  const periodOptions = useMemo(() => {
+    const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+    const seen = new Set();
+    const opts = [];
+
+    // 1. Thêm từ evaluation_periods collection
+    periods.forEach((p) => {
+      const code = p.quarter && p.year
+        ? `Quý ${roman[p.quarter] || p.quarter} / ${p.year}`
+        : p.name;
+      if (code && !seen.has(code)) {
+        seen.add(code);
+        opts.push({
+          value: code,
+          label: `${code}${p.status === 'ACTIVE' ? ' (Đang diễn ra)' : ''}`,
+          status: p.status,
+        });
+      }
+    });
+
+    // 2. Thêm các kỳ đã có trong kpiList (bảo toàn lịch sử)
+    kpiList.forEach((k) => {
+      if (k.period && !seen.has(k.period)) {
+        seen.add(k.period);
+        opts.push({
+          value: k.period,
+          label: k.period,
+          status: 'PAST',
+        });
+      }
+    });
+
+    if (opts.length === 0) {
+      opts.push({ value: 'Quý III / 2026', label: 'Quý III / 2026' });
+    }
+
+    return opts;
+  }, [periods, kpiList]);
 
   // Kiểm tra xem user hiện tại đã gửi Step 1 trong kỳ này chưa
   const myCurrentKpi = useMemo(() => {
@@ -198,9 +258,11 @@ const KpiEvaluation = () => {
             onChange={(e) => setPeriod(e.target.value)}
             className="text-xs font-bold text-[#0f766e] bg-transparent focus:outline-none cursor-pointer"
           >
-            <option value="Quý III / 2026">Quý III / 2026</option>
-            <option value="Quý IV / 2026">Quý IV / 2026</option>
-            <option value="Quý I / 2027">Quý I / 2027</option>
+            {periodOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>

@@ -191,12 +191,6 @@ export const AuthProvider = ({ children }) => {
       setRole(userData.role);
       setLoading(false);
       return { success: true, user: userData };
-
-      failedAttempts = 0;
-      setCurrentUser(userData);
-      setRole(userData.role);
-      setLoading(false);
-      return { success: true, user: userData };
     } catch (error) {
       setLoading(false);
       console.error('Lỗi xác thực Google:', error);

@@ -28,7 +28,7 @@ export const SYSTEM_MODULES = {
     route: '/employees',
     color: 'teal',
     badge: 'Đang vận hành',
-    features: ['Danh bạ 9 cán bộ', 'CCCD & Chức vụ Đảng', 'Timeline luân chuyển', 'Bàn giao hồ sơ nợ'],
+    features: ['Danh bạ 12 cán bộ', 'CCCD & Chức vụ Đảng', 'Timeline luân chuyển', 'Bàn giao hồ sơ nợ'],
   },
   KPI: {
     code: 'MODULE_KPI',

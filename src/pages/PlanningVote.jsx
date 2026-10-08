@@ -21,7 +21,8 @@ import {
   savePlanningVote, 
   subscribePlanningVotes, 
   subscribeEmployees,
-  subscribeSystemSettings
+  subscribeSystemSettings,
+  subscribeEvaluationPeriods
 } from '../lib/services';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -36,6 +37,8 @@ const PlanningVote = () => {
 
   const [employees, setEmployees] = useState([]);
   const [votes, setVotes] = useState([]);
+  const [periods, setPeriods] = useState([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [planningPositions, setPlanningPositions] = useState(FALLBACK_PLANNING_POSITIONS);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -60,9 +63,17 @@ const PlanningVote = () => {
         setPlanningPositions(FALLBACK_PLANNING_POSITIONS);
       }
     });
+    const unsubPeriods = subscribeEvaluationPeriods((list) => {
+      if (list && list.length > 0) {
+        setPeriods(list);
+        const active = list.find((p) => p.status === 'ACTIVE') || list[0];
+        if (active) setSelectedPeriodId((prev) => prev || active.id);
+      }
+    });
     return () => {
       unsubEmp();
       unsubSettings();
+      unsubPeriods();
     };
   }, []);
 
@@ -74,6 +85,11 @@ const PlanningVote = () => {
     });
     return () => unsub();
   }, []);
+
+  // Đợt quy hoạch đang chọn
+  const currentPeriod = useMemo(() => {
+    return periods.find((p) => p.id === selectedPeriodId) || null;
+  }, [periods, selectedPeriodId]);
 
   // Ứng viên được chọn
   const selectedCandidate = useMemo(() => {
@@ -104,6 +120,8 @@ const PlanningVote = () => {
         proposedRole: proposedRole.trim(),
         vote: voteChoice, // 'Tín nhiệm cao' | 'Tín nhiệm' | 'Tín nhiệm thấp'
         comments: comments.trim(),
+        periodId: selectedPeriodId || 'PERIOD-PLANNING',
+        periodName: currentPeriod?.name || 'Kỳ Quy hoạch cán bộ nguồn',
       };
 
       await savePlanningVote(payload);
@@ -124,7 +142,12 @@ const PlanningVote = () => {
   // Tổng hợp thống kê phiếu biểu quyết theo từng ứng viên
   const candidateStats = useMemo(() => {
     const map = {};
-    votes.forEach((v) => {
+    const filteredVotes = votes.filter((v) => {
+      if (!selectedPeriodId || selectedPeriodId === 'ALL') return true;
+      return !v.periodId || v.periodId === selectedPeriodId;
+    });
+
+    filteredVotes.forEach((v) => {
       const cId = v.candidateId;
       if (!map[cId]) {
         map[cId] = {
@@ -142,8 +165,17 @@ const PlanningVote = () => {
       else if (v.vote === 'Tín nhiệm') map[cId].medium += 1;
       else if (v.vote === 'Tín nhiệm thấp') map[cId].low += 1;
     });
-    return Object.values(map);
-  }, [votes]);
+
+    return Object.values(map).filter((stat) => {
+      if (!searchTerm.trim()) return true;
+      const term = searchTerm.toLowerCase();
+      return (
+        stat.candidateName?.toLowerCase().includes(term) ||
+        stat.proposedRole?.toLowerCase().includes(term) ||
+        stat.department?.toLowerCase().includes(term)
+      );
+    });
+  }, [votes, selectedPeriodId, searchTerm]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -162,10 +194,30 @@ const PlanningVote = () => {
           </p>
         </div>
 
-        <div className="bg-white px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 text-xs self-start md:self-auto">
-          <Award className="w-4 h-4 text-[#0f766e]" />
-          <span className="font-bold text-slate-700">Tổng phiếu đã phát:</span>
-          <span className="font-black text-[#0f766e] text-sm">{votes.length}</span>
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+          {periods.length > 0 && (
+            <div className="bg-white px-3 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 text-xs">
+              <span className="font-bold text-slate-700">Kỳ quy hoạch:</span>
+              <select
+                value={selectedPeriodId}
+                onChange={(e) => setSelectedPeriodId(e.target.value)}
+                className="font-bold text-[#0f766e] bg-transparent focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">-- Tất cả các đợt --</option>
+                {periods.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.status === 'ACTIVE' ? '(Đang diễn ra)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="bg-white px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 text-xs">
+            <Award className="w-4 h-4 text-[#0f766e]" />
+            <span className="font-bold text-slate-700">Tổng phiếu đã phát:</span>
+            <span className="font-black text-[#0f766e] text-sm">{votes.length}</span>
+          </div>
         </div>
       </div>
 
@@ -392,6 +444,18 @@ const PlanningVote = () => {
           <Card
             title="Kết Quả Bỏ Phiếu Quy Hoạch (Tổng Hợp)"
             subtitle="Tỷ lệ tín nhiệm theo từng nhân sự dự kiến"
+            headerRight={
+              <div className="relative w-40">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Lọc nhân sự..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-8 pr-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0f766e]"
+                />
+              </div>
+            }
           >
             {loading ? (
               <div className="py-12">
