@@ -693,3 +693,65 @@ export const deleteTrustCriterion = async (code) => {
   await deleteDoc(doc(db, 'trust_criteria', code));
   return { success: true };
 };
+
+// ============================================================================
+// 10. CẤU HÌNH CHUYÊN BIỆT TỪNG PHÂN HỆ (SUBSYSTEM DOMAIN CONFIGS)
+// Lưu trữ tại collection: system_settings, document: module_<moduleKey>
+// Ví dụ: module_trust, module_hr, module_kpi, module_planning, module_attendance...
+// ============================================================================
+
+export const subscribeSubsystemConfig = (moduleKey, callback) => {
+  if (!db) {
+    callback(null);
+    return () => {};
+  }
+  const cleanKey = moduleKey.toLowerCase().replace(/^module_/, '');
+  const docId = `module_${cleanKey}`;
+  try {
+    return onSnapshot(
+      doc(db, 'system_settings', docId),
+      (snap) => {
+        if (snap.exists()) {
+          callback(snap.data());
+        } else {
+          callback(null);
+        }
+      },
+      (err) => {
+        console.error(`Lỗi onSnapshot cấu hình phân hệ [${docId}]:`, err);
+        callback(null);
+      }
+    );
+  } catch (err) {
+    console.error(`Lỗi subscribeSubsystemConfig [${docId}]:`, err);
+    callback(null);
+    return () => {};
+  }
+};
+
+export const saveSubsystemConfig = async (moduleKey, data) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const cleanKey = moduleKey.toLowerCase().replace(/^module_/, '');
+  const docId = `module_${cleanKey}`;
+  const payload = {
+    ...data,
+    moduleKey: cleanKey,
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(doc(db, 'system_settings', docId), payload, { merge: true });
+  return { success: true, moduleKey: cleanKey, docId };
+};
+
+export const getSubsystemConfig = async (moduleKey) => {
+  if (!db) return null;
+  const cleanKey = moduleKey.toLowerCase().replace(/^module_/, '');
+  const docId = `module_${cleanKey}`;
+  try {
+    const snap = await getDoc(doc(db, 'system_settings', docId));
+    return snap.exists() ? snap.data() : null;
+  } catch (err) {
+    console.error(`Lỗi getSubsystemConfig [${docId}]:`, err);
+    return null;
+  }
+};
+

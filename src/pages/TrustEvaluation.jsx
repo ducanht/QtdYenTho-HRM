@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   ShieldCheck, 
-  ShieldAlert, 
   UserCheck, 
-  Award, 
   CheckCircle2, 
   Send, 
   Search, 
-  Eye, 
   Clock, 
   Calendar, 
   Settings, 
@@ -20,7 +18,11 @@ import {
   Printer, 
   Trash2, 
   Edit3, 
-  Sliders
+  Sliders,
+  Table,
+  LayoutGrid,
+  Check,
+  Timer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -35,7 +37,7 @@ import {
   deleteEvaluationPeriod
 } from '../lib/services';
 import { PERMISSIONS, hasPermission } from '../lib/permissions';
-import { formatDateTimeVN, formatDateRangeVN } from '../lib/dateUtils';
+import { formatDateRangeVN, formatDateVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
@@ -59,6 +61,7 @@ const DEFAULT_CRITERIA = [
 const TrustEvaluation = () => {
   const { currentUser, role } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
 
   // Dữ liệu từ Firestore
   const [employees, setEmployees] = useState([]);
@@ -76,7 +79,10 @@ const TrustEvaluation = () => {
   // 'HISTORY_LIST': Lịch sử các phiếu đánh giá
   const [activeTab, setActiveTab] = useState('CRITERIA_MATRIX');
 
-  // Trạng thái cho Tab 1: Ma trận theo Tiêu chí
+  // Chế độ xem của Tab Ma Trận: 'CARDS' (Thẻ so sánh xoay vòng) hoặc 'TABLE' (Ma trận bảng toàn cảnh 2 chiều)
+  const [matrixViewMode, setMatrixViewMode] = useState('CARDS');
+
+  // Trạng thái cho Tab 1: Ma trận theo Tiêu chí (Chế độ Cards)
   const [activeCriterionIndex, setActiveCriterionIndex] = useState(0);
 
   // Bảng điểm ma trận: matrixScores[employeeId][criterionId] = score
@@ -93,7 +99,6 @@ const TrustEvaluation = () => {
   // Bộ lọc lịch sử & Chi tiết phiếu
   const [filterDept, setFilterDept] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEvaluation, setSelectedEvaluation] = useState(null);
 
   // Modal In Biên Bản A4
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -116,9 +121,11 @@ const TrustEvaluation = () => {
     customCriteria: DEFAULT_CRITERIA,
   });
 
-  // State thêm tiêu chí tùy biến trong modal Admin
+  // State thêm/sửa tiêu chí tùy biến trong modal Admin
   const [newCustomCrit, setNewCustomCrit] = useState({ title: '', description: '', maxScore: 10 });
   const [isAddingCrit, setIsAddingCrit] = useState(false);
+  const [editingCritIndex, setEditingCritIndex] = useState(null);
+  const [editingCritData, setEditingCritData] = useState({ title: '', description: '', maxScore: 10 });
 
   // Quyền quản lý đợt đánh giá
   const canManagePeriods = useMemo(() => {
@@ -160,7 +167,6 @@ const TrustEvaluation = () => {
   useEffect(() => {
     const unsub = subscribeTrustEvaluations((data) => {
       setEvaluations(data || []);
-      setLoadingHistory(false);
     });
     return () => unsub();
   }, []);
@@ -178,7 +184,7 @@ const TrustEvaluation = () => {
     return globalCriteria;
   }, [currentPeriod, globalCriteria]);
 
-  // Tiêu chí hiện đang chọn ở Tab 1
+  // Tiêu chí hiện đang chọn ở Tab 1 (Cards mode)
   const currentCriterion = useMemo(() => {
     return activeCriteria[activeCriterionIndex] || activeCriteria[0];
   }, [activeCriteria, activeCriterionIndex]);
@@ -199,7 +205,7 @@ const TrustEvaluation = () => {
       pool = employees.filter((e) => currentPeriod.targetEmployeeIds.includes(e.id));
     }
 
-    // NGHIÊM NGẶT LOẠI TRỪ BẢN THÂN
+    // NGHIÊM NGẶT LOẠI TRỪ BẢN THÂN NGƯỜI DÙNG
     return pool.filter((emp) => {
       const isSelf = (currentUser?.id && emp.id === currentUser.id) ||
                      (currentUser?.uid && emp.id === currentUser.uid) ||
@@ -209,9 +215,26 @@ const TrustEvaluation = () => {
     });
   }, [employees, currentPeriod, currentUser]);
 
+  // Đếm ngược thời gian kết thúc đợt đánh giá
+  const timeRemainingBadge = useMemo(() => {
+    if (!currentPeriod?.endDate) return null;
+    const now = new Date();
+    const end = new Date(currentPeriod.endDate + 'T23:59:59');
+    const diffMs = end - now;
+    if (diffMs < 0) {
+      return { text: 'Đã hết hạn nộp phiếu', isExpired: true };
+    }
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) {
+      return { text: `Còn ${days} ngày ${hours} giờ`, isExpired: false };
+    }
+    return { text: `Còn ${hours} giờ nữa`, isExpired: false, isUrgent: true };
+  }, [currentPeriod?.endDate]);
+
   // Tải dữ liệu nháp (Local Draft) hoặc dữ liệu đã nộp cho Ma trận điểm khi đổi đợt
   useEffect(() => {
-    if (!currentPeriod || !evaluatableEmployees.length || !currentUser) return;
+    if (!currentPeriod?.id || !evaluatableEmployees.length || !currentUser?.uid) return;
 
     const draftKey = `qtd_trust_draft_${currentPeriod.id}_${currentUser.uid || currentUser.id}`;
     let savedDraft = null;
@@ -219,7 +242,7 @@ const TrustEvaluation = () => {
       const draftStr = localStorage.getItem(draftKey);
       if (draftStr) savedDraft = JSON.parse(draftStr);
     } catch {
-      // bỏ qua lỗi parse
+      // ignore parse error
     }
 
     // Lấy các phiếu đã nộp trước đó của người dùng này trong đợt
@@ -241,7 +264,7 @@ const TrustEvaluation = () => {
         } else if (foundSubmitted?.scores?.[crit.id] !== undefined) {
           initialMatrix[emp.id][crit.id] = Number(foundSubmitted.scores[crit.id]);
         } else {
-          initialMatrix[emp.id][crit.id] = 8; // Điểm chuẩn mặc định
+          initialMatrix[emp.id][crit.id] = 8; // Điểm chuẩn mặc định 8.0
         }
       });
 
@@ -258,7 +281,10 @@ const TrustEvaluation = () => {
 
   // Tự động lưu nháp điểm ma trận vào LocalStorage
   const handleScoreChangeMatrix = (employeeId, criterionId, score) => {
-    const val = Math.max(0, Math.min(Number(score) || 0, currentCriterion?.maxScore || 10));
+    const critObj = activeCriteria.find((c) => String(c.id) === String(criterionId)) || currentCriterion;
+    const maxVal = critObj?.maxScore || 10;
+    const val = Math.max(0, Math.min(Number(score) || 0, maxVal));
+
     setMatrixScores((prev) => {
       const updated = {
         ...prev,
@@ -277,7 +303,7 @@ const TrustEvaluation = () => {
     });
   };
 
-  // Nút tiện ích: Gán điểm nhanh cho toàn bộ cán bộ tại Tiêu chí hiện tại
+  // Nút tiện ích: Gán nhanh điểm sàn cho toàn bộ cán bộ tại Tiêu chí hiện tại
   const handleQuickFillCriterion = (fillScore) => {
     if (!currentCriterion) return;
     const cid = currentCriterion.id;
@@ -296,7 +322,7 @@ const TrustEvaluation = () => {
       }
       return updated;
     });
-    toast.success(`Đã gán nhanh điểm [${fillScore}] cho toàn bộ đồng nghiệp tại ${currentCriterion.title}!`);
+    toast.success(`Đã gán nhanh điểm [${fillScore}] cho toàn bộ đồng nghiệp tại [${currentCriterion.title}]!`);
   };
 
   // Nộp toàn bộ phiếu đánh giá từ Bảng Ma Trận
@@ -313,6 +339,11 @@ const TrustEvaluation = () => {
     setSubmittingMatrix(true);
     try {
       const payloadList = evaluatableEmployees.map((emp) => {
+        // Kiểm tra an toàn: Tuyệt đối không tự chấm bản thân
+        if (emp.id === currentUser.id || emp.id === currentUser.uid || emp.code === currentUser.code) {
+          throw new Error('Quy chế Quỹ không cho phép tự đánh giá tín nhiệm cho chính mình.');
+        }
+
         const empScores = matrixScores[emp.id] || {};
         const total = Object.values(empScores).reduce((sum, v) => sum + (Number(v) || 0), 0);
         let classification = 'Không hoàn thành';
@@ -367,6 +398,11 @@ const TrustEvaluation = () => {
     const targetEmp = employees.find((e) => e.id === singleTargetId);
     if (!targetEmp) return;
 
+    if (targetEmp.id === currentUser.id || targetEmp.id === currentUser.uid || targetEmp.code === currentUser.code) {
+      toast.error('Quy chế không cho phép tự đánh giá tín nhiệm cho bản thân!');
+      return;
+    }
+
     setSubmittingSingle(true);
     try {
       const total = Object.values(singleScores).reduce((sum, v) => sum + (Number(v) || 0), 0);
@@ -406,7 +442,12 @@ const TrustEvaluation = () => {
   // Tính toán Tiến trình đánh giá & Bảng xếp hạng Realtime
   const analyticsData = useMemo(() => {
     if (!currentPeriod || !employees.length) {
-      return { leaderboard: [], voterProgress: { submitted: 0, total: 0, percent: 0 }, deptBreakdown: [] };
+      return { 
+        leaderboard: [], 
+        voterProgress: { submitted: 0, total: 0, percent: 0 }, 
+        submittedVoters: [], 
+        pendingVoters: [] 
+      };
     }
 
     const periodEvaluations = evaluations.filter((ev) => ev.periodId === currentPeriod.id);
@@ -416,6 +457,9 @@ const TrustEvaluation = () => {
     const totalEligible = employees.length;
     const submittedCount = submittedVoterIds.size;
     const turnoutPercent = totalEligible > 0 ? Math.round((submittedCount / totalEligible) * 100) : 0;
+
+    const submittedVoters = employees.filter((e) => submittedVoterIds.has(e.id) || submittedVoterIds.has(e.uid));
+    const pendingVoters = employees.filter((e) => !submittedVoterIds.has(e.id) && !submittedVoterIds.has(e.uid));
 
     // 2. Bảng xếp hạng cán bộ theo điểm trung bình
     const employeeStats = {};
@@ -477,8 +521,10 @@ const TrustEvaluation = () => {
     return {
       leaderboard,
       voterProgress: { submitted: submittedCount, total: totalEligible, percent: turnoutPercent },
+      submittedVoters,
+      pendingVoters
     };
-  }, [currentPeriod, evaluations, evaluatableEmployees, activeCriteria, employees.length]);
+  }, [currentPeriod, evaluations, evaluatableEmployees, activeCriteria, employees]);
 
   // Bộ lọc lịch sử phiếu
   const filteredEvaluations = useMemo(() => {
@@ -573,6 +619,21 @@ const TrustEvaluation = () => {
     }
   };
 
+  // Nhanh: Chọn cán bộ theo phòng ban trong modal
+  const handleSelectEmployeesByDept = (deptName) => {
+    if (deptName === 'ALL') {
+      setPeriodFormData((prev) => ({ ...prev, targetEmployeeIds: employees.map((e) => e.id) }));
+    } else if (deptName === 'NONE') {
+      setPeriodFormData((prev) => ({ ...prev, targetEmployeeIds: [] }));
+    } else {
+      const matchingIds = employees.filter((e) => e.department === deptName).map((e) => e.id);
+      setPeriodFormData((prev) => ({
+        ...prev,
+        targetEmployeeIds: Array.from(new Set([...prev.targetEmployeeIds, ...matchingIds])),
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header Trang & Bộ chọn Đợt Đánh Giá */}
@@ -580,7 +641,7 @@ const TrustEvaluation = () => {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-[#0f766e] uppercase tracking-wider mb-1">
             <ShieldCheck className="w-4 h-4" />
-            <span>Phân hệ Nghiệp vụ A • Quỹ Tín Dụng Nhân Dân Yên Thọ</span>
+            <span>Phân Hệ Tín Nhiệm • Quỹ Tín Dụng Nhân Dân Yên Thọ</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Đánh Giá Tín Nhiệm Cán Bộ
@@ -593,15 +654,26 @@ const TrustEvaluation = () => {
         {/* Cán bộ đang đăng nhập & Nút Admin */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {canManagePeriods && (
-            <Button
-              variant="outline"
-              size="sm"
-              icon={Settings}
-              onClick={() => handleOpenCreatePeriod()}
-              className="text-xs font-bold text-teal-800 border-teal-300 hover:bg-teal-50"
-            >
-              Cấu hình Đợt Đánh Giá
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Settings}
+                onClick={() => navigate('/admin-settings')}
+                className="text-xs font-bold text-teal-800 border-teal-300 hover:bg-teal-50"
+              >
+                Cấu Hình Phân Hệ
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={PlusCircle}
+                onClick={() => handleOpenCreatePeriod()}
+                className="text-xs font-bold bg-[#0f766e] hover:bg-[#115e59]"
+              >
+                Tạo Đợt Đánh Giá
+              </Button>
+            </>
           )}
 
           <div className="bg-white px-3 py-1.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2">
@@ -617,7 +689,7 @@ const TrustEvaluation = () => {
         </div>
       </div>
 
-      {/* 2. Banner Thông Tin Kỳ Đánh Giá Đang Chọn & Đồng Hồ Tiến Trình */}
+      {/* 2. Banner Thông Tin Kỳ Đánh Giá Đang Chọn & Đồng Hồ Đếm Ngược */}
       <Card className="border-teal-200 bg-gradient-to-r from-teal-50/70 via-white to-emerald-50/40 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-2">
@@ -640,6 +712,20 @@ const TrustEvaluation = () => {
 
               <StatusBadge type="period_status" value={currentPeriod?.status} />
               <StatusBadge type="voting_mode" value={currentPeriod?.votingMode} />
+
+              {/* Huy hiệu đếm ngược thời gian */}
+              {timeRemainingBadge && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                  timeRemainingBadge.isExpired
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : timeRemainingBadge.isUrgent
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
+                    : 'bg-teal-100 text-teal-800 border-teal-300'
+                }`}>
+                  <Timer className="w-3.5 h-3.5" />
+                  <span>{timeRemainingBadge.text}</span>
+                </span>
+              )}
 
               {canManagePeriods && currentPeriod && (
                 <div className="flex items-center gap-1 ml-2">
@@ -685,7 +771,7 @@ const TrustEvaluation = () => {
             </div>
             <div className="text-xs">
               <div className="font-bold text-slate-900">
-                {isAnonymousByPolicy ? 'QUY CHẾ BỎ PHIẾU KÍN (ẨN DANH)' : 'HÌNH THỨC CÔNG KHAI (ĐỊNH DANH)'}
+                {isAnonymousByPolicy ? 'QUY CHẾ BỎ PHIẾU KÍN (ẨN DANH 100%)' : 'HÌNH THỨC CÔNG KHAI (ĐỊNH DANH)'}
               </div>
               <p className="text-[11px] text-slate-500">
                 {isAnonymousByPolicy
@@ -709,8 +795,8 @@ const TrustEvaluation = () => {
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>Ma Trận So Sánh Theo Tiêu Chí (Khuyên dùng)</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-emerald-950 font-black">Mới</span>
+          <span>1. Ma Trận Tiêu Chí (So sánh CBNV)</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-emerald-950 font-black">Trọng tâm</span>
         </button>
 
         <button
@@ -723,7 +809,7 @@ const TrustEvaluation = () => {
           }`}
         >
           <UserCheck className="w-4 h-4" />
-          <span>Chấm Theo Từng Cán Bộ</span>
+          <span>2. Chấm Theo Từng Cán Bộ</span>
         </button>
 
         <button
@@ -736,7 +822,7 @@ const TrustEvaluation = () => {
           }`}
         >
           <BarChart2 className="w-4 h-4" />
-          <span>Tiến Trình & Kết Quả Tổng Hợp</span>
+          <span>3. Tiến Trình Realtime & Kết Quả</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-teal-100 text-teal-800 font-bold">Realtime</span>
         </button>
 
@@ -750,190 +836,333 @@ const TrustEvaluation = () => {
           }`}
         >
           <Clock className="w-4 h-4" />
-          <span>Lịch Sử Phiếu Đã Nộp ({filteredEvaluations.length})</span>
+          <span>4. Lịch Sử Phiếu Đã Nộp ({filteredEvaluations.length})</span>
         </button>
       </div>
 
-      {/* 4. TAB 1: MA TRẬN SO SÁNH THEO TIÊU CHÍ (YÊU CẦU TRỌNG TÂM) */}
+      {/* ===================================================================== */}
+      {/* 4. TAB 1: MA TRẬN SO SÁNH THEO TIÊU CHÍ (YÊU CẦU TRỌNG TÂM)           */}
+      {/* ===================================================================== */}
       {activeTab === 'CRITERIA_MATRIX' && (
         <div className="space-y-6">
-          {/* Header Tiêu chí hiện hành & Stepper chọn tiêu chí */}
-          <div className="bg-white p-5 rounded-3xl border border-teal-200 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-xl bg-teal-800 text-white flex items-center justify-center font-black text-xs">
-                  {activeCriterionIndex + 1}
-                </span>
-                <div>
-                  <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wider block">
-                    Tiêu chí {activeCriterionIndex + 1} / {activeCriteria.length}:
-                  </span>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900">
-                    {currentCriterion?.title}
-                  </h3>
+          {/* BANNER BẢO CHỨNG QUY CHẾ CÔNG TÂM (KHÔNG TỰ ĐÁNH GIÁ BẢN THÂN) */}
+          <div className="bg-amber-50/80 border border-amber-200 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-400/30 flex items-center justify-center shrink-0">
+                <Lock className="w-4 h-4 text-amber-800" />
+              </div>
+              <div>
+                <strong className="font-bold text-amber-950">Quy chế Công tâm Quỹ TDND Yên Thọ: </strong>
+                Đã loại trừ đồng chí <strong className="text-teal-900 underline font-black">{currentUser?.name}</strong> ({currentUser?.position || 'Bản thân'}) khỏi danh sách lấy phiếu tín nhiệm của chính mình.
+              </div>
+            </div>
+            <span className="self-start sm:self-auto px-2.5 py-1 rounded-full bg-amber-200/80 text-amber-950 font-bold text-[10px] border border-amber-300">
+              Bảo mật danh tính & Khách quan
+            </span>
+          </div>
+
+          {/* THANH ĐIỀU KHIỂN CHẾ ĐỘ XEM MA TRẬN */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-700">Chế độ hiển thị:</span>
+              <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setMatrixViewMode('CARDS')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    matrixViewMode === 'CARDS'
+                      ? 'bg-white text-teal-800 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Thẻ So Sánh Theo Tiêu Chí</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixViewMode('TABLE')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    matrixViewMode === 'TABLE'
+                      ? 'bg-white text-teal-800 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Table className="w-3.5 h-3.5" />
+                  <span>Bảng Ma Trận Toàn Cảnh (Grid View)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium">
+              Đang chấm điểm cho <strong className="text-teal-800 font-bold">{evaluatableEmployees.length}</strong> đồng nghiệp
+            </div>
+          </div>
+
+          {/* CHẾ ĐỘ 1: THẺ SO SÁNH THEO TIÊU CHÍ (CARDS VIEW) */}
+          {matrixViewMode === 'CARDS' && (
+            <div className="space-y-6">
+              {/* Header Tiêu chí hiện hành & Stepper chọn tiêu chí */}
+              <div className="bg-white p-5 rounded-3xl border border-teal-200 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-xl bg-teal-800 text-white flex items-center justify-center font-black text-xs">
+                      {activeCriterionIndex + 1}
+                    </span>
+                    <div>
+                      <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wider block">
+                        Tiêu chí {activeCriterionIndex + 1} / {activeCriteria.length}:
+                      </span>
+                      <h3 className="text-base sm:text-lg font-black text-slate-900">
+                        {currentCriterion?.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  {/* Bộ điều hướng tiêu chí nhanh */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={activeCriterionIndex === 0}
+                      onClick={() => setActiveCriterionIndex((prev) => Math.max(0, prev - 1))}
+                      className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Tiêu chí trước"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <span className="text-xs font-bold text-slate-700 px-2">
+                      {activeCriterionIndex + 1} / {activeCriteria.length}
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={activeCriterionIndex === activeCriteria.length - 1}
+                      onClick={() => setActiveCriterionIndex((prev) => Math.min(activeCriteria.length - 1, prev + 1))}
+                      className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Tiêu chí tiếp theo"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Diễn giải tiêu chí & Thanh thao tác gán nhanh */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                  <div className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+                    <strong className="text-slate-800">Nội dung yêu cầu: </strong>
+                    {currentCriterion?.description}
+                  </div>
+
+                  {/* Nút tiện ích gán nhanh điểm sàn */}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-slate-500 font-medium">Gán nhanh cho tất cả:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickFillCriterion(8)}
+                      className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition-colors cursor-pointer"
+                    >
+                      8 điểm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickFillCriterion(8.5)}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 transition-colors cursor-pointer"
+                    >
+                      8.5 điểm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickFillCriterion(9)}
+                      className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-bold text-xs border border-blue-200 transition-colors cursor-pointer"
+                    >
+                      9 điểm
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stepper Dots (10 tiêu chí) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {activeCriteria.map((crit, idx) => (
+                    <button
+                      key={crit.id}
+                      type="button"
+                      onClick={() => setActiveCriterionIndex(idx)}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all cursor-pointer ${
+                        activeCriterionIndex === idx
+                          ? 'bg-teal-800 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      TC {idx + 1}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Bộ điều hướng tiêu chí nhanh */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={activeCriterionIndex === 0}
-                  onClick={() => setActiveCriterionIndex((prev) => Math.max(0, prev - 1))}
-                  className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
-                  title="Tiêu chí trước"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
+              {/* Lưới các cán bộ nhân viên xếp cùng nhau ở tiêu chí này */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {evaluatableEmployees.map((emp) => {
+                  const currentScore = matrixScores[emp.id]?.[currentCriterion?.id] ?? 8;
+                  return (
+                    <Card
+                      key={emp.id}
+                      className="border-slate-200/80 hover:border-teal-300 transition-all shadow-xs bg-white flex flex-col justify-between"
+                    >
+                      <div>
+                        {/* Thông tin Cán bộ */}
+                        <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                          <EmployeeBadge
+                            employee={emp}
+                            size="md"
+                            showCode={true}
+                            showPosition={true}
+                            showDepartment={true}
+                          />
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] text-slate-400 block font-medium">Điểm tiêu chí:</span>
+                            <span className="text-2xl font-black text-[#0f766e]">
+                              {currentScore}
+                            </span>
+                            <span className="text-[10px] text-slate-400"> / {currentCriterion?.maxScore || 10}</span>
+                          </div>
+                        </div>
 
-                <span className="text-xs font-bold text-slate-700 px-2">
-                  {activeCriterionIndex + 1} / {activeCriteria.length}
-                </span>
+                        {/* Bộ chấm điểm nhanh cho cán bộ */}
+                        <div className="mt-4 space-y-3">
+                          <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                            <span>Chọn điểm đánh giá:</span>
+                            <span className="font-bold text-slate-700">
+                              {currentScore >= 9 ? 'Xuất sắc' : currentScore >= 7 ? 'Tốt' : 'Khá'}
+                            </span>
+                          </div>
 
-                <button
-                  type="button"
-                  disabled={activeCriterionIndex === activeCriteria.length - 1}
-                  onClick={() => setActiveCriterionIndex((prev) => Math.min(activeCriteria.length - 1, prev + 1))}
-                  className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
-                  title="Tiêu chí tiếp theo"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+                          {/* Slider chấm điểm mượt mà */}
+                          <input
+                            type="range"
+                            min="0"
+                            max={currentCriterion?.maxScore || 10}
+                            step="0.5"
+                            value={currentScore}
+                            onChange={(e) => handleScoreChangeMatrix(emp.id, currentCriterion?.id, e.target.value)}
+                            className="w-full accent-[#0f766e] cursor-pointer"
+                          />
 
-            {/* Diễn giải tiêu chí & Thanh thao tác gán nhanh */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
-              <div className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-                <strong className="text-slate-800">Nội dung yêu cầu: </strong>
-                {currentCriterion?.description}
-              </div>
-
-              {/* Nút tiện ích gán nhanh điểm sàn */}
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <span className="text-[11px] text-slate-500 font-medium">Gán nhanh cho tất cả:</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFillCriterion(8)}
-                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition-colors cursor-pointer"
-                >
-                  8 điểm
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFillCriterion(8.5)}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 transition-colors cursor-pointer"
-                >
-                  8.5 điểm
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFillCriterion(9)}
-                  className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-bold text-xs border border-blue-200 transition-colors cursor-pointer"
-                >
-                  9 điểm
-                </button>
-              </div>
-            </div>
-
-            {/* Stepper Dots (10 tiêu chí) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-              {activeCriteria.map((crit, idx) => (
-                <button
-                  key={crit.id}
-                  type="button"
-                  onClick={() => setActiveCriterionIndex(idx)}
-                  className={`px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all cursor-pointer ${
-                    activeCriterionIndex === idx
-                      ? 'bg-teal-800 text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  TC {idx + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Lưới các cán bộ nhân viên xếp cùng nhau ở tiêu chí này */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {evaluatableEmployees.map((emp) => {
-              const currentScore = matrixScores[emp.id]?.[currentCriterion?.id] ?? 8;
-              return (
-                <Card
-                  key={emp.id}
-                  className="border-slate-200/80 hover:border-teal-300 transition-all shadow-xs bg-white flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Thông tin Cán bộ */}
-                    <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-                      <EmployeeBadge
-                        employee={emp}
-                        size="md"
-                        showCode={true}
-                        showPosition={true}
-                        showDepartment={true}
-                      />
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] text-slate-400 block font-medium">Điểm tiêu chí:</span>
-                        <span className="text-2xl font-black text-[#0f766e]">
-                          {currentScore}
-                        </span>
-                        <span className="text-[10px] text-slate-400"> / 10</span>
-                      </div>
-                    </div>
-
-                    {/* Bộ chấm điểm nhanh cho cán bộ */}
-                    <div className="mt-4 space-y-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                        <span>Chọn điểm đánh giá:</span>
-                        <span className="font-bold text-slate-700">
-                          {currentScore >= 9 ? 'Xuất sắc' : currentScore >= 7 ? 'Tốt' : 'Khá'}
-                        </span>
+                          {/* Các nút bấm điểm số nhanh 1 chạm */}
+                          <div className="grid grid-cols-6 gap-1">
+                            {[6, 7, 8, 8.5, 9, 10].map((scorePill) => (
+                              <button
+                                key={scorePill}
+                                type="button"
+                                onClick={() => handleScoreChangeMatrix(emp.id, currentCriterion?.id, scorePill)}
+                                className={`py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  currentScore === scorePill
+                                    ? 'bg-teal-800 text-white shadow-xs'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                }`}
+                              >
+                                {scorePill}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Slider chấm điểm mượt mà */}
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        step="0.5"
-                        value={currentScore}
-                        onChange={(e) => handleScoreChangeMatrix(emp.id, currentCriterion?.id, e.target.value)}
-                        className="w-full accent-[#0f766e] cursor-pointer"
-                      />
-
-                      {/* Các nút bấm điểm số nhanh 1 chạm */}
-                      <div className="grid grid-cols-6 gap-1">
-                        {[6, 7, 8, 8.5, 9, 10].map((scorePill) => (
-                          <button
-                            key={scorePill}
-                            type="button"
-                            onClick={() => handleScoreChangeMatrix(emp.id, currentCriterion?.id, scorePill)}
-                            className={`py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              currentScore === scorePill
-                                ? 'bg-teal-800 text-white shadow-xs'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                            }`}
-                          >
-                            {scorePill}
-                          </button>
-                        ))}
+                      {/* Tổng điểm dự kiến của cán bộ này qua tất cả các tiêu chí */}
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span>Tổng điểm tạm tính:</span>
+                        <strong className="text-slate-800 font-bold">
+                          {Object.values(matrixScores[emp.id] || {}).reduce((s, v) => s + (Number(v) || 0), 0)} / 100 điểm
+                        </strong>
                       </div>
-                    </div>
-                  </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-                  {/* Tổng điểm dự kiến của cán bộ này qua tất cả các tiêu chí */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                    <span>Tổng điểm tạm tính:</span>
-                    <strong className="text-slate-800">
-                      {Object.values(matrixScores[emp.id] || {}).reduce((s, v) => s + (Number(v) || 0), 0)} / 100 điểm
-                    </strong>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+          {/* CHẾ ĐỘ 2: BẢNG MA TRẬN TOÀN CẢNH (FULL MATRIX TABLE VIEW) */}
+          {matrixViewMode === 'TABLE' && (
+            <Card title="Bảng Ma Trận So Sánh Toàn Bộ Cán Bộ Qua 10 Tiêu Chí">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <th className="py-3 px-3 min-w-[200px] sticky left-0 bg-slate-100 z-10 shadow-r">
+                        Cán bộ được đánh giá
+                      </th>
+                      {activeCriteria.map((c, idx) => (
+                        <th key={c.id} className="py-3 px-2 text-center min-w-[70px]" title={c.title}>
+                          <span className="block font-mono text-teal-800">TC{idx + 1}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">(/10)</span>
+                        </th>
+                      ))}
+                      <th className="py-3 px-3 text-center min-w-[90px] font-bold text-slate-900">
+                        Tổng điểm
+                      </th>
+                      <th className="py-3 px-3 text-center min-w-[100px]">
+                        Xếp loại
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {evaluatableEmployees.map((emp) => {
+                      const empScores = matrixScores[emp.id] || {};
+                      const total = Object.values(empScores).reduce((s, v) => s + (Number(v) || 0), 0);
+                      let grade = 'Không hoàn thành';
+                      if (total >= 90) grade = 'Xuất sắc';
+                      else if (total >= 70) grade = 'Tốt';
+                      else if (total >= 50) grade = 'Hoàn thành';
+
+                      return (
+                        <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 px-3 sticky left-0 bg-white hover:bg-slate-50 z-10 font-bold text-slate-900 shadow-r">
+                            <div>
+                              <span>{emp.name}</span>
+                              <div className="text-[10px] text-slate-400 font-normal">
+                                {emp.position} • {emp.department}
+                              </div>
+                            </div>
+                          </td>
+
+                          {activeCriteria.map((crit) => {
+                            const sc = empScores[crit.id] ?? 8;
+                            return (
+                              <td key={crit.id} className="py-2 px-1 text-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={crit.maxScore || 10}
+                                  step="0.5"
+                                  value={sc}
+                                  onChange={(e) => handleScoreChangeMatrix(emp.id, crit.id, e.target.value)}
+                                  className="w-12 p-1 text-center font-bold text-xs bg-slate-50 border border-slate-200 rounded-lg focus:border-teal-500 focus:bg-white focus:outline-none"
+                                />
+                              </td>
+                            );
+                          })}
+
+                          <td className="py-2.5 px-3 text-center font-black text-sm text-[#0f766e]">
+                            {total}
+                          </td>
+
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              total >= 90 ? 'bg-emerald-100 text-emerald-800' :
+                              total >= 70 ? 'bg-blue-100 text-blue-800' :
+                              total >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {grade}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
 
           {/* Thanh Footer Điều Hướng & Nút Hoàn Tất */}
           <div className="sticky bottom-4 z-20 bg-slate-900/95 text-white p-4 rounded-3xl shadow-2xl backdrop-blur-md border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -943,17 +1172,19 @@ const TrustEvaluation = () => {
             </div>
 
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={activeCriterionIndex === 0}
-                onClick={() => setActiveCriterionIndex((prev) => Math.max(0, prev - 1))}
-                className="text-white border-slate-600 hover:bg-slate-800"
-              >
-                ← Tiêu chí trước
-              </Button>
+              {matrixViewMode === 'CARDS' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={activeCriterionIndex === 0}
+                  onClick={() => setActiveCriterionIndex((prev) => Math.max(0, prev - 1))}
+                  className="text-white border-slate-600 hover:bg-slate-800"
+                >
+                  ← Tiêu chí trước
+                </Button>
+              )}
 
-              {activeCriterionIndex < activeCriteria.length - 1 ? (
+              {matrixViewMode === 'CARDS' && activeCriterionIndex < activeCriteria.length - 1 ? (
                 <Button
                   variant="primary"
                   size="sm"
@@ -979,7 +1210,9 @@ const TrustEvaluation = () => {
         </div>
       )}
 
-      {/* 5. TAB 2: CHẤM THEO TỪNG CÁN BỘ (CHẾ ĐỘ TRUYỀN THỐNG) */}
+      {/* ===================================================================== */}
+      {/* 5. TAB 2: CHẤM THEO TỪNG CÁN BỘ (CHẾ ĐỘ TRUYỀN THỐNG)                  */}
+      {/* ===================================================================== */}
       {activeTab === 'SINGLE_EMPLOYEE' && (
         <Card title="Chấm Điểm Tín Nhiệm Theo Từng Cá Nhân">
           <form onSubmit={handleSubmitSingle} className="space-y-6">
@@ -1019,13 +1252,13 @@ const TrustEvaluation = () => {
                     <div key={crit.id} className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-bold text-slate-900">{crit.title}</span>
-                        <strong className="text-sm font-black text-[#0f766e]">{singleScores[crit.id] || 8} / 10</strong>
+                        <strong className="text-sm font-black text-[#0f766e]">{singleScores[crit.id] || 8} / {crit.maxScore || 10}</strong>
                       </div>
                       <p className="text-[11px] text-slate-500">{crit.description}</p>
                       <input
                         type="range"
                         min="0"
-                        max="10"
+                        max={crit.maxScore || 10}
                         step="0.5"
                         value={singleScores[crit.id] || 8}
                         onChange={(e) => setSingleScores((prev) => ({ ...prev, [crit.id]: Number(e.target.value) }))}
@@ -1065,7 +1298,9 @@ const TrustEvaluation = () => {
         </Card>
       )}
 
-      {/* 6. TAB 3: TIẾN TRÌNH REALTIME & BẢNG XẾP HẠNG TÍN NHIỆM */}
+      {/* ===================================================================== */}
+      {/* 6. TAB 3: TIẾN TRÌNH REALTIME & BẢNG XẾP HẠNG TÍN NHIỆM                */}
+      {/* ===================================================================== */}
       {activeTab === 'LEADERBOARD_ANALYTICS' && (
         <div className="space-y-6">
           {/* Hàng chỉ số Thống kê Realtime */}
@@ -1125,6 +1360,49 @@ const TrustEvaluation = () => {
             </Card>
           </div>
 
+          {/* Giám sát Cử tri Đã nộp phiếu vs Chưa nộp phiếu (Bảo mật ẩn danh) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card title={`Cử Tri Đã Hoàn Thành Nộp Phiếu (${analyticsData.submittedVoters.length})`}>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {analyticsData.submittedVoters.map((v) => (
+                  <div key={v.id} className="p-2 rounded-xl bg-emerald-50/60 border border-emerald-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="font-bold text-slate-800">{v.name}</span>
+                      <span className="text-[10px] text-slate-400">({v.position})</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-700 font-bold bg-white px-2 py-0.5 rounded-full border border-emerald-200">
+                      Đã nộp đủ
+                    </span>
+                  </div>
+                ))}
+                {analyticsData.submittedVoters.length === 0 && (
+                  <div className="text-xs text-slate-400 text-center py-4">Chưa có cử tri nào nộp phiếu.</div>
+                )}
+              </div>
+            </Card>
+
+            <Card title={`Cử Tri Chưa Hoàn Thành Nộp Phiếu (${analyticsData.pendingVoters.length})`}>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {analyticsData.pendingVoters.map((v) => (
+                  <div key={v.id} className="p-2 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="font-bold text-slate-800">{v.name}</span>
+                      <span className="text-[10px] text-slate-400">({v.position})</span>
+                    </div>
+                    <span className="text-[10px] text-amber-800 font-bold bg-white px-2 py-0.5 rounded-full border border-amber-200">
+                      Chưa nộp
+                    </span>
+                  </div>
+                ))}
+                {analyticsData.pendingVoters.length === 0 && (
+                  <div className="text-xs text-emerald-600 font-bold text-center py-4">100% cán bộ đã hoàn thành nghĩa vụ!</div>
+                )}
+              </div>
+            </Card>
+          </div>
+
           {/* Bảng Xếp Hạng Tín Nhiệm Tổng Hợp */}
           <Card title="Bảng Xếp Hạng Điểm Tín Nhiệm Cán Bộ (Leaderboard)">
             <div className="overflow-x-auto">
@@ -1179,7 +1457,9 @@ const TrustEvaluation = () => {
         </div>
       )}
 
-      {/* 7. TAB 4: LỊCH SỬ PHIẾU ĐÃ NỘP */}
+      {/* ===================================================================== */}
+      {/* 7. TAB 4: LỊCH SỬ PHIẾU ĐÃ NỘP                                         */}
+      {/* ===================================================================== */}
       {activeTab === 'HISTORY_LIST' && (
         <Card title="Danh Sách Phiếu Đánh Giá Tín Nhiệm Đã Ghi Nhận">
           <div className="space-y-4">
@@ -1205,7 +1485,7 @@ const TrustEvaluation = () => {
                   <option value="Phòng Tín dụng">Phòng Tín dụng</option>
                   <option value="Phòng Kế toán - Ngân quỹ">Phòng Kế toán - Ngân quỹ</option>
                   <option value="Ban Kiểm soát">Ban Kiểm soát</option>
-                  <option value="Ban Giám đốc">Ban Giám đốc</option>
+                  <option value="Hội đồng Quản trị">Hội đồng Quản trị</option>
                 </select>
               </div>
 
@@ -1228,8 +1508,7 @@ const TrustEvaluation = () => {
                       <th className="py-3 px-3">Người chấm</th>
                       <th className="py-3 px-3 text-center">Tổng điểm</th>
                       <th className="py-3 px-3">Xếp loại</th>
-                      <th className="py-3 px-3">Thời gian nộp</th>
-                      <th className="py-3 px-3 text-right">Chi tiết</th>
+                      <th className="py-3 px-3">Ghi chú</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1250,25 +1529,14 @@ const TrustEvaluation = () => {
                             <span className="text-slate-800 font-medium">{item.evaluatorName}</span>
                           )}
                         </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="font-black text-sm text-[#0f766e]">{item.totalScore}</span>
-                          <span className="text-slate-400 text-[10px]"> / 100</span>
+                        <td className="py-3 px-3 text-center font-black text-sm text-[#0f766e]">
+                          {item.totalScore}
                         </td>
                         <td className="py-3 px-3">
                           <StatusBadge type="trust_classification" value={item.classification} />
                         </td>
-                        <td className="py-3 px-3 text-slate-400 text-[11px]">
-                          {formatDateTimeVN(item.createdAt)}
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedEvaluation(item)}
-                            className="text-[#0f766e] hover:text-teal-900 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            Xem
-                          </button>
+                        <td className="py-3 px-3 text-slate-500 italic max-w-xs truncate">
+                          {item.notes || '—'}
                         </td>
                       </tr>
                     ))}
@@ -1280,128 +1548,72 @@ const TrustEvaluation = () => {
         </Card>
       )}
 
-      {/* MODAL 1: Chi tiết Phiếu Đánh Giá */}
-      <Modal
-        isOpen={Boolean(selectedEvaluation)}
-        onClose={() => setSelectedEvaluation(null)}
-        title="Chi Tiết Phiếu Đánh Giá Tín Nhiệm"
-        subtitle={`Mã phiếu: ${selectedEvaluation?.id}`}
-        maxWidth="max-w-3xl"
-        footer={
-          <Button variant="outline" onClick={() => setSelectedEvaluation(null)}>
-            Đóng cửa sổ
-          </Button>
-        }
-      >
-        {selectedEvaluation && (
-          <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-              <div>
-                <span className="text-slate-400 text-[10px] block">Cán bộ được đánh giá:</span>
-                <strong className="text-sm text-slate-900">{selectedEvaluation.targetEmployeeName}</strong>
-                <span className="text-[11px] text-slate-500 block">{selectedEvaluation.targetDepartment}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[10px] block">Hình thức phiếu:</span>
-                <StatusBadge type="voting_mode" value={selectedEvaluation.isAnonymous ? 'ANONYMOUS' : 'IDENTIFIED'} />
-              </div>
-              <div>
-                <span className="text-slate-400 text-[10px] block">Tổng điểm & Xếp loại:</span>
-                <span className="text-sm font-black text-[#0f766e]">{selectedEvaluation.totalScore} điểm</span> • {selectedEvaluation.classification}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-slate-800 uppercase tracking-wider mb-2 text-[11px]">
-                Chi tiết điểm các tiêu chí:
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {activeCriteria.map((c) => (
-                  <div key={c.id} className="p-2.5 rounded-lg border border-slate-100 bg-white flex items-center justify-between">
-                    <span className="text-slate-700 font-medium truncate pr-2">{c.title}</span>
-                    <strong className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 shrink-0">
-                      {selectedEvaluation.scores?.[c.id] ?? 0} / 10
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {selectedEvaluation.notes && (
-              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl">
-                <strong className="text-teal-900 block mb-0.5">Nhận xét:</strong>
-                <p className="text-teal-800 italic">{selectedEvaluation.notes}</p>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-
-      {/* MODAL 2: Quản Lý & Cấu Hình Đợt Đánh Giá (Admin) */}
+      {/* ===================================================================== */}
+      {/* MODAL 2: TẠO / CẬP NHẬT ĐỢT ĐÁNH GIÁ (ADMIN)                         */}
+      {/* ===================================================================== */}
       <Modal
         isOpen={isPeriodModalOpen}
         onClose={() => setIsPeriodModalOpen(false)}
-        title={periodFormMode === 'CREATE' ? 'Ban Hành Đợt Lấy Phiếu Tín Nhiệm Mới' : 'Chỉnh Sửa Cấu Hình Đợt Đánh Giá'}
-        subtitle="Quản lý thời gian, tùy biến danh sách ứng viên và bộ tiêu chí đánh giá"
-        maxWidth="max-w-4xl"
+        title={periodFormMode === 'CREATE' ? 'Ban Hành Đợt Lấy Phiếu Tín Nhiệm Mới' : 'Cập Nhật Cấu Hình Đợt Đánh Giá'}
+        subtitle="Quản trị thời gian, đối tượng được lấy phiếu và bộ tiêu chí tùy biến"
+        maxWidth="max-w-3xl"
         footer={
-          <div className="flex items-center justify-between w-full">
-            <span className="text-[11px] text-slate-500">Chỉ cấp Quản lý/Chủ tịch có quyền tác nghiệp.</span>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsPeriodModalOpen(false)}>Hủy</Button>
-              <Button
-                variant="primary"
-                onClick={handleSavePeriod}
-                isLoading={submittingPeriod}
-                icon={CheckCircle2}
-              >
-                Xác nhận lưu đợt
-              </Button>
-            </div>
+          <div className="flex justify-end gap-2 w-full">
+            <Button variant="outline" onClick={() => setIsPeriodModalOpen(false)}>Hủy</Button>
+            <Button
+              variant="primary"
+              isLoading={submittingPeriod}
+              onClick={handleSavePeriod}
+            >
+              {periodFormMode === 'CREATE' ? 'Ban hành đợt này' : 'Lưu cập nhật'}
+            </Button>
           </div>
         }
       >
-        <div className="space-y-5 text-xs max-h-[70vh] overflow-y-auto pr-1">
-          {/* Thông tin chung */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 mb-1">Tên đợt đánh giá <span className="text-rose-500">*</span></label>
+        <div className="space-y-4 text-xs">
+          {/* Tên đợt */}
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Tên đợt đánh giá</label>
+            <input
+              type="text"
+              value={periodFormData.name}
+              onChange={(e) => setPeriodFormData((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="VD: Lấy phiếu tín nhiệm Cán bộ Quản lý & Nhân viên Quý IV/2026..."
+              className="w-full p-2.5 bg-white rounded-xl border border-slate-300 font-bold text-slate-800"
+              required
+            />
+          </div>
+
+          {/* Năm và Quý */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Năm</label>
               <input
-                type="text"
-                required
-                value={periodFormData.name}
-                onChange={(e) => setPeriodFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="VD: Lấy phiếu tín nhiệm Cán bộ Quản lý Quý IV/2026"
-                className="w-full p-2 bg-white rounded-xl border border-slate-300 text-xs font-bold"
+                type="number"
+                value={periodFormData.year}
+                onChange={(e) => setPeriodFormData((prev) => ({ ...prev, year: Number(e.target.value) }))}
+                className="w-full p-2 bg-white rounded-xl border border-slate-300 font-bold"
               />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Kỳ / Năm</label>
-              <div className="flex gap-1.5">
-                <select
-                  value={periodFormData.quarter}
-                  onChange={(e) => setPeriodFormData((prev) => ({ ...prev, quarter: Number(e.target.value) }))}
-                  className="p-2 bg-white rounded-xl border border-slate-300 text-xs"
-                >
-                  <option value={1}>Quý I</option>
-                  <option value={2}>Quý II</option>
-                  <option value={3}>Quý III</option>
-                  <option value={4}>Quý IV</option>
-                </select>
-                <input
-                  type="number"
-                  value={periodFormData.year}
-                  onChange={(e) => setPeriodFormData((prev) => ({ ...prev, year: Number(e.target.value) }))}
-                  className="w-20 p-2 bg-white rounded-xl border border-slate-300 text-xs"
-                />
-              </div>
+              <label className="block font-bold text-slate-700 mb-1">Quý / Kỳ</label>
+              <select
+                value={periodFormData.quarter}
+                onChange={(e) => setPeriodFormData((prev) => ({ ...prev, quarter: Number(e.target.value) }))}
+                className="w-full p-2 bg-white rounded-xl border border-slate-300 font-bold"
+              >
+                <option value={1}>Quý I</option>
+                <option value={2}>Quý II</option>
+                <option value={3}>Quý III</option>
+                <option value={4}>Quý IV (Cuối năm)</option>
+              </select>
             </div>
           </div>
 
           {/* Thời gian bắt đầu và kết thúc */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Thời gian bắt đầu</label>
+              <label className="block font-bold text-slate-700 mb-1">Thời gian bắt đầu lấy phiếu</label>
               <input
                 type="date"
                 value={periodFormData.startDate}
@@ -1410,7 +1622,7 @@ const TrustEvaluation = () => {
               />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Thời gian kết thúc</label>
+              <label className="block font-bold text-slate-700 mb-1">Thời gian kết thúc (Khóa sổ)</label>
               <input
                 type="date"
                 value={periodFormData.endDate}
@@ -1435,7 +1647,7 @@ const TrustEvaluation = () => {
                     checked={periodFormData.votingMode === 'ANONYMOUS'}
                     onChange={() => setPeriodFormData((prev) => ({ ...prev, votingMode: 'ANONYMOUS' }))}
                   />
-                  <span>Bỏ phiếu kín (Ẩn danh)</span>
+                  <span>Bỏ phiếu kín (Ẩn danh 100%)</span>
                 </label>
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
@@ -1466,23 +1678,37 @@ const TrustEvaluation = () => {
             </div>
           </div>
 
-          {/* Danh sách cán bộ được lấy phiếu tín nhiệm */}
+          {/* Danh sách cán bộ được lấy phiếu tín nhiệm (Có bộ lọc chọn nhanh) */}
           <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
                 Cán bộ được lấy phiếu tín nhiệm ({periodFormData.targetEmployeeIds.length}/{employees.length}):
               </label>
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 <button
                   type="button"
-                  onClick={() => setPeriodFormData((prev) => ({ ...prev, targetEmployeeIds: employees.map((e) => e.id) }))}
+                  onClick={() => handleSelectEmployeesByDept('ALL')}
                   className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]"
                 >
-                  Chọn tất cả
+                  Tất cả ({employees.length})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPeriodFormData((prev) => ({ ...prev, targetEmployeeIds: [] }))}
+                  onClick={() => handleSelectEmployeesByDept('Phòng Tín dụng')}
+                  className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]"
+                >
+                  Khối Tín dụng
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectEmployeesByDept('Phòng Kế toán - Ngân quỹ')}
+                  className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-[10px]"
+                >
+                  Khối Kế toán
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectEmployeesByDept('NONE')}
                   className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-bold text-[10px]"
                 >
                   Bỏ chọn
@@ -1515,7 +1741,7 @@ const TrustEvaluation = () => {
             </div>
           </div>
 
-          {/* Tùy biến Tiêu chí Đánh giá */}
+          {/* Tùy biến Tiêu chí Đánh giá (Cho phép Thêm / Sửa / Xóa) */}
           <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
             <div className="flex items-center justify-between">
               <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
@@ -1525,10 +1751,13 @@ const TrustEvaluation = () => {
                 variant="outline"
                 size="sm"
                 icon={PlusCircle}
-                onClick={() => setIsAddingCrit(!isAddingCrit)}
+                onClick={() => {
+                  setIsAddingCrit(!isAddingCrit);
+                  setEditingCritIndex(null);
+                }}
                 className="text-[10px] py-1 px-2"
               >
-                {isAddingCrit ? 'Đóng' : 'Thêm tiêu chí mới'}
+                {isAddingCrit ? 'Đóng form thêm' : 'Thêm tiêu chí mới'}
               </Button>
             </div>
 
@@ -1580,23 +1809,75 @@ const TrustEvaluation = () => {
               </div>
             )}
 
+            {/* Form chỉnh sửa tiêu chí đã có */}
+            {editingCritIndex !== null && (
+              <div className="p-3 bg-amber-50/80 border border-amber-300 rounded-xl space-y-2">
+                <div className="font-bold text-amber-900 text-xs">Chỉnh sửa tiêu chí:</div>
+                <input
+                  type="text"
+                  value={editingCritData.title}
+                  onChange={(e) => setEditingCritData((prev) => ({ ...prev, title: e.target.value }))}
+                  className="w-full p-2 bg-white rounded-lg border border-slate-300 text-xs font-bold"
+                />
+                <input
+                  type="text"
+                  value={editingCritData.description}
+                  onChange={(e) => setEditingCritData((prev) => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-2 bg-white rounded-lg border border-slate-300 text-xs"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingCritIndex(null)}>Hủy</Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      const updated = [...periodFormData.customCriteria];
+                      updated[editingCritIndex] = {
+                        ...updated[editingCritIndex],
+                        title: editingCritData.title.trim(),
+                        description: editingCritData.description.trim(),
+                      };
+                      setPeriodFormData((prev) => ({ ...prev, customCriteria: updated }));
+                      setEditingCritIndex(null);
+                      toast.success('Đã cập nhật tiêu chí!');
+                    }}
+                  >
+                    Cập nhật
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="max-h-40 overflow-y-auto space-y-1.5 p-1">
               {periodFormData.customCriteria.map((crit, cIdx) => (
                 <div key={crit.id} className="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-800 truncate pr-2">{crit.title}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPeriodFormData((prev) => ({
-                        ...prev,
-                        customCriteria: prev.customCriteria.filter((_, idx) => idx !== cIdx),
-                      }));
-                    }}
-                    className="text-rose-500 hover:text-rose-700 p-1"
-                    title="Xóa tiêu chí này"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCritIndex(cIdx);
+                        setEditingCritData({ title: crit.title, description: crit.description, maxScore: crit.maxScore || 10 });
+                      }}
+                      className="text-slate-500 hover:text-teal-700 p-1"
+                      title="Sửa tiêu chí này"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPeriodFormData((prev) => ({
+                          ...prev,
+                          customCriteria: prev.customCriteria.filter((_, idx) => idx !== cIdx),
+                        }));
+                      }}
+                      className="text-rose-500 hover:text-rose-700 p-1"
+                      title="Xóa tiêu chí này"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1604,7 +1885,9 @@ const TrustEvaluation = () => {
         </div>
       </Modal>
 
-      {/* MODAL 3: In Biên Bản Tổng Kết A4 Chuẩn Mực */}
+      {/* ===================================================================== */}
+      {/* MODAL 3: IN BIÊN BẢN TỔNG KẾT A4 CHUẨN MỰC                           */}
+      {/* ===================================================================== */}
       <Modal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
@@ -1644,7 +1927,7 @@ const TrustEvaluation = () => {
               BIÊN BẢN TỔNG HỢP KẾT QUẢ LẤY PHIẾU TÍN NHIỆM
             </h3>
             <p className="text-xs italic text-slate-600">
-              Đợt: {currentPeriod?.name} (Hình thức: {isAnonymousByPolicy ? 'Bỏ phiếu kín' : 'Công khai'})
+              Đợt: {currentPeriod?.name} (Hình thức: {isAnonymousByPolicy ? 'Bỏ phiếu kín 100%' : 'Công khai'})
             </p>
           </div>
 

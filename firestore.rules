@@ -181,7 +181,8 @@ service cloud.firestore {
     // ===============================================================
     match /departments/{deptId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isManagerOrChairman();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
     }
 
     // ===============================================================
@@ -189,15 +190,18 @@ service cloud.firestore {
     // ===============================================================
     match /positions/{posId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isManagerOrChairman();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
     }
 
     // ===============================================================
     // 13. Cấu hình Hệ thống & Tham số (system_settings)
+    // Bao gồm cấu hình chung (general) và cấu hình từng phân hệ (module_*)
     // ===============================================================
     match /system_settings/{settingId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isManagerOrChairman();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
     }
   }
 }

@@ -17,6 +17,13 @@ import {
   DEFAULT_POSITIONS,
   DEFAULT_TRUST_CRITERIA,
   DEFAULT_SYSTEM_SETTINGS,
+  DEFAULT_MODULE_TRUST_SETTINGS,
+  DEFAULT_MODULE_HR_SETTINGS,
+  DEFAULT_MODULE_KPI_SETTINGS,
+  DEFAULT_MODULE_PLANNING_SETTINGS,
+  DEFAULT_MODULE_ATTENDANCE_SETTINGS,
+  DEFAULT_MODULE_PAYROLL_SETTINGS,
+  DEFAULT_MODULE_AWARDS_SETTINGS,
   DEFAULT_EVALUATION_PERIODS,
   OFFICIAL_EMPLOYEES,
   OFFICIAL_WORK_HISTORY
@@ -27,7 +34,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.08_v3.0_zero_mock';
+export const CURRENT_SCHEMA_VERSION = '2026.10.08_v3.1_subsystem_settings';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ
@@ -147,11 +154,29 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       }, { merge: true });
     }
 
-    // 5. Bảng system_settings (Cấu hình hệ thống chung)
+    // 5. Bảng system_settings (Cấu hình hệ thống chung & Cấu hình từng phân hệ)
     await setDoc(doc(db, 'system_settings', 'general'), {
       ...DEFAULT_SYSTEM_SETTINGS,
       updatedAt: serverTimestamp(),
     }, { merge: true });
+
+    // 5.1 Đồng bộ cấu hình từng phân hệ chuyên biệt (Subsystem Domain Settings)
+    const subsystemDefaults = [
+      { id: 'module_trust', data: DEFAULT_MODULE_TRUST_SETTINGS },
+      { id: 'module_hr', data: DEFAULT_MODULE_HR_SETTINGS },
+      { id: 'module_kpi', data: DEFAULT_MODULE_KPI_SETTINGS },
+      { id: 'module_planning', data: DEFAULT_MODULE_PLANNING_SETTINGS },
+      { id: 'module_attendance', data: DEFAULT_MODULE_ATTENDANCE_SETTINGS },
+      { id: 'module_payroll', data: DEFAULT_MODULE_PAYROLL_SETTINGS },
+      { id: 'module_awards', data: DEFAULT_MODULE_AWARDS_SETTINGS },
+    ];
+
+    for (const sub of subsystemDefaults) {
+      await setDoc(doc(db, 'system_settings', sub.id), {
+        ...sub.data,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
 
     // 6. Bảng trust_criteria (10 tiêu chí đánh giá tín nhiệm chuẩn)
     for (const crit of DEFAULT_TRUST_CRITERIA) {

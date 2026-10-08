@@ -177,6 +177,97 @@ export const DEFAULT_SYSTEM_SETTINGS = {
 };
 
 // ============================================================================
+// 5.1 CẤU HÌNH CHUYÊN BIỆT TỪNG PHÂN HỆ (SUBSYSTEM DOMAIN SETTINGS)
+// ============================================================================
+
+// Phân hệ Tín Nhiệm (MODULE_TRUST)
+export const DEFAULT_MODULE_TRUST_SETTINGS = {
+  excellentThreshold: 90,
+  goodThreshold: 70,
+  passThreshold: 50,
+  defaultVotingMode: 'ANONYMOUS', // 'ANONYMOUS' | 'IDENTIFIED'
+  allowSelfEvaluation: false,     // Tuyệt đối không cho phép tự đánh giá
+  autoSaveDraftIntervalSec: 10,  // Tự động lưu nháp mỗi 10 giây
+  criteriaCount: 10,
+  printReportTitle: 'BIÊN BẢN TỔNG HỢP KẾT QUẢ LẤY PHIẾU TÍN NHIỆM',
+  signers: [
+    { role: 'TRƯỞNG BAN KIỂM SOÁT', title: 'Trưởng Ban Kiểm soát' },
+    { role: 'GIÁM ĐỐC ĐIỀU HÀNH', title: 'Giám đốc' },
+    { role: 'CHỦ TỊCH HỘI ĐỒNG QUẢN TRỊ', title: 'Chủ tịch HĐQT' },
+  ],
+};
+
+// Phân hệ Nhân Sự & Luân Chuyển (MODULE_HR)
+export const DEFAULT_MODULE_HR_SETTINGS = {
+  transferCycleMonths: 36,        // Chu kỳ tối đa luân chuyển cán bộ tín dụng
+  warningDaysBefore: 90,          // Cảnh báo trước 90 ngày
+  requireDebtHandover: true,      // Yêu cầu biên bản bàn giao nợ trước khi chuyển địa bàn
+  codePrefix: 'CB',               // Tiền tố mã nhân viên
+  autoGenerateCode: true,
+  transferTypes: [
+    { code: 'LUAN_CHUYEN_DINH_KY', label: 'Luân chuyển định kỳ địa bàn tín dụng' },
+    { code: 'BO_NHIEM', label: 'Bổ nhiệm chức danh quản lý' },
+    { code: 'BO_NHIEM_LAI', label: 'Bổ nhiệm lại' },
+    { code: 'PHAN_CONG_CHUYEN_TRACH', label: 'Phân công chuyên trách nghiệp vụ' },
+    { code: 'DIEU_DONG_NOI_BO', label: 'Điều động nội bộ phòng ban' },
+  ],
+};
+
+// Phân hệ Đánh Giá KPI 3 Cấp (MODULE_KPI)
+export const DEFAULT_MODULE_KPI_SETTINGS = {
+  weightSelf: 40,                 // Cấp 1: Cán bộ tự chấm
+  weightManager: 30,              // Cấp 2: Ban Điều hành thẩm tra
+  weightChairman: 30,             // Cấp 3: Chủ tịch HĐQT phê chuẩn
+  evaluationPeriod: 'MONTHLY',    // 'MONTHLY' | 'QUARTERLY'
+  dueDayOfMonth: 25,              // Hạn nộp bảng tự chấm hàng tháng
+  excellentThreshold: 90,
+  goodThreshold: 75,
+  passThreshold: 60,
+  targetCategories: ['Tín dụng & Dư nợ', 'Huy động vốn', 'An toàn kho quỹ & Kế toán', 'Kiểm soát tuân thủ'],
+};
+
+// Phân hệ Quy Hoạch Nguồn (MODULE_PLANNING)
+export const DEFAULT_MODULE_PLANNING_SETTINGS = {
+  thresholdPercent: 50,           // Ngưỡng trúng quy hoạch (>= 50% số phiếu)
+  termYears: 5,                   // Nhiệm kỳ quy hoạch (5 năm)
+  maxCandidatesPerPosition: 3,    // Số ứng viên tối đa cho 1 chức danh
+  minimumTenureMonths: 24,        // Thời gian công tác tối thiểu tại Quỹ
+};
+
+// Phân hệ Chấm Công & Ca Trực (MODULE_ATTENDANCE - Đang triển khai)
+export const DEFAULT_MODULE_ATTENDANCE_SETTINGS = {
+  morningShiftStart: '07:30',
+  morningShiftEnd: '11:30',
+  afternoonShiftStart: '13:30',
+  afternoonShiftEnd: '17:00',
+  vaultGuardStart: '17:00',
+  vaultGuardEnd: '07:30',
+  annualLeaveDays: 12,
+  allowLateMinutes: 15,
+  gracePeriodMinutes: 30,
+};
+
+// Phân hệ Tiền Lương & Đãi Ngộ (MODULE_PAYROLL - Đang triển khai)
+export const DEFAULT_MODULE_PAYROLL_SETTINGS = {
+  baseSalaryCoeff: 1.0,
+  kpiSalaryWeight: 30,            // Tỷ trọng lương kinh doanh theo KPI (%)
+  socialInsuranceRate: 10.5,      // Tỷ lệ trích nộp BHXH cá nhân (%)
+  meetingAllowance: 500000,       // Thù lao họp HĐQT/BKS (VNĐ/buổi)
+  payDayOfMonth: 10,              // Ngày chi trả lương hàng tháng
+};
+
+// Phân hệ Thi Đua Khen Thưởng (MODULE_AWARDS - Đang triển khai)
+export const DEFAULT_MODULE_AWARDS_SETTINGS = {
+  titles: [
+    { id: 'T1', name: 'Chiến sĩ thi đua cấp cơ sở', bonus: 2000000, condition: 'KPI Xuất sắc 12 tháng + Tín nhiệm >= 90' },
+    { id: 'T2', name: 'Lao động tiên tiến', bonus: 1000000, condition: 'KPI Tốt trở lên + Tín nhiệm >= 70' },
+    { id: 'T3', name: 'Tập thể lao động xuất sắc', bonus: 5000000, condition: '100% cá nhân hoàn thành nhiệm vụ' },
+  ],
+  reviewMonth: 12,                // Tháng bình xét cuối năm
+};
+
+
+// ============================================================================
 // 6. DANH MỤC KỲ ĐÁNH GIÁ MẶC ĐỊNH
 // ============================================================================
 export const DEFAULT_EVALUATION_PERIODS = [
