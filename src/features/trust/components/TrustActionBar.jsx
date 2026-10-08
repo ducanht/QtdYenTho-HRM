@@ -5,11 +5,8 @@ import {
   Settings, 
   PlusCircle, 
   Printer, 
-  Save, 
   Edit3, 
-  Trash2,
-  CheckCircle2,
-  Send
+  Trash2
 } from 'lucide-react';
 import Button from '../../../components/common/Button';
 import StatusBadge from '../../../components/common/StatusBadge';
@@ -17,8 +14,9 @@ import EmployeeBadge from '../../../components/common/EmployeeBadge';
 
 /**
  * TrustActionBar: Thanh tác vụ chính cho Phân hệ Tín nhiệm
- * - Không lặp lại tên phân hệ (đã có ở Navbar trên cùng)
- * - Tập trung vào bộ chọn Kỳ đánh giá, đồng hồ đếm ngược, và các nút nghiệp vụ
+ * - Tối ưu 100% không tràn trên di động (Zero Horizontal Overflow)
+ * - Bộ chọn kỳ đánh giá full-width trên mobile, co giãn thông minh trên desktop
+ * - Menu Tab ngang hiển thị trên Desktop (Mobile dùng Bottom Menu chuyên biệt)
  */
 const TrustActionBar = ({
   periods = [],
@@ -38,29 +36,50 @@ const TrustActionBar = ({
   onOpenEditPeriod,
   onDeletePeriod,
   onOpenPrintModal,
-  onSaveDraft,
-  onSubmitAll,
-  isDraftSaving,
-  isSubmitting,
-  progress,
   activeTab,
   onChangeTab,
 }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* 1. Thanh điều khiển chính (ActionBar Toolbar) */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        {/* Bộ chọn đợt đánh giá & Trạng thái */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
-              <Calendar className="w-4 h-4 text-[#0f766e]" />
-              Kỳ đánh giá:
-            </span>
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+        {/* Hàng 1: Bộ chọn kỳ đánh giá và thao tác quản lý */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Ô chọn kỳ đánh giá */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center justify-between sm:justify-start gap-1.5 shrink-0">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                <Calendar className="w-4 h-4 text-[#0f766e] shrink-0" />
+                <span>Kỳ đánh giá:</span>
+              </span>
+
+              {/* Nút Sửa / Xóa đợt cho Lãnh đạo trên Mobile */}
+              {canManagePeriods && currentPeriod && (
+                <div className="flex sm:hidden items-center gap-1 pl-1">
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditPeriod(currentPeriod)}
+                    className="p-1 rounded-lg text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
+                    title="Sửa thông tin đợt này"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeletePeriod(currentPeriod.id, currentPeriod.name)}
+                    className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="Xóa đợt này"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
             <select
               value={selectedPeriodId}
               onChange={(e) => onSelectPeriod(e.target.value)}
-              className="text-xs sm:text-sm font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 shadow-2xs cursor-pointer hover:border-teal-500"
+              className="w-full sm:max-w-md text-xs sm:text-sm font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 shadow-2xs cursor-pointer hover:border-teal-500"
             >
               {periods.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -68,84 +87,88 @@ const TrustActionBar = ({
                 </option>
               ))}
             </select>
+
+            {/* Nút Sửa / Xóa đợt cho Lãnh đạo trên Desktop */}
+            {canManagePeriods && currentPeriod && (
+              <div className="hidden sm:flex items-center gap-1 border-l border-slate-200 pl-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onOpenEditPeriod(currentPeriod)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
+                  title="Sửa thông tin đợt này"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDeletePeriod(currentPeriod.id, currentPeriod.name)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  title="Xóa đợt này"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
-          {currentPeriod && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <StatusBadge type="period_status" value={currentPeriod.status} />
-              <StatusBadge type="voting_mode" value={currentPeriod.votingMode} />
-            </div>
-          )}
-
-          {/* Đếm ngược thời gian nộp phiếu */}
-          {timeRemainingBadge && (
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border ${
-                timeRemainingBadge.isExpired
-                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                  : timeRemainingBadge.isUrgent
-                  ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
-                  : 'bg-teal-50 text-teal-800 border-teal-200'
-              }`}
-            >
-              <Timer className="w-3.5 h-3.5" />
-              <span>{timeRemainingBadge.text}</span>
-            </span>
-          )}
-
-          {/* Nút Sửa / Xóa đợt cho Lãnh đạo */}
-          {canManagePeriods && currentPeriod && (
-            <div className="flex items-center gap-1 ml-1 border-l border-slate-200 pl-2">
-              <button
-                type="button"
-                onClick={() => onOpenEditPeriod(currentPeriod)}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
-                title="Chỉnh sửa thông tin đợt này"
+          {/* Cụm nút In & Tạo đợt */}
+          <div className="flex items-center gap-2 shrink-0 justify-end">
+            {canPrintReport && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Printer}
+                onClick={onOpenPrintModal}
+                className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeletePeriod(currentPeriod.id, currentPeriod.name)}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                title="Xóa đợt này"
+                In biên bản
+              </Button>
+            )}
+
+            {canManagePeriods && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={PlusCircle}
+                onClick={onOpenCreatePeriod}
+                className="text-xs font-bold border-teal-300 text-teal-800 hover:bg-teal-50"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+                Tạo đợt mới
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Cụm nút thao tác nghiệp vụ bên phải */}
-        <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
-          {/* Nút In biên bản kiểm phiếu A4 */}
-          {canPrintReport && (
-            <Button
-              variant="outline"
-              size="sm"
-              icon={Printer}
-              onClick={onOpenPrintModal}
-              className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              In biên bản
-            </Button>
-          )}
+        {/* Hàng 2: Trạng thái đợt, Đếm ngược thời gian và Người dùng */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {currentPeriod && (
+              <>
+                <StatusBadge type="period_status" value={currentPeriod.status} />
+                <StatusBadge type="voting_mode" value={currentPeriod.votingMode} />
+              </>
+            )}
 
-          {canManagePeriods && (
-            <Button
-              variant="outline"
-              size="sm"
-              icon={PlusCircle}
-              onClick={onOpenCreatePeriod}
-              className="text-xs font-bold border-teal-300 text-teal-800 hover:bg-teal-50"
-            >
-              Tạo đợt mới
-            </Button>
-          )}
+            {/* Đếm ngược thời gian */}
+            {timeRemainingBadge && (
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-xs font-bold border ${
+                  timeRemainingBadge.isExpired
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : timeRemainingBadge.isUrgent
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
+                    : 'bg-teal-50 text-teal-800 border-teal-200'
+                }`}
+              >
+                <Timer className="w-3 h-3" />
+                <span>{timeRemainingBadge.text}</span>
+              </span>
+            )}
+          </div>
 
-          {/* Người thực hiện lấy phiếu */}
-          <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">
-            <span className="text-slate-400 text-[10px] font-medium">Tài khoản:</span>
+          {/* Tài khoản người chấm */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 text-[10px] font-medium hidden sm:inline">Tài khoản:</span>
             <EmployeeBadge
               employee={currentUser}
               size="sm"
@@ -157,8 +180,8 @@ const TrustActionBar = ({
         </div>
       </div>
 
-      {/* 2. Menu phân vùng tính năng (Tab Bar rút gọn theo nghiệp vụ) */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2">
+      {/* 2. Menu phân vùng tính năng trên Desktop (Màn hình lớn) - Trên Mobile dùng Bottom Navigation Menu */}
+      <div className="hidden md:flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2">
         {canVote && (
           <button
             type="button"
@@ -246,6 +269,5 @@ const TrustActionBar = ({
     </div>
   );
 };
-
 
 export default React.memo(TrustActionBar);

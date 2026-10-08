@@ -33,6 +33,7 @@ import MySelfResults from './components/MySelfResults';
 import TrustOverviewReport from './components/TrustOverviewReport';
 import TrustPeriodModal from './components/TrustPeriodModal';
 import TrustA4PrintModal from './components/TrustA4PrintModal';
+import TrustBottomNav from './components/TrustBottomNav';
 
 // Components Cấu hình & Phân quyền chuyên biệt của Phân hệ Tín nhiệm
 import TrustCriteriaSettings from '../settings/components/subsystems/TrustCriteriaSettings';
@@ -72,7 +73,6 @@ const TrustEvaluationContainer = () => {
   // Bảng điểm chấm: matrixScores[employeeId][criterionId] = score (số nguyên 1..10)
   const [matrixScores, setMatrixScores] = useState({});
   const [matrixNotes, setMatrixNotes] = useState({});
-  const [isDraftSaving, setIsDraftSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quản lý Modal in A4 & Modal đợt Admin
@@ -371,27 +371,65 @@ const TrustEvaluationContainer = () => {
     setMatrixNotes(initialNotes);
   }, [currentPeriod?.id, evaluatableEmployees.length, activeCriteria.length, currentUser?.uid]);
 
-  // Cập nhật điểm cho 1 cán bộ ở 1 tiêu chí (Số nguyên 1..10)
+  // Cập nhật điểm cho 1 cán bộ ở 1 tiêu chí (Số nguyên 1..10) & TỰ ĐỘNG LƯU NGẦM
   const handleSetScore = useCallback((employeeId, criterionId, score) => {
     const intScore = Math.round(Number(score));
     if (isNaN(intScore) || intScore < 1 || intScore > 10) return;
 
-    setMatrixScores((prev) => ({
-      ...prev,
-      [employeeId]: {
-        ...(prev[employeeId] || {}),
-        [criterionId]: intScore,
-      },
-    }));
-  }, []);
+    setMatrixScores((prev) => {
+      const updated = {
+        ...prev,
+        [employeeId]: {
+          ...(prev[employeeId] || {}),
+          [criterionId]: intScore,
+        },
+      };
 
-  // Cập nhật ghi chú cho 1 cán bộ
+      // Tự động lưu ngầm vào localStorage ngay lập tức
+      if (currentPeriod?.id && (currentUser?.uid || currentUser?.id)) {
+        try {
+          const draftKey = `qtd_trust_draft_${currentPeriod.id}_${currentUser.uid || currentUser.id}`;
+          const existing = JSON.parse(localStorage.getItem(draftKey) || '{}');
+          localStorage.setItem(draftKey, JSON.stringify({
+            ...existing,
+            scores: updated,
+            updatedAt: new Date().toISOString(),
+          }));
+        } catch {
+          // ignore
+        }
+      }
+
+      return updated;
+    });
+  }, [currentPeriod?.id, currentUser]);
+
+  // Cập nhật ghi chú cho 1 cán bộ & TỰ ĐỘNG LƯU NGẦM
   const handleSetNote = useCallback((employeeId, note) => {
-    setMatrixNotes((prev) => ({
-      ...prev,
-      [employeeId]: note,
-    }));
-  }, []);
+    setMatrixNotes((prev) => {
+      const updated = {
+        ...prev,
+        [employeeId]: note,
+      };
+
+      // Tự động lưu ngầm vào localStorage ngay lập tức
+      if (currentPeriod?.id && (currentUser?.uid || currentUser?.id)) {
+        try {
+          const draftKey = `qtd_trust_draft_${currentPeriod.id}_${currentUser.uid || currentUser.id}`;
+          const existing = JSON.parse(localStorage.getItem(draftKey) || '{}');
+          localStorage.setItem(draftKey, JSON.stringify({
+            ...existing,
+            notes: updated,
+            updatedAt: new Date().toISOString(),
+          }));
+        } catch {
+          // ignore
+        }
+      }
+
+      return updated;
+    });
+  }, [currentPeriod?.id, currentUser]);
 
   // Tính số lượng cán bộ đã chấm trên từng tiêu chí
   const completionByCriteria = useMemo(() => {
@@ -441,33 +479,24 @@ const TrustEvaluationContainer = () => {
     return overallPercent === 100 && evaluatableEmployees.length > 0;
   }, [overallPercent, evaluatableEmployees.length]);
 
-  // Lưu nháp (Local Draft)
-  const handleSaveDraft = useCallback(() => {
-    if (!currentPeriod?.id || !currentUser) return;
-    setIsDraftSaving(true);
-    try {
-      const draftKey = `qtd_trust_draft_${currentPeriod.id}_${currentUser.uid || currentUser.id}`;
-      const payload = {
-        scores: matrixScores,
-        notes: matrixNotes,
-        updatedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(draftKey, JSON.stringify(payload));
-      toast.success('Đã lưu nháp kết quả chấm điểm tạm thời thành công!');
-    } catch {
-      toast.error('Không thể lưu nháp vào bộ nhớ trình duyệt.');
-    } finally {
-      setIsDraftSaving(false);
-    }
-  }, [currentPeriod?.id, currentUser, matrixScores, matrixNotes, toast]);
-
-  // Nộp phiếu chính thức cho tất cả cán bộ
+  // Nộp phiếu chính thức cho tất cả cán bộ (Chặn hoàn toàn nếu chưa hoàn thành)
   const handleSubmitOfficial = async () => {
     if (!currentPeriod || !currentUser) return;
 
     if (!isFullyReadyToSubmit) {
-      toast.error('Đồng chí vui lòng chấm đủ điểm từ 1 đến 10 cho toàn bộ cán bộ ở cả 10 tiêu chí trước khi nộp.');
+      toast.error('Chưa hoàn thành toàn bộ đánh giá! Vui lòng chấm điểm đủ tất cả tiêu chí cho toàn bộ cán bộ trước khi nộp phiếu.');
       return;
+    }
+
+    // Kiểm tra soát lỗi kỹ càng từng cán bộ và từng tiêu chí
+    for (const emp of evaluatableEmployees) {
+      for (const crit of activeCriteria) {
+        const val = matrixScores[emp.id]?.[crit.id];
+        if (val === undefined || val === null || Number(val) <= 0) {
+          toast.error(`Chưa chấm điểm cho cán bộ ${emp.name} ở tiêu chí [${crit.title || crit.code}].`);
+          return;
+        }
+      }
     }
 
     const confirmSubmit = window.confirm(
@@ -606,7 +635,7 @@ const TrustEvaluationContainer = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-200">
       {/* 1. Thanh tác vụ chính: Chọn đợt, trạng thái, đếm ngược và các nút chức năng (KHÔNG lặp lại tên phân hệ) */}
       <TrustActionBar
         periods={periods}
@@ -632,17 +661,15 @@ const TrustEvaluationContainer = () => {
 
       {/* 2. Nội dung theo từng Tab */}
       {activeTab === 'SCORING' && (
-        <div className="space-y-6">
-          {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng) */}
+        <div className="space-y-4 sm:space-y-6">
+          {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm) */}
           <TrustProgressBanner
             totalEmployeesCount={evaluatableEmployees.length}
             completedCriteriaCount={completedCriteriaCount}
             totalCriteriaCount={activeCriteria.length}
             overallPercent={overallPercent}
             isFullyReadyToSubmit={isFullyReadyToSubmit}
-            onSaveDraft={handleSaveDraft}
             onSubmitOfficial={handleSubmitOfficial}
-            isDraftSaving={isDraftSaving}
             isSubmitting={isSubmitting}
           />
 
@@ -776,6 +803,18 @@ const TrustEvaluationContainer = () => {
             classification: 'Tốt',
           };
         })}
+      />
+
+      {/* 4. Bottom Navigation Menu (Chuyên dụng cho thiết bị di động - Truy cập nhanh 1 chạm) */}
+      <TrustBottomNav
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
+        canVote={canVote}
+        canViewSubmitted={canViewSubmitted}
+        canViewOwnResults={canViewOwnResults}
+        canViewOverview={canViewOverview}
+        canManageCriteria={canManageCriteria}
+        canManagePeriods={canManagePeriods}
       />
     </div>
   );
