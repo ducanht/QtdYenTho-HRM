@@ -127,11 +127,10 @@ const TrustActionBar = ({
               onClick={onOpenPrintModal}
               className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50"
             >
-              In Biên Bản A4
+              In biên bản
             </Button>
           )}
 
-          {/* Nút Admin: Tạo đợt mới */}
           {canManagePeriods && (
             <Button
               variant="outline"
@@ -140,13 +139,13 @@ const TrustActionBar = ({
               onClick={onOpenCreatePeriod}
               className="text-xs font-bold border-teal-300 text-teal-800 hover:bg-teal-50"
             >
-              Tạo Đợt Đánh Giá
+              Tạo đợt mới
             </Button>
           )}
 
           {/* Người thực hiện lấy phiếu */}
           <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">
-            <span className="text-slate-400 text-[10px] font-medium">Người chấm:</span>
+            <span className="text-slate-400 text-[10px] font-medium">Tài khoản:</span>
             <EmployeeBadge
               employee={currentUser}
               size="sm"
@@ -158,19 +157,19 @@ const TrustActionBar = ({
         </div>
       </div>
 
-      {/* 2. Menu phân vùng tính năng (Tab Bar trực quan theo phân quyền RBAC) */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
+      {/* 2. Menu phân vùng tính năng (Tab Bar rút gọn theo nghiệp vụ) */}
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2">
         {canVote && (
           <button
             type="button"
             onClick={() => onChangeTab('SCORING')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'SCORING'
                 ? 'bg-[#0f766e] text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
             }`}
           >
-            1. Lấy Phiếu Tín Nhiệm Theo Tiêu Chí
+            Đánh giá
           </button>
         )}
 
@@ -178,13 +177,13 @@ const TrustActionBar = ({
           <button
             type="button"
             onClick={() => onChangeTab('MY_VOTES')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'MY_VOTES'
                 ? 'bg-[#0f766e] text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
             }`}
           >
-            2. Phiếu Tôi Đã Nộp
+            Lịch sử
           </button>
         )}
 
@@ -192,13 +191,13 @@ const TrustActionBar = ({
           <button
             type="button"
             onClick={() => onChangeTab('MY_RESULTS')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'MY_RESULTS'
                 ? 'bg-[#0f766e] text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
             }`}
           >
-            3. Kết Quả Của Tôi
+            Cá nhân
           </button>
         )}
 
@@ -206,13 +205,13 @@ const TrustActionBar = ({
           <button
             type="button"
             onClick={() => onChangeTab('OVERVIEW')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'OVERVIEW'
                 ? 'bg-[#0f766e] text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
             }`}
           >
-            4. Tổng Quan Kết Quả Toàn Quỹ
+            Tổng quan
           </button>
         )}
 
@@ -220,13 +219,13 @@ const TrustActionBar = ({
           <button
             type="button"
             onClick={() => onChangeTab('CRITERIA_SETTINGS')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'CRITERIA_SETTINGS'
                 ? 'bg-[#0f766e] text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
             }`}
           >
-            5. Tiêu Chí & Thang Điểm
+            Cấu hình
           </button>
         )}
 
@@ -234,13 +233,13 @@ const TrustActionBar = ({
           <button
             type="button"
             onClick={() => onChangeTab('PERMISSIONS_SETTINGS')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'PERMISSIONS_SETTINGS'
                 ? 'bg-[#0f766e] text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
             }`}
           >
-            6. Phân Quyền Phân Hệ
+            Phân quyền
           </button>
         )}
       </div>

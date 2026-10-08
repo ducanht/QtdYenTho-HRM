@@ -29,10 +29,10 @@ const CriteriaTabsNav = ({
       <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-100 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">
-            Danh mục 10 tiêu chí chuẩn NHNN:
+            Tiêu chí:
           </span>
           <span className="text-[11px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-            Tiêu chí {activeIndex + 1} / {criteria.length}
+            {activeIndex + 1} / {criteria.length}
           </span>
         </div>
 
@@ -42,17 +42,17 @@ const CriteriaTabsNav = ({
             type="button"
             onClick={onToggleViewMode}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
-            title="Đổi chế độ xem từng tiêu chí hoặc cuộn toàn bộ"
+            title="Đổi chế độ xem từng tiêu chí hoặc toàn bộ"
           >
             {viewMode === 'STEPPER' ? (
               <>
                 <Layers className="w-3.5 h-3.5 text-[#0f766e]" />
-                <span>Xem tất cả tiêu chí</span>
+                <span>Xem tất cả</span>
               </>
             ) : (
               <>
                 <ListFilter className="w-3.5 h-3.5 text-[#0f766e]" />
-                <span>Chấm từng tiêu chí</span>
+                <span>Từng tiêu chí</span>
               </>
             )}
           </button>

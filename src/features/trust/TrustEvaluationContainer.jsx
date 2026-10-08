@@ -67,7 +67,6 @@ const TrustEvaluationContainer = () => {
   const [activeCriterionIndex, setActiveCriterionIndex] = useState(0);
 
   // Bộ lọc bảng chấm điểm
-  const [sortBy, setSortBy] = useState('ABC'); // 'ABC' | 'DEPT'
   const [searchTerm, setSearchTerm] = useState('');
 
   // Bảng điểm chấm: matrixScores[employeeId][criterionId] = score (số nguyên 1..10)
@@ -658,7 +657,7 @@ const TrustEvaluationContainer = () => {
             onToggleViewMode={() => setViewMode((prev) => (prev === 'STEPPER' ? 'ALL' : 'STEPPER'))}
           />
 
-          {/* Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10, vần ABC) */}
+          {/* Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10) */}
           {viewMode === 'STEPPER' ? (
             <CriteriaScoringTable
               criterion={currentCriterion}
@@ -668,8 +667,6 @@ const TrustEvaluationContainer = () => {
               notes={matrixNotes}
               onSetScore={handleSetScore}
               onSetNote={handleSetNote}
-              sortBy={sortBy}
-              onChangeSortBy={setSortBy}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
               showTitle={true}
@@ -686,8 +683,6 @@ const TrustEvaluationContainer = () => {
                   notes={matrixNotes}
                   onSetScore={handleSetScore}
                   onSetNote={handleSetNote}
-                  sortBy={sortBy}
-                  onChangeSortBy={setSortBy}
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
                   showTitle={true}
@@ -698,12 +693,13 @@ const TrustEvaluationContainer = () => {
         </div>
       )}
 
-      {/* Tab 2: Xem kết quả phiếu chính mình đã chấm cho đồng nghiệp */}
+      {/* Tab 2: Lịch sử phiếu chính mình đã chấm cho đồng nghiệp */}
       {activeTab === 'MY_VOTES' && (
         <MySubmittedSummary
           evaluations={evaluations}
           currentUser={currentUser}
           currentPeriod={currentPeriod}
+          periods={periods}
           criteria={activeCriteria}
         />
       )}

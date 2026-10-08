@@ -184,8 +184,8 @@ const TrustOverviewReport = ({
       {/* 2. Tiến trình cử tri nộp phiếu (Dành riêng cho Lãnh đạo / Admin) */}
       {isAdmin && (
         <Card
-          title="Tiến Trình Cử Tri Nộp Phiếu Tín Nhiệm (Real-time)"
-          subtitle="Giám sát tỷ lệ tham gia bỏ phiếu của cán bộ nhân viên Quỹ"
+          title="Tiến độ nộp phiếu"
+          subtitle="Tỷ lệ tham gia bỏ phiếu của cán bộ nhân viên"
           headerRight={
             <Button
               variant="outline"
@@ -194,7 +194,7 @@ const TrustOverviewReport = ({
               onClick={onOpenPrintModal}
               className="text-xs font-bold"
             >
-              In Biên Bản A4
+              In biên bản
             </Button>
           }
         >
@@ -204,7 +204,7 @@ const TrustOverviewReport = ({
               <div className="text-xs font-bold text-emerald-900 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Đã hoàn tất nộp phiếu ({reportData.submittedVoters.length})
+                  Đã nộp phiếu ({reportData.submittedVoters.length})
                 </span>
                 <span className="text-[11px] text-emerald-700 font-semibold">{reportData.voterStats.turnoutPercent}%</span>
               </div>
@@ -249,8 +249,8 @@ const TrustOverviewReport = ({
       {/* 3. Bảng Tổng Hợp Điểm Tín Nhiệm (Dành cho Lãnh đạo hoặc khi đã khép lại) */}
       {(isAdmin || isPeriodClosed) && (
         <Card
-          title="Bảng Tổng Hợp Kết Quả Lấy Phiếu Tín Nhiệm"
-          subtitle={`Kỳ: ${currentPeriod?.name} • Cập nhật theo thời gian thực`}
+          title="Kết quả tín nhiệm toàn Quỹ"
+          subtitle={`Kỳ: ${currentPeriod?.name}`}
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -258,7 +258,7 @@ const TrustOverviewReport = ({
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4 w-12 text-center">Hạng</th>
                   <th className="py-3 px-4 min-w-[180px]">Họ và tên cán bộ</th>
-                  <th className="py-3 px-4 min-w-[150px]">Chức vụ & Đơn vị</th>
+                  <th className="py-3 px-4 min-w-[150px]">Chức vụ</th>
                   <th className="py-3 px-4 text-center min-w-[100px]">Số phiếu nhận</th>
                   <th className="py-3 px-4 text-center min-w-[120px]">Điểm trung bình (Thang 10)</th>
                   <th className="py-3 px-4 text-center min-w-[120px]">Điểm quy đổi (Thang 100)</th>
@@ -274,11 +274,9 @@ const TrustOverviewReport = ({
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-bold text-slate-900 text-xs sm:text-sm">{row.name}</div>
-                      <div className="text-[10px] text-slate-400">Mã: {row.code}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{row.position}</div>
-                      <div className="text-[11px] text-slate-400">{row.department}</div>
+                      <div className="font-semibold text-slate-800">{row.position || 'Cán bộ'}</div>
                     </td>
                     <td className="py-3 px-4 text-center font-semibold text-slate-700">
                       {row.evaluationsCount} phiếu

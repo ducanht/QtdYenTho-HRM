@@ -138,17 +138,14 @@ const EmployeeTrustDetailModal = ({
         {/* 1. Header tóm tắt hồ sơ & điểm số */}
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-900 via-[#0f766e] to-emerald-800 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white uppercase tracking-wider">
-                Hồ Sơ Cán Bộ
-              </span>
-              <span className="text-teal-200 text-xs">• Mã: {employee.code || 'CB'}</span>
-            </div>
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white uppercase tracking-wider">
+              Cán bộ
+            </span>
             <h3 className="text-xl font-black text-white">
               {employee.name}
             </h3>
             <p className="text-xs text-teal-100">
-              Chức vụ: <strong>{employee.position}</strong> • Phòng ban: <strong>{employee.department}</strong>
+              Chức vụ: <strong>{employee.position || 'Cán bộ'}</strong>
             </p>
           </div>
 
@@ -293,8 +290,8 @@ const EmployeeTrustDetailModal = ({
                       : `Cử tri #${idx + 1} (Bỏ phiếu kín)`;
 
                     const voterSub = showVoterIdentity
-                      ? `${ev.evaluatorPosition || ''} ${ev.evaluatorDepartment ? `• ${ev.evaluatorDepartment}` : ''}`
-                      : 'Thông tin bảo mật cử tri';
+                      ? (ev.evaluatorPosition || 'Cán bộ')
+                      : 'Bảo mật';
 
                     return (
                       <tr key={ev.id || idx} className="hover:bg-slate-50/70 transition-colors">

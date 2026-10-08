@@ -26,10 +26,10 @@ const TrustProgressBanner = ({
         <div className="space-y-2 max-w-xl">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-              Tiến trình lấy phiếu
+              Tiến độ đánh giá
             </span>
             <span className="text-xs text-slate-300">
-              Quy mô: <strong className="text-white">{totalEmployeesCount} cán bộ</strong> (đã loại trừ bản thân)
+              Quy mô: <strong className="text-white">{totalEmployeesCount} cán bộ</strong>
             </span>
           </div>
 
@@ -52,12 +52,12 @@ const TrustProgressBanner = ({
             {isFullyReadyToSubmit ? (
               <span className="text-emerald-300 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Đã chấm đầy đủ 10 tiêu chí cho toàn bộ cán bộ. Đồng chí có thể nộp phiếu chính thức.
+                Đã hoàn tất đánh giá toàn bộ cán bộ. Sẵn sàng nộp phiếu.
               </span>
             ) : (
               <span className="flex items-center gap-1 text-amber-200/90">
                 <Clock className="w-3.5 h-3.5 shrink-0" />
-                Vui lòng chấm đủ điểm (từ 1 đến 10) cho tất cả cán bộ ở cả 10 tiêu chí để hoàn tất phiếu.
+                Vui lòng hoàn tất chấm điểm tất cả tiêu chí để nộp phiếu.
               </span>
             )}
           </p>
@@ -74,7 +74,7 @@ const TrustProgressBanner = ({
             onClick={onSaveDraft}
             className="text-xs font-bold border-white/20 text-white hover:bg-white/10 bg-white/5"
           >
-            Lưu Nháp Tạm
+            Lưu nháp
           </Button>
 
           <Button
@@ -95,7 +95,7 @@ const TrustProgressBanner = ({
               }
             `}
           >
-            Nộp Phiếu Chính Thức
+            Nộp phiếu
           </Button>
         </div>
       </div>

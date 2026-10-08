@@ -79,10 +79,10 @@ const MySelfResults = ({
         </div>
         <div className="space-y-1.5">
           <h3 className="text-base sm:text-lg font-black text-slate-900">
-            Kỳ Đánh Giá Đang Trong Thời Gian Lấy Ý Kiến
+            Kỳ đánh giá đang trong thời gian lấy ý kiến
           </h3>
           <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-            Để đảm bảo tính khách quan và nguyên tắc bảo mật thông tin tín nhiệm nội bộ, kết quả đánh giá của đồng chí sẽ được hiển thị ngay khi Hội đồng Quản trị & Ban Kiểm soát đóng đợt đánh giá và công bố kết quả.
+            Để đảm bảo tính khách quan và bảo mật thông tin, kết quả đánh giá cá nhân sẽ được hiển thị khi đợt đánh giá kết thúc và được công bố.
           </p>
         </div>
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
@@ -99,7 +99,7 @@ const MySelfResults = ({
       <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400 space-y-2">
         <Award className="w-10 h-10 mx-auto text-slate-300" />
         <div className="text-sm font-bold text-slate-600">
-          Chưa ghi nhận phiếu tín nhiệm nào cho đồng chí trong kỳ này
+          Chưa có phiếu đánh giá trong kỳ này
         </div>
       </div>
     );
@@ -112,16 +112,16 @@ const MySelfResults = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/20">
-              Kết quả tín nhiệm chính thức
+              Kết quả đánh giá cá nhân
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white">
-              Đồng chí: {currentUser?.name}
+              {currentUser?.name}
             </h3>
             <p className="text-xs text-teal-100">
               Chức vụ: <strong>{currentUser?.position}</strong> • Đơn vị: <strong>{currentUser?.department}</strong>
             </p>
             <p className="text-[11px] text-teal-200">
-              Tổng số đồng nghiệp tham gia đánh giá tín nhiệm: <strong>{summary.voterCount} lượt</strong>
+              Tổng số lượt đánh giá: <strong>{summary.voterCount} phiếu</strong>
             </p>
           </div>
 
