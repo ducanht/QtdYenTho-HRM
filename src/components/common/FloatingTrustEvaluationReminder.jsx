@@ -76,8 +76,12 @@ const FloatingTrustEvaluationReminder = () => {
   const remainingCount = Math.max(0, totalRequired - myEvaluatedCount);
   const isCompleted = totalRequired > 0 && remainingCount === 0;
 
-  // Nếu đang ở trang /trust-evaluation hoặc đã tắt thông báo cho đợt này thì không hiện
-  const isOnTrustPage = location.pathname === '/trust-evaluation';
+  // Nếu đang ở trang /trust hoặc /trust-evaluation hoặc đã tắt thông báo cho đợt này thì không hiện
+  const isOnTrustPage = 
+    location.pathname === '/trust' || 
+    location.pathname === '/trust-evaluation' || 
+    location.pathname.startsWith('/trust/') ||
+    location.pathname.startsWith('/trust-evaluation/');
   const isDismissed = dismissedPeriodId === activePeriod?.id;
 
   if (!currentUser || !activePeriod || totalRequired === 0 || isCompleted || isOnTrustPage || isDismissed) {
@@ -126,7 +130,7 @@ const FloatingTrustEvaluationReminder = () => {
               <div className="flex items-center gap-2 mt-3 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => navigate('/trust-evaluation')}
+                  onClick={() => navigate('/trust')}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-emerald-950 font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
                   <span>Truy cập đánh giá ngay</span>

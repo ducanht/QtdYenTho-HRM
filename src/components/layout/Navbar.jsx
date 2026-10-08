@@ -20,62 +20,80 @@ import { useToast } from '../../context/ToastContext';
 import { ROLE_LABELS } from '../../lib/constants';
 import AutoInitDbModal from '../common/AutoInitDbModal';
 
-// Danh mục thông tin hiển thị Header cho từng phân hệ cụ thể
+// Cấu hình thông tin Header từng phân hệ
+const TRUST_HEADER_CONFIG = {
+  code: 'MODULE_TRUST',
+  title: 'Phân hệ Đánh giá Tín nhiệm Cán bộ',
+  short: 'Tín nhiệm Cán bộ',
+  badge: '10 Tiêu chí chuẩn NHNN',
+  icon: ShieldCheck,
+  iconColor: 'text-[#047857]',
+  badgeBg: 'bg-emerald-50 text-[#047857] border-emerald-200',
+};
+
+const HR_HEADER_CONFIG = {
+  code: 'MODULE_HR',
+  title: 'Phân hệ Hồ sơ Cán bộ & Luân chuyển Công tác',
+  short: 'Hồ sơ & Luân chuyển',
+  badge: 'Quy định Luân chuyển 3 năm',
+  icon: Users,
+  iconColor: 'text-[#0f766e]',
+  badgeBg: 'bg-teal-50 text-[#0f766e] border-teal-200',
+};
+
+const KPI_HEADER_CONFIG = {
+  code: 'MODULE_KPI',
+  title: 'Phân hệ Chấm điểm KPI 3 Cấp (40-30-30)',
+  short: 'Chấm điểm KPI',
+  badge: 'Quy trình 3 Cấp Phê duyệt',
+  icon: TrendingUp,
+  iconColor: 'text-blue-700',
+  badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+};
+
+const PLANNING_HEADER_CONFIG = {
+  code: 'MODULE_PLANNING',
+  title: 'Phân hệ Bỏ phiếu Quy hoạch Cán bộ Nguồn',
+  short: 'Quy hoạch Cán bộ',
+  badge: 'Lấy phiếu Tín nhiệm Lãnh đạo',
+  icon: Vote,
+  iconColor: 'text-purple-700',
+  badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',
+};
+
+const DASHBOARD_HEADER_CONFIG = {
+  code: 'MODULE_DASHBOARD',
+  title: 'Phân hệ Báo cáo & Điều hành Giám sát',
+  short: 'Báo cáo Điều hành',
+  badge: 'Giám sát Lãnh đạo',
+  icon: LayoutDashboard,
+  iconColor: 'text-amber-700',
+  badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+};
+
+const SETTINGS_HEADER_CONFIG = {
+  code: 'MODULE_SETTINGS',
+  title: 'Phân hệ Cấu hình & Quản trị Hệ thống',
+  short: 'Cấu hình Quản trị',
+  badge: 'Ban Quản trị Quỹ',
+  icon: Settings,
+  iconColor: 'text-slate-800',
+  badgeBg: 'bg-slate-100 text-slate-800 border-slate-300',
+};
+
+// Danh mục thông tin hiển thị Header cho từng phân hệ cụ thể (hỗ trợ cả route ngắn và route dài)
 const MODULE_HEADER_MAP = {
-  '/trust-evaluation': {
-    code: 'MODULE_TRUST',
-    title: 'Phân hệ Đánh giá Tín nhiệm Cán bộ',
-    short: 'Tín nhiệm Cán bộ',
-    badge: '10 Tiêu chí chuẩn NHNN',
-    icon: ShieldCheck,
-    iconColor: 'text-[#047857]',
-    badgeBg: 'bg-emerald-50 text-[#047857] border-emerald-200',
-  },
-  '/employees': {
-    code: 'MODULE_HR',
-    title: 'Phân hệ Hồ sơ Cán bộ & Luân chuyển Công tác',
-    short: 'Hồ sơ & Luân chuyển',
-    badge: 'Quy định Luân chuyển 3 năm',
-    icon: Users,
-    iconColor: 'text-[#0f766e]',
-    badgeBg: 'bg-teal-50 text-[#0f766e] border-teal-200',
-  },
-  '/kpi-evaluation': {
-    code: 'MODULE_KPI',
-    title: 'Phân hệ Chấm điểm KPI 3 Cấp (40-30-30)',
-    short: 'Chấm điểm KPI',
-    badge: 'Quy trình 3 Cấp Phê duyệt',
-    icon: TrendingUp,
-    iconColor: 'text-blue-700',
-    badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  '/planning-vote': {
-    code: 'MODULE_PLANNING',
-    title: 'Phân hệ Bỏ phiếu Quy hoạch Cán bộ Nguồn',
-    short: 'Quy hoạch Cán bộ',
-    badge: 'Lấy phiếu Tín nhiệm Lãnh đạo',
-    icon: Vote,
-    iconColor: 'text-purple-700',
-    badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',
-  },
-  '/dashboard': {
-    code: 'MODULE_DASHBOARD',
-    title: 'Phân hệ Báo cáo & Điều hành Giám sát',
-    short: 'Báo cáo Điều hành',
-    badge: 'Giám sát Lãnh đạo',
-    icon: LayoutDashboard,
-    iconColor: 'text-amber-700',
-    badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
-  },
-  '/admin-settings': {
-    code: 'MODULE_SETTINGS',
-    title: 'Phân hệ Cấu hình & Quản trị Hệ thống',
-    short: 'Cấu hình Quản trị',
-    badge: 'Ban Quản trị Quỹ',
-    icon: Settings,
-    iconColor: 'text-slate-800',
-    badgeBg: 'bg-slate-100 text-slate-800 border-slate-300',
-  },
+  '/trust': TRUST_HEADER_CONFIG,
+  '/trust-evaluation': TRUST_HEADER_CONFIG,
+  '/employees': HR_HEADER_CONFIG,
+  '/hr': HR_HEADER_CONFIG,
+  '/kpi': KPI_HEADER_CONFIG,
+  '/kpi-evaluation': KPI_HEADER_CONFIG,
+  '/planning': PLANNING_HEADER_CONFIG,
+  '/planning-vote': PLANNING_HEADER_CONFIG,
+  '/dashboard': DASHBOARD_HEADER_CONFIG,
+  '/admin-settings': SETTINGS_HEADER_CONFIG,
+  '/settings': SETTINGS_HEADER_CONFIG,
 };
 
 const Navbar = () => {
@@ -90,7 +108,7 @@ const Navbar = () => {
 
   // Tìm phân hệ hiện tại tương ứng
   const currentModule = Object.entries(MODULE_HEADER_MAP).find(([route]) => 
-    pathname.startsWith(route)
+    pathname === route || pathname.startsWith(`${route}/`)
   )?.[1] || null;
 
   const handleLogout = async () => {

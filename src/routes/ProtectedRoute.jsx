@@ -45,10 +45,15 @@ const ProtectedRoute = ({ children, allowedRoles = null }) => {
             </span>
             .
           </p>
-          <div className="flex justify-center gap-3">
-            <Link to="/trust-evaluation">
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <Link to="/portal">
               <Button variant="primary" icon={ArrowLeft}>
-                Về trang Đánh giá
+                Về Cổng Phân Hệ
+              </Button>
+            </Link>
+            <Link to="/trust">
+              <Button variant="outline">
+                Phân Hệ Đánh Giá
               </Button>
             </Link>
           </div>

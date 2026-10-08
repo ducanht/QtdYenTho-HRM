@@ -18,11 +18,18 @@ const NotFound = () => {
         <p className="text-xs text-slate-500 mb-6">
           Đường dẫn không tồn tại hoặc bạn không có quyền truy cập vào nội dung này.
         </p>
-        <Link to="/trust-evaluation">
-          <Button variant="primary" icon={ArrowLeft}>
-            Về Trang Chủ Đánh Giá
-          </Button>
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link to="/portal" className="w-full sm:w-auto">
+            <Button variant="primary" icon={ArrowLeft} className="w-full">
+              Về Cổng Phân Hệ
+            </Button>
+          </Link>
+          <Link to="/trust" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full">
+              Phân Hệ Đánh Giá
+            </Button>
+          </Link>
+        </div>
       </Card>
     </div>
   );

@@ -6,16 +6,36 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import Spinner from './components/common/Spinner';
 
-// Pages - Code Splitting (Lazy Loading) để tối ưu dung lượng Bundle & Tốc độ tải
-const Login = lazy(() => import('./pages/Login'));
-const PortalLauncher = lazy(() => import('./pages/PortalLauncher'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const TrustEvaluation = lazy(() => import('./pages/TrustEvaluation'));
-const KpiEvaluation = lazy(() => import('./pages/KpiEvaluation'));
-const PlanningVote = lazy(() => import('./pages/PlanningVote'));
-const Employees = lazy(() => import('./pages/Employees'));
-const AdminSettings = lazy(() => import('./pages/AdminSettings'));
-const NotFound = lazy(() => import('./pages/NotFound'));
+// Cơ chế Phục hồi Tự động Chunk Loading SPA khi deploy phiên bản mới (Zero Stale Chunk Crash)
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const pageHasBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenForceRefreshed) {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        window.location.reload();
+        return;
+      }
+      throw error;
+    }
+  });
+
+// Pages - Code Splitting (Lazy Loading) kèm cơ chế tự phục hồi Chunk
+const Login = lazyWithRetry(() => import('./pages/Login'));
+const PortalLauncher = lazyWithRetry(() => import('./pages/PortalLauncher'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const TrustEvaluation = lazyWithRetry(() => import('./pages/TrustEvaluation'));
+const KpiEvaluation = lazyWithRetry(() => import('./pages/KpiEvaluation'));
+const PlanningVote = lazyWithRetry(() => import('./pages/PlanningVote'));
+const Employees = lazyWithRetry(() => import('./pages/Employees'));
+const AdminSettings = lazyWithRetry(() => import('./pages/AdminSettings'));
+const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
 
 // Loading Fallback Component
 const PageLoadingFallback = () => (
@@ -57,19 +77,23 @@ function AppRoutes() {
           {/* Cổng Phân Hệ Ô Lưới (Application Grid Hub) - Màn hình chính sau đăng nhập */}
           <Route path="portal" element={<PortalLauncher />} />
 
-          {/* Module A: Đánh giá tín nhiệm 10 tiêu chí (Trọng tâm) */}
+          {/* Module A: Đánh giá tín nhiệm 10 tiêu chí (Trọng tâm) - Hỗ trợ cả /trust và /trust-evaluation */}
+          <Route path="trust" element={<TrustEvaluation />} />
           <Route path="trust-evaluation" element={<TrustEvaluation />} />
 
-          {/* Module B: Chấm điểm KPI 3 cấp */}
+          {/* Module B: Chấm điểm KPI 3 cấp - Hỗ trợ cả /kpi và /kpi-evaluation */}
+          <Route path="kpi" element={<KpiEvaluation />} />
           <Route path="kpi-evaluation" element={<KpiEvaluation />} />
 
-          {/* Module C: Bỏ phiếu quy hoạch cán bộ */}
+          {/* Module C: Bỏ phiếu quy hoạch cán bộ - Hỗ trợ cả /planning và /planning-vote */}
+          <Route path="planning" element={<PlanningVote />} />
           <Route path="planning-vote" element={<PlanningVote />} />
 
-          {/* Module D: Danh bạ & Quá trình luân chuyển cán bộ */}
+          {/* Module D: Danh bạ & Quá trình luân chuyển cán bộ - Hỗ trợ cả /employees và /hr */}
           <Route path="employees" element={<Employees />} />
+          <Route path="hr" element={<Employees />} />
 
-          {/* Module E: Dashboard & Giám sát (Chỉ cho phép manager và chairman) */}
+          {/* Module E: Dashboard & Giám sát (Chỉ cho phép manager, chairman và admin) */}
           <Route
             path="dashboard"
             element={
@@ -79,9 +103,17 @@ function AppRoutes() {
             }
           />
 
-          {/* Module F: Cấu hình & Quản trị Hệ thống (Chỉ cho phép admin, chairman, manager) */}
+          {/* Module F: Cấu hình & Quản trị Hệ thống - Hỗ trợ cả /admin-settings và /settings */}
           <Route
             path="admin-settings"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'chairman', 'manager']}>
+                <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings"
             element={
               <ProtectedRoute allowedRoles={['admin', 'chairman', 'manager']}>
                 <AdminSettings />
