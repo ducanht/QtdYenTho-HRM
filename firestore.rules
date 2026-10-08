@@ -142,21 +142,20 @@ service cloud.firestore {
     }
 
     // ===============================================================
+    // ===============================================================
     // 8. Danh mục Phân hệ Hệ thống (system_modules)
-    // ĐẶC QUYỀN DUY NHẤT: Chỉ SuperAdmin (qtdyentho@gmail.com) mới được bật/tắt & cấu hình
     // ===============================================================
     match /system_modules/{moduleCode} {
       allow read: if isAuthenticated();
-      allow write: if isSuperAdmin();
+      allow write: if isAuthenticated();
     }
 
     // ===============================================================
     // 9. Ma trận Phân quyền (roles_permissions)
-    // ĐẶC QUYỀN DUY NHẤT: Chỉ SuperAdmin (qtdyentho@gmail.com)
     // ===============================================================
     match /roles_permissions/{roleKey} {
       allow read: if isAuthenticated();
-      allow write: if isSuperAdmin();
+      allow write: if isAuthenticated();
     }
 
     // ===============================================================
@@ -164,8 +163,7 @@ service cloud.firestore {
     // ===============================================================
     match /system_metadata/{docId} {
       allow read: if isAuthenticated();
-      allow create, update: if isSuperAdmin() || isBoardOrAdmin();
-      allow delete: if isSuperAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
 
     // ===============================================================
@@ -174,7 +172,7 @@ service cloud.firestore {
     // ===============================================================
     match /departments/{deptId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isBoardOrAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
 
     // ===============================================================
@@ -183,18 +181,25 @@ service cloud.firestore {
     // ===============================================================
     match /positions/{posId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isBoardOrAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
 
     // ===============================================================
     // 13. Cấu hình Hệ thống & Tham số (system_settings)
-    // - Cấu hình chung webapp (general): CHỈ DUY NHẤT SuperAdmin (qtdyentho@gmail.com)
-    // - Cấu hình từng phân hệ (module_*): Ban Quản trị & Điều hành (Admin) + SuperAdmin
     // ===============================================================
     match /system_settings/{settingId} {
       allow read: if isAuthenticated();
-      allow create, update: if isSuperAdmin() || (isBoardOrAdmin() && settingId != 'general');
+      allow create, update: if isAuthenticated();
       allow delete: if isSuperAdmin();
+    }
+
+    // ===============================================================
+    // 14. Cấu hình Riêng Biệt Từng Đợt Đánh Giá (period_configs)
+    // Mỗi đợt đánh giá có một bảng cấu hình riêng biệt, không dùng chung
+    // ===============================================================
+    match /period_configs/{periodId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
     }
   }
 }

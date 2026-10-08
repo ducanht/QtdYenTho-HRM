@@ -34,7 +34,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.08_v3.2_superadmin_role';
+export const CURRENT_SCHEMA_VERSION = '2026.10.08_v3.3_period_configs_table';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ
@@ -48,6 +48,7 @@ export const CORE_COLLECTIONS = [
   'positions',
   'trust_criteria',
   'evaluation_periods',
+  'period_configs',
   'users',
   'work_history',
   'evaluations_trust',
@@ -186,12 +187,30 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       }, { merge: true });
     }
 
-    // 7. Kiểm tra & Tự động tạo Đợt đánh giá nếu chưa có
+    // 7. Kiểm tra & Tự động tạo Đợt đánh giá kèm Bảng Cấu Hình Riêng Biệt (period_configs)
     const periodsSnap = await getDocs(collection(db, 'evaluation_periods')).catch(() => null);
     if (!periodsSnap || periodsSnap.empty) {
       for (const p of DEFAULT_EVALUATION_PERIODS) {
         await setDoc(doc(db, 'evaluation_periods', p.id), {
           ...p,
+          configId: p.id,
+          thresholds: { excellent: 90, good: 70, pass: 50 },
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        // Tự động tạo bảng cấu hình riêng biệt cho từng đợt
+        await setDoc(doc(db, 'period_configs', p.id), {
+          id: p.id,
+          periodId: p.id,
+          periodName: p.name,
+          votingMode: p.votingMode || 'ANONYMOUS',
+          allowSelfEvaluation: false,
+          excellentThreshold: 90,
+          goodThreshold: 70,
+          passThreshold: 50,
+          scale: 100,
+          targetEmployeeIds: OFFICIAL_EMPLOYEES.map((e) => e.id),
+          criteria: DEFAULT_TRUST_CRITERIA,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }

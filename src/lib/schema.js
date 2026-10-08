@@ -10,11 +10,15 @@ import { TRUST_CRITERIA_DEFAULT as TRUST_CRITERIA } from './constants';
  * >= 50: Hoàn thành
  * < 50: Không hoàn thành
  */
-export const classifyTrustScore = (totalScore) => {
+export const classifyTrustScore = (totalScore, thresholds = {}) => {
   const score = Number(totalScore) || 0;
-  if (score >= 90) return { label: 'Xuất sắc', code: 'XUAT_SAC', variant: 'xuat-sac' };
-  if (score >= 70) return { label: 'Tốt', code: 'TOT', variant: 'tot' };
-  if (score >= 50) return { label: 'Hoàn thành', code: 'HOAN_THANH', variant: 'hoan-thanh' };
+  const exc = Number(thresholds.excellentThreshold ?? thresholds.excellent) || 90;
+  const good = Number(thresholds.goodThreshold ?? thresholds.good) || 70;
+  const pass = Number(thresholds.passThreshold ?? thresholds.pass) || 50;
+
+  if (score >= exc) return { label: 'Xuất sắc', code: 'XUAT_SAC', variant: 'xuat-sac' };
+  if (score >= good) return { label: 'Tốt', code: 'TOT', variant: 'tot' };
+  if (score >= pass) return { label: 'Hoàn thành', code: 'HOAN_THANH', variant: 'hoan-thanh' };
   return { label: 'Không hoàn thành', code: 'KHONG_HOAN_THANH', variant: 'khong-hoan-thanh' };
 };
 

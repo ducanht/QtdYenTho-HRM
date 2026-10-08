@@ -223,6 +223,7 @@ export const saveEvaluationPeriod = async (arg1, arg2) => {
   const payload = {
     ...cleanData,
     id: targetId,
+    configId: targetId,
     updatedAt: nowIso,
     serverTime: serverTimestamp(),
   };
@@ -233,6 +234,23 @@ export const saveEvaluationPeriod = async (arg1, arg2) => {
 
   try {
     await setDoc(doc(db, 'evaluation_periods', targetId), payload, { merge: true });
+
+    // Tự động khởi tạo hoặc đồng bộ cấu hình riêng cho đợt trong bảng period_configs
+    const periodConfigPayload = {
+      id: targetId,
+      periodId: targetId,
+      periodName: payload.name || '',
+      votingMode: payload.votingMode || 'ANONYMOUS',
+      allowSelfEvaluation: payload.allowSelfEvaluation ?? false,
+      excellentThreshold: payload.thresholds?.excellent ?? payload.excellentThreshold ?? 90,
+      goodThreshold: payload.thresholds?.good ?? payload.goodThreshold ?? 70,
+      passThreshold: payload.thresholds?.pass ?? payload.passThreshold ?? 50,
+      targetEmployeeIds: payload.targetEmployeeIds || [],
+      criteria: payload.customCriteria || [],
+      updatedAt: nowIso,
+    };
+    await setDoc(doc(db, 'period_configs', targetId), periodConfigPayload, { merge: true }).catch(() => {});
+
     return { success: true, id: targetId, data: payload };
   } catch (error) {
     console.error('Lỗi setDoc evaluation_periods trên Firestore:', error);
@@ -260,9 +278,109 @@ export const deleteEvaluationPeriod = async (periodId) => {
 
   try {
     await deleteDoc(doc(db, 'evaluation_periods', periodId));
+    await deleteDoc(doc(db, 'period_configs', periodId)).catch(() => {});
     return { success: true };
   } catch (error) {
     console.error('Lỗi deleteDoc evaluation_periods trên Firestore:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// 3B. CẤU HÌNH RIÊNG BIỆT TỪNG ĐỢT ĐÁNH GIÁ (period_configs collection)
+// Mỗi đợt đánh giá liên kết đến một bảng cấu hình riêng biệt (Zero Shared Config Drift)
+// ============================================================================
+
+export const subscribePeriodConfig = (periodId, callback) => {
+  if (!db || !periodId) {
+    callback(null);
+    return () => {};
+  }
+
+  try {
+    return onSnapshot(
+      doc(db, 'period_configs', periodId),
+      (snap) => {
+        if (snap.exists()) {
+          callback({ id: snap.id, ...snap.data() });
+        } else {
+          callback(null);
+        }
+      },
+      (error) => {
+        console.error(`Lỗi onSnapshot period_configs [${periodId}]:`, error);
+        callback(null);
+      }
+    );
+  } catch (err) {
+    console.error(`Lỗi thiết lập onSnapshot period_configs [${periodId}]:`, err);
+    callback(null);
+    return () => {};
+  }
+};
+
+export const getPeriodConfig = async (periodId) => {
+  if (!db || !periodId) return null;
+  try {
+    const snap = await getDoc(doc(db, 'period_configs', periodId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  } catch (err) {
+    console.error(`Lỗi getPeriodConfig [${periodId}]:`, err);
+    return null;
+  }
+};
+
+export const savePeriodConfig = async (periodId, configData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!periodId) throw new Error('Thiếu mã đợt đánh giá (periodId)');
+
+  // Làm sạch các trường undefined
+  const cleanData = {};
+  Object.keys(configData || {}).forEach((key) => {
+    if (configData[key] !== undefined) {
+      cleanData[key] = configData[key];
+    }
+  });
+
+  const nowIso = new Date().toISOString();
+  const configPayload = {
+    ...cleanData,
+    id: periodId,
+    periodId,
+    updatedAt: nowIso,
+    serverTime: serverTimestamp(),
+  };
+
+  try {
+    // 1. Lưu vào bảng cấu hình riêng của đợt: period_configs
+    await setDoc(doc(db, 'period_configs', periodId), configPayload, { merge: true });
+
+    // 2. Đồng bộ 2 chiều các trường cốt lõi vào evaluation_periods
+    const periodSyncData = {
+      configId: periodId,
+      updatedAt: nowIso,
+    };
+    if (cleanData.votingMode !== undefined) periodSyncData.votingMode = cleanData.votingMode;
+    if (cleanData.allowSelfEvaluation !== undefined) periodSyncData.allowSelfEvaluation = cleanData.allowSelfEvaluation;
+    if (cleanData.targetEmployeeIds !== undefined) periodSyncData.targetEmployeeIds = cleanData.targetEmployeeIds;
+    if (cleanData.criteria !== undefined) periodSyncData.customCriteria = cleanData.criteria;
+    if (
+      cleanData.excellentThreshold !== undefined ||
+      cleanData.goodThreshold !== undefined ||
+      cleanData.passThreshold !== undefined
+    ) {
+      periodSyncData.thresholds = {
+        excellent: cleanData.excellentThreshold ?? 90,
+        good: cleanData.goodThreshold ?? 70,
+        pass: cleanData.passThreshold ?? 50,
+      };
+    }
+
+    await setDoc(doc(db, 'evaluation_periods', periodId), periodSyncData, { merge: true });
+
+    return { success: true, id: periodId, data: configPayload };
+  } catch (error) {
+    console.error(`Lỗi khi lưu cấu hình đợt [${periodId}] vào Firestore:`, error);
     throw error;
   }
 };

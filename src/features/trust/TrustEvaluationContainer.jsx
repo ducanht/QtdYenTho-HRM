@@ -13,7 +13,9 @@ import {
   subscribeSubsystemConfig,
   saveSubsystemConfig,
   saveTrustCriterion,
-  deleteTrustCriterion
+  deleteTrustCriterion,
+  subscribePeriodConfig,
+  savePeriodConfig
 } from '../../lib/services';
 import { classifyTrustScore } from '../../lib/schema';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../lib/constants';
@@ -98,6 +100,22 @@ const TrustEvaluationContainer = () => {
   const [trustConfig, setTrustConfig] = useState(DEFAULT_MODULE_TRUST_SETTINGS);
   const [savingConfig, setSavingConfig] = useState(false);
   const [savingPermissions, setSavingPermissions] = useState(false);
+
+  // Cấu hình Riêng Biệt Cho Từng Đợt Đánh Giá (period_configs)
+  const [currentPeriodConfig, setCurrentPeriodConfig] = useState(null);
+  const [savingPeriodConfig, setSavingPeriodConfig] = useState(false);
+
+  // Lắng nghe cấu hình độc lập của đợt đánh giá đang chọn
+  useEffect(() => {
+    if (!selectedPeriodId) {
+      setCurrentPeriodConfig(null);
+      return;
+    }
+    const unsub = subscribePeriodConfig(selectedPeriodId, (cfg) => {
+      setCurrentPeriodConfig(cfg);
+    });
+    return () => unsub();
+  }, [selectedPeriodId]);
 
   useEffect(() => {
     const unsubConfig = subscribeSubsystemConfig('trust', (cfg) => {
@@ -265,8 +283,15 @@ const TrustEvaluationContainer = () => {
     return periods.find((p) => p.id === selectedPeriodId) || periods[0] || null;
   }, [periods, selectedPeriodId]);
 
-  // Bộ tiêu chí áp dụng cho Đợt
+  // Bộ tiêu chí áp dụng cho Đợt (Ưu tiên cấu hình độc lập của đợt trong period_configs)
   const activeCriteria = useMemo(() => {
+    if (
+      currentPeriodConfig?.criteria &&
+      Array.isArray(currentPeriodConfig.criteria) &&
+      currentPeriodConfig.criteria.length > 0
+    ) {
+      return currentPeriodConfig.criteria;
+    }
     if (
       currentPeriod?.customCriteria &&
       Array.isArray(currentPeriod.customCriteria) &&
@@ -275,27 +300,33 @@ const TrustEvaluationContainer = () => {
       return currentPeriod.customCriteria;
     }
     return globalCriteria;
-  }, [currentPeriod, globalCriteria]);
+  }, [currentPeriodConfig, currentPeriod, globalCriteria]);
 
   // Tiêu chí hiện đang chọn ở chế độ Stepper
   const currentCriterion = useMemo(() => {
     return activeCriteria[activeCriterionIndex] || activeCriteria[0] || null;
   }, [activeCriteria, activeCriterionIndex]);
 
-  // Danh sách cán bộ được lấy phiếu tín nhiệm (LOẠI TRỪ 100% BẢN THÂN NGƯỜI ĐĂNG NHẬP)
+  // Danh sách cán bộ được lấy phiếu tín nhiệm (Lọc theo đợt & loại trừ bản thân nếu quy chế khóa)
   const evaluatableEmployees = useMemo(() => {
     if (!employees.length) return [];
 
     let pool = employees;
-    if (
-      currentPeriod?.targetEmployeeIds &&
-      Array.isArray(currentPeriod.targetEmployeeIds) &&
-      currentPeriod.targetEmployeeIds.length > 0
-    ) {
-      pool = employees.filter((e) => currentPeriod.targetEmployeeIds.includes(e.id));
+    const targetIds =
+      currentPeriodConfig?.targetEmployeeIds ||
+      currentPeriod?.targetEmployeeIds;
+
+    if (Array.isArray(targetIds) && targetIds.length > 0) {
+      pool = employees.filter((e) => targetIds.includes(e.id));
     }
 
+    const allowSelf =
+      currentPeriodConfig?.allowSelfEvaluation ??
+      currentPeriod?.allowSelfEvaluation ??
+      false;
+
     return pool.filter((emp) => {
+      if (allowSelf) return true;
       const isSelf =
         (currentUser?.id && emp.id === currentUser.id) ||
         (currentUser?.uid && emp.id === currentUser.uid) ||
@@ -303,7 +334,7 @@ const TrustEvaluationContainer = () => {
         (currentUser?.code && emp.code === currentUser.code);
       return !isSelf;
     });
-  }, [employees, currentPeriod, currentUser]);
+  }, [employees, currentPeriodConfig, currentPeriod, currentUser]);
 
   // Đếm ngược thời gian kết thúc đợt
   const timeRemainingBadge = useMemo(() => {
@@ -667,6 +698,48 @@ const TrustEvaluationContainer = () => {
     }
   };
 
+  // Handler: Lưu cấu hình riêng biệt cho từng đợt đánh giá (period_configs)
+  const handleSavePeriodConfig = async (periodId, configData) => {
+    setSavingPeriodConfig(true);
+    try {
+      await savePeriodConfig(periodId, configData);
+
+      // Cập nhật lạc quan state periods trong RAM
+      setPeriods((prev) =>
+        prev.map((p) => {
+          if (p.id !== periodId) return p;
+          return {
+            ...p,
+            configId: periodId,
+            votingMode: configData.votingMode,
+            allowSelfEvaluation: configData.allowSelfEvaluation,
+            targetEmployeeIds: configData.targetEmployeeIds,
+            customCriteria: configData.criteria,
+            thresholds: {
+              excellent: configData.excellentThreshold,
+              good: configData.goodThreshold,
+              pass: configData.passThreshold,
+            },
+          };
+        })
+      );
+
+      // Đồng bộ state cấu hình hiện hành
+      setCurrentPeriodConfig({
+        ...configData,
+        id: periodId,
+        periodId,
+      });
+
+      toast.success(`Đã lưu cấu hình riêng cho đợt "${currentPeriod?.name || periodId}" thành công!`);
+    } catch (err) {
+      console.error('Lỗi khi lưu cấu hình đợt:', err);
+      toast.error(`Có lỗi khi lưu cấu hình đợt: ${err.message || 'Vui lòng thử lại'}`);
+    } finally {
+      setSavingPeriodConfig(false);
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-200">
       {/* 1. Thanh tác vụ chính: Chọn đợt, trạng thái, đếm ngược và các nút chức năng (KHÔNG lặp lại tên phân hệ) */}
@@ -786,16 +859,17 @@ const TrustEvaluationContainer = () => {
         />
       )}
 
-      {/* Tab 5: Cấu hình Tiêu chí & Thang điểm tín nhiệm */}
+      {/* Tab 5: Cấu hình Tiêu chí & Thang điểm tín nhiệm theo TỪNG ĐỢT ĐÁNH GIÁ */}
       {activeTab === 'CRITERIA_SETTINGS' && (
         <TrustCriteriaSettings
-          trustConfig={trustConfig}
-          setTrustConfig={setTrustConfig}
-          trustCriteria={globalCriteria}
-          onSaveConfig={handleSaveTrustConfig}
-          isSaving={savingConfig}
-          onSaveCriterion={handleSaveCriterion}
-          onDeleteCriterion={handleDeleteCriterion}
+          periods={periods}
+          selectedPeriodId={selectedPeriodId}
+          onSelectPeriod={setSelectedPeriodId}
+          currentPeriod={currentPeriod}
+          periodConfig={currentPeriodConfig}
+          employees={employees}
+          onSavePeriodConfig={handleSavePeriodConfig}
+          isSaving={savingPeriodConfig}
         />
       )}
 
