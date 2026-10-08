@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Database, Server } from 'lucide-react';
 import AutoInitDbModal from '../common/AutoInitDbModal';
 import ForceChangePasswordModal from '../auth/ForceChangePasswordModal';
+import FloatingTrustEvaluationReminder from '../common/FloatingTrustEvaluationReminder';
 import { autoSyncDatabaseSchema } from '../../lib/autoInitDb';
 
 const MainLayout = () => {
@@ -74,6 +75,9 @@ const MainLayout = () => {
 
       {/* Modal Bắt buộc thay đổi mật khẩu lần đầu */}
       <ForceChangePasswordModal />
+
+      {/* Thông báo nổi nhắc nhở hoàn thành đánh giá tín nhiệm */}
+      <FloatingTrustEvaluationReminder />
     </div>
   );
 };

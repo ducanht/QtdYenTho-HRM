@@ -8,6 +8,7 @@ import {
   setDoc, 
   addDoc, 
   updateDoc, 
+  deleteDoc,
   onSnapshot, 
   query, 
   orderBy, 
@@ -219,6 +220,18 @@ export const updateEvaluationPeriod = async (periodId, updateFields) => {
   }
 };
 
+export const deleteEvaluationPeriod = async (periodId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
+  try {
+    await deleteDoc(doc(db, 'evaluation_periods', periodId));
+    return { success: true };
+  } catch (error) {
+    console.error('Lỗi deleteDoc evaluation_periods trên Firestore:', error);
+    throw error;
+  }
+};
+
 // ============================================================================
 // 4. TIÊU CHÍ ĐÁNH GIÁ TÍN NHIỆM (trust_criteria collection)
 // ============================================================================
@@ -254,6 +267,10 @@ export const subscribeTrustCriteria = (callback) => {
 export const saveTrustEvaluation = async (evaluationData) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
 
+  if (evaluationData.evaluatorId && evaluationData.targetEmployeeId && evaluationData.evaluatorId === evaluationData.targetEmployeeId) {
+    throw new Error('Quy chế Quỹ TDND Yên Thọ: Cán bộ không được phép tự đánh giá tín nhiệm cho chính mình!');
+  }
+
   // Tính tổng điểm
   const scoresObj = evaluationData.scores || {};
   const scoresArray = Object.values(scoresObj).map(Number);
@@ -272,17 +289,33 @@ export const saveTrustEvaluation = async (evaluationData) => {
     isAnonymous,
     totalScore,
     classification,
-    createdAt: new Date().toISOString(),
+    createdAt: evaluationData.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     serverTime: serverTimestamp(),
   };
 
   try {
-    const docRef = await addDoc(collection(db, 'evaluations_trust'), payload);
-    return { success: true, id: docRef.id, totalScore, classification };
+    // Sử dụng docId có quy tắc để bảo đảm tính duy nhất: 1 evaluator chỉ có 1 phiếu cho 1 targetEmployee trong 1 period
+    const docId = evaluationData.id || `eval_${evaluationData.periodId}_${evaluationData.evaluatorId}_${evaluationData.targetEmployeeId}`;
+    await setDoc(doc(db, 'evaluations_trust', docId), payload, { merge: true });
+    return { success: true, id: docId, totalScore, classification };
   } catch (error) {
-    console.error('Lỗi Firestore addDoc evaluations_trust:', error);
+    console.error('Lỗi Firestore setDoc evaluations_trust:', error);
     throw error;
   }
+};
+
+export const saveBatchTrustEvaluations = async (evaluationsList) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const results = [];
+  for (const item of evaluationsList) {
+    if (item.evaluatorId && item.targetEmployeeId && item.evaluatorId === item.targetEmployeeId) {
+      continue;
+    }
+    const res = await saveTrustEvaluation(item);
+    results.push(res);
+  }
+  return results;
 };
 
 export const subscribeTrustEvaluations = (callback) => {

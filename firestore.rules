@@ -119,9 +119,16 @@ service cloud.firestore {
     // ===============================================================
     match /evaluations_trust/{evalId} {
       allow read: if isAuthenticated();
-      // Cho phép cán bộ nộp phiếu đánh giá
-      allow create: if isAuthenticated();
-      allow update, delete: if isManagerOrChairman();
+      // Cho phép cán bộ nộp phiếu đánh giá nhưng KHÔNG được tự đánh giá cho bản thân
+      allow create: if isAuthenticated() && (
+        !('targetEmployeeId' in request.resource.data) ||
+        request.resource.data.evaluatorId != request.resource.data.targetEmployeeId
+      );
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.evaluatorId) || 
+        isManagerOrChairman()
+      );
+      allow delete: if isManagerOrChairman();
     }
 
     // ===============================================================
