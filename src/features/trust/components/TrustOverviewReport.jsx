@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   BarChart3, 
   Users, 
@@ -8,12 +8,14 @@ import {
   Printer, 
   ShieldCheck,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Eye
 } from 'lucide-react';
 import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
 import Button from '../../../components/common/Button';
 import { classifyTrustScore } from '../../../lib/schema';
+import EmployeeTrustDetailModal from './EmployeeTrustDetailModal';
 
 /**
  * TrustOverviewReport: Báo cáo tổng quan kết quả đánh giá toàn Quỹ
@@ -29,6 +31,7 @@ const TrustOverviewReport = ({
   onOpenPrintModal,
 }) => {
   const isPeriodClosed = currentPeriod?.status === 'CLOSED';
+  const [selectedEmpForDetail, setSelectedEmpForDetail] = useState(null);
 
   // Tính toán tổng hợp kết quả
   const reportData = useMemo(() => {
@@ -260,6 +263,7 @@ const TrustOverviewReport = ({
                   <th className="py-3 px-4 text-center min-w-[120px]">Điểm trung bình (Thang 10)</th>
                   <th className="py-3 px-4 text-center min-w-[120px]">Điểm quy đổi (Thang 100)</th>
                   <th className="py-3 px-4 text-center min-w-[120px]">Xếp loại</th>
+                  <th className="py-3 px-4 text-center min-w-[120px]">Chi tiết phiếu</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -300,6 +304,21 @@ const TrustOverviewReport = ({
                         {row.classification.label}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-center">
+                      {isAdmin ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEmpForDetail(row)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-300 transition-colors shadow-xs"
+                          title="Thẩm tra chi tiết điểm từng tiêu chí và người đánh giá"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-teal-600" />
+                          Xem chi tiết
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Bảo mật</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -307,6 +326,17 @@ const TrustOverviewReport = ({
           </div>
         </Card>
       )}
+
+      {/* Modal thẩm tra chi tiết phiếu đánh giá của từng cán bộ (Dành riêng cho Admin) */}
+      <EmployeeTrustDetailModal
+        isOpen={Boolean(selectedEmpForDetail)}
+        onClose={() => setSelectedEmpForDetail(null)}
+        employee={selectedEmpForDetail}
+        evaluations={evaluations}
+        criteria={criteria}
+        currentPeriod={currentPeriod}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };

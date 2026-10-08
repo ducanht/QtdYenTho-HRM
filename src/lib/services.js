@@ -329,18 +329,10 @@ export const subscribeTrustEvaluations = (callback) => {
     return onSnapshot(
       q,
       (snapshot) => {
-        const list = snapshot.docs.map((docItem) => {
-          const data = docItem.data();
-          if (data.isAnonymous) {
-            return {
-              ...data,
-              id: docItem.id,
-              evaluatorName: 'Cán bộ Quỹ (Bỏ phiếu kín)',
-              evaluatorRole: 'Ẩn danh',
-            };
-          }
-          return { id: docItem.id, ...data };
-        });
+        const list = snapshot.docs.map((docItem) => ({
+          id: docItem.id,
+          ...docItem.data()
+        }));
         callback(list);
       },
       (error) => {
