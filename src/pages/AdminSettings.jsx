@@ -15,8 +15,11 @@ import {
   Award,
   Globe,
   Settings2,
-  Lock
+  Lock,
+  ShieldAlert,
+  CheckCircle2
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { 
   subscribeDepartments,
@@ -52,6 +55,7 @@ import Modal from '../components/common/Modal';
 
 const AdminSettings = () => {
   const toast = useToast();
+  const { isSuperAdmin, isAdmin, canToggleModules, canConfigureWebapp, currentUser } = useAuth();
 
   // Nhóm tab lớn: 'GLOBAL' (Cấu hình chung) hoặc 'SUBSYSTEM' (Cấu hình từng phân hệ)
   const [activeGroup, setActiveGroup] = useState('SUBSYSTEM');
@@ -155,9 +159,13 @@ const AdminSettings = () => {
     };
   }, []);
 
-  // Handler: Lưu Cài đặt hệ thống chung
+  // Handler: Lưu Cài đặt hệ thống chung (Đặc quyền SuperAdmin qtdyentho@gmail.com)
   const handleSaveGeneralSettings = async (e) => {
     e?.preventDefault?.();
+    if (!canConfigureWebapp) {
+      toast.error('Chỉ Quản trị viên cấp cao duy nhất (qtdyentho@gmail.com) mới có quyền lưu cấu hình tham số webapp!');
+      return;
+    }
     setSavingSection('GENERAL_LEGAL');
     try {
       await saveSystemSettings(systemSettings);
@@ -340,8 +348,16 @@ const AdminSettings = () => {
     }
   };
 
-  // Handler: Bật/Tắt module
+  // Handler: Bật/Tắt module webapp (Đặc quyền SuperAdmin qtdyentho@gmail.com)
   const handleToggleModuleStatus = async (moduleCode, currentStatus) => {
+    if (moduleCode === 'MODULE_SETTINGS') {
+      toast.warning('Cấu hình & Quản trị Hệ thống là Module Cốt lõi đặc biệt, luôn luôn vận hành và không thể tắt!');
+      return;
+    }
+    if (!canToggleModules) {
+      toast.error('Chỉ Quản trị viên cấp cao duy nhất (qtdyentho@gmail.com) mới có quyền bật/tắt các phân hệ webapp!');
+      return;
+    }
     const newStatus = currentStatus === 'ACTIVE' ? 'PLANNED' : 'ACTIVE';
     try {
       await updateSystemModule(moduleCode, { status: newStatus });
@@ -587,18 +603,29 @@ const AdminSettings = () => {
       {/* ===================================================================== */}
       {activeGroup === 'GLOBAL' && activeTab === 'GENERAL_LEGAL' && (
         <Card title="Thông Tin Pháp Nhân & Địa Bàn Hoạt Động (QTDND Yên Thọ)">
+          {!canConfigureWebapp && (
+            <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
+              <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Chế độ Xem (Read-only):</strong> Thông tin pháp nhân và Cấu hình hệ thống Webapp được bảo vệ. Chỉ Quản trị viên cấp cao duy nhất (<strong>qtdyentho@gmail.com</strong>) mới có quyền chỉnh sửa và lưu thay đổi.
+              </span>
+            </div>
+          )}
+
           <form onSubmit={handleSaveGeneralSettings} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Tên đầy đủ Quỹ tín dụng"
                 value={systemSettings.unitName || ''}
                 onChange={(e) => setSystemSettings((prev) => ({ ...prev, unitName: e.target.value }))}
+                disabled={!canConfigureWebapp}
                 required
               />
               <Input
                 label="Tên viết tắt"
                 value={systemSettings.shortName || ''}
                 onChange={(e) => setSystemSettings((prev) => ({ ...prev, shortName: e.target.value }))}
+                disabled={!canConfigureWebapp}
               />
             </div>
 
@@ -606,6 +633,7 @@ const AdminSettings = () => {
               label="Địa chỉ trụ sở chính"
               value={systemSettings.address || ''}
               onChange={(e) => setSystemSettings((prev) => ({ ...prev, address: e.target.value }))}
+              disabled={!canConfigureWebapp}
               required
             />
 
@@ -614,11 +642,13 @@ const AdminSettings = () => {
                 label="Giấy phép thành lập & hoạt động NHNN"
                 value={systemSettings.licenseNo || ''}
                 onChange={(e) => setSystemSettings((prev) => ({ ...prev, licenseNo: e.target.value }))}
+                disabled={!canConfigureWebapp}
               />
               <Input
                 label="Số điện thoại liên hệ"
                 value={systemSettings.phone || ''}
                 onChange={(e) => setSystemSettings((prev) => ({ ...prev, phone: e.target.value }))}
+                disabled={!canConfigureWebapp}
               />
             </div>
 
@@ -627,25 +657,29 @@ const AdminSettings = () => {
                 label="Chủ tịch Hội đồng Quản trị"
                 value={systemSettings.chairmanName || ''}
                 onChange={(e) => setSystemSettings((prev) => ({ ...prev, chairmanName: e.target.value }))}
+                disabled={!canConfigureWebapp}
               />
               <Input
                 label="Giám đốc điều hành"
                 value={systemSettings.directorName || ''}
                 onChange={(e) => setSystemSettings((prev) => ({ ...prev, directorName: e.target.value }))}
+                disabled={!canConfigureWebapp}
               />
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-200">
-              <Button 
-                type="submit" 
-                variant="primary" 
-                icon={Save} 
-                isLoading={savingSection === 'GENERAL_LEGAL'}
-                className="font-bold"
-              >
-                Lưu thông tin pháp nhân
-              </Button>
-            </div>
+            {canConfigureWebapp && (
+              <div className="flex justify-end pt-3 border-t border-slate-200">
+                <Button 
+                  type="submit" 
+                  variant="primary" 
+                  icon={Save} 
+                  isLoading={savingSection === 'GENERAL_LEGAL'}
+                  className="font-bold"
+                >
+                  Lưu thông tin pháp nhân
+                </Button>
+              </div>
+            )}
           </form>
         </Card>
       )}
@@ -766,44 +800,107 @@ const AdminSettings = () => {
       {/* ===================================================================== */}
       {activeGroup === 'GLOBAL' && activeTab === 'GENERAL_MODULES' && (
         <Card title="Quản Lý Kích Hoạt Các Phân Hệ Trên Cổng Portal (Registry & Feature Flags)">
+          {/* Thông báo phân quyền */}
+          {canToggleModules ? (
+            <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>Đặc quyền SuperAdmin (qtdyentho@gmail.com):</strong> Đồng chí có toàn quyền kích hoạt hoặc tạm ẩn các phân hệ webapp theo tiến độ vận hành.
+              </span>
+            </div>
+          ) : (
+            <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
+              <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Phân định quyền hạn:</strong> Chỉ tài khoản Quản trị Cấp cao duy nhất (<strong>qtdyentho@gmail.com</strong>) mới có quyền bật/tắt các phân hệ webapp. Ban Quản trị & Điều hành đang ở chế độ xem trạng thái vận hành.
+              </span>
+            </div>
+          )}
+
           <p className="text-xs text-slate-500 mb-4">
-            Kích hoạt đưa vào sử dụng ngay lập tức hoặc tạm ẩn các phân hệ khi đang bảo trì hoặc đang trong giai đoạn triển khai.
+            Kích hoạt đưa vào sử dụng ngay lập tức hoặc tạm ẩn các phân hệ webapp khi đang bảo trì hoặc đang trong giai đoạn triển khai.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {modulesList.map((mod) => {
-              const isActive = mod.status === 'ACTIVE';
+              const isCoreModule = mod.code === 'MODULE_SETTINGS' || mod.isCore || mod.isSystemCore;
+              const isActive = isCoreModule ? true : mod.status === 'ACTIVE';
+
               return (
                 <div 
                   key={mod.code} 
                   className={`p-4 rounded-2xl border transition-all ${
-                    isActive 
-                      ? 'border-emerald-300 bg-emerald-50/30' 
-                      : 'border-slate-200 bg-slate-50'
+                    isCoreModule
+                      ? 'border-teal-400 bg-gradient-to-br from-teal-50/90 via-white to-emerald-50/40 shadow-xs ring-1 ring-teal-300/40'
+                      : isActive 
+                        ? 'border-emerald-300 bg-emerald-50/30' 
+                        : 'border-slate-200 bg-slate-50'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                        <h4 className="text-sm font-black text-slate-900">{mod.name}</h4>
+                        <span className={`w-2.5 h-2.5 rounded-full ${isCoreModule ? 'bg-teal-600 animate-pulse' : isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                        <h4 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                          {mod.name}
+                          {isCoreModule && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 border border-teal-200">
+                              Core
+                            </span>
+                          )}
+                        </h4>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                        {mod.description}
+                        {isCoreModule 
+                          ? 'Module Cốt lõi Quản trị Hệ thống & Tham số toàn Quỹ. Nền tảng vận hành bắt buộc 24/7 và không thể bật/tắt.'
+                          : mod.description}
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleToggleModuleStatus(mod.code, mod.status)}
-                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-colors shrink-0 cursor-pointer ${
-                        isActive
-                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                          : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                      }`}
-                    >
-                      {isActive ? 'ĐANG VẬN HÀNH' : 'KẾ HOẠCH TRIỂN KHAI'}
-                    </button>
+                    {/* Điều khiển Bật/Tắt hoặc Huy hiệu Cốt lõi */}
+                    {isCoreModule ? (
+                      /* Module Cốt lõi: CỐ ĐỊNH, KHÔNG CÓ NÚT BẬT/TẮT */
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <span className="px-3 py-1.5 rounded-xl font-bold text-xs bg-teal-800 text-white shadow-xs flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-200" />
+                          HỆ THỐNG CỐT LÕI
+                        </span>
+                        <span className="text-[9px] text-teal-700 font-bold uppercase tracking-wider">
+                          Bắt buộc • Luôn bật
+                        </span>
+                      </div>
+                    ) : canToggleModules ? (
+                      /* SuperAdmin: Nút bấm Toggle hoạt động */
+                      <button
+                        type="button"
+                        onClick={() => handleToggleModuleStatus(mod.code, mod.status)}
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-colors shrink-0 cursor-pointer ${
+                          isActive
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                            : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                        }`}
+                      >
+                        {isActive ? 'ĐANG VẬN HÀNH' : 'KẾ HOẠCH TRIỂN KHAI'}
+                      </button>
+                    ) : (
+                      /* Ban Quản trị khác: Chế độ Xem (Locked) */
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <span
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 opacity-80 cursor-not-allowed border ${
+                            isActive
+                              ? 'bg-emerald-100 text-[#047857] border-emerald-300'
+                              : 'bg-slate-200 text-slate-700 border-slate-300'
+                          }`}
+                          title="Chỉ Quản trị viên cấp cao (qtdyentho@gmail.com) mới có quyền bật/tắt phân hệ"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          {isActive ? 'ĐANG VẬN HÀNH' : 'KẾ HOẠCH TRIỂN KHAI'}
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          Chỉ SuperAdmin được đổi
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-slate-200/80 flex items-center justify-between text-[10px] text-slate-400 font-mono">

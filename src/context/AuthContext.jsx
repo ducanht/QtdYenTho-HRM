@@ -17,39 +17,99 @@ const AuthContext = createContext(null);
 let failedAttempts = 0;
 let lockUntilTime = 0;
 
-// Nhận diện tài khoản Lãnh đạo / Admin Quỹ
+// 1. Nhận diện tài khoản Quản trị Cấp cao DUY NHẤT (SuperAdmin)
+export const isSuperAdminEmail = (email) => {
+  if (!email) return false;
+  return email.trim().toLowerCase() === 'qtdyentho@gmail.com';
+};
+
+// 2. Nhận diện tài khoản Ban Quản trị & Điều hành (Admin: CT HĐQT, Giám đốc, TV HĐQT)
 export const isAdminEmail = (email) => {
   if (!email) return false;
   const lower = email.trim().toLowerCase();
   return (
+    lower === 'qtdyentho@gmail.com' ||
     lower === 'ducanht@gmail.com' ||
+    lower === 'ducanhqtdyt@gmail.com' ||
     lower === 'nguyenducthao.qtd@gmail.com' ||
     lower === 'ducanht.gemini@gmail.com' ||
+    lower === 'sonqtdyt@gmail.com' ||
+    lower === 'nguyenvansontdyt@gmail.com' ||
+    lower === 'qtdyentho.vuhien@gmail.com' ||
     lower.includes('admin') ||
-    lower.includes('chutich')
+    lower.includes('chutich') ||
+    lower.includes('giamdoc') ||
+    lower.includes('hdqt')
   );
 };
 
 // Hàm chuẩn hóa hồ sơ cán bộ khi đăng nhập
 export const buildUserData = (fbUser, profile) => {
-  const adminFlag = isAdminEmail(fbUser?.email);
-  const resolvedRole = profile?.role || (adminFlag ? ROLES.ADMIN : ROLES.STAFF);
+  const superFlag = isSuperAdminEmail(fbUser?.email);
+  const adminFlag = superFlag || isAdminEmail(fbUser?.email) || profile?.department === 'Hội đồng Quản trị';
+  
+  let resolvedRole = ROLES.STAFF;
+  if (superFlag) {
+    resolvedRole = ROLES.SUPERADMIN;
+  } else if (profile?.role) {
+    resolvedRole = profile.role;
+  } else if (adminFlag) {
+    resolvedRole = ROLES.ADMIN;
+  }
+
+  // Tự động suy luận thông tin hiển thị chuẩn theo email lãnh đạo nếu chưa có profile
+  const emailLower = fbUser?.email?.toLowerCase() || '';
+  let defaultName = fbUser?.displayName || emailLower.split('@')[0];
+  let defaultPosition = 'Cán bộ';
+  let defaultDepartment = 'Phòng Tín dụng';
+  let defaultCode = 'CB-QT';
+  let defaultPartyRole = '';
+  let defaultArea = '';
+
+  if (superFlag) {
+    defaultName = 'Quản trị viên Cấp cao (SuperAdmin)';
+    defaultPosition = 'Quản trị viên Cấp cao';
+    defaultDepartment = 'Hệ thống Quản trị Webapp';
+    defaultCode = 'ROOT';
+    defaultArea = 'Quản trị toàn diện Webapp, Feature Flags & Cấu hình tham số';
+  } else if (emailLower.includes('ducanh') || emailLower.includes('nguyenducthao')) {
+    defaultName = 'Trịnh Đức Anh';
+    defaultPosition = 'Chủ tịch HĐQT';
+    defaultDepartment = 'Hội đồng Quản trị';
+    defaultCode = 'CB07';
+    defaultPartyRole = 'Bí thư Chi bộ';
+    defaultArea = 'Lãnh đạo toàn diện HĐQT & Định hướng chiến lược Quỹ';
+  } else if (emailLower.includes('son') || emailLower.includes('giamdoc')) {
+    defaultName = 'Nguyễn Văn Sơn';
+    defaultPosition = 'Giám đốc';
+    defaultDepartment = 'Ban Điều hành';
+    defaultCode = 'CB03';
+    defaultPartyRole = 'Phó Bí thư Chi bộ';
+    defaultArea = 'Điều hành toàn diện hoạt động kinh doanh Quỹ';
+  } else if (emailLower.includes('vuhien') || emailLower.includes('hdqt')) {
+    defaultName = 'Vũ Thị Hiền';
+    defaultPosition = 'Thành viên HĐQT chuyên trách';
+    defaultDepartment = 'Hội đồng Quản trị';
+    defaultCode = 'TV-HDQT';
+    defaultPartyRole = 'Đảng viên';
+    defaultArea = 'Thành viên Hội đồng Quản trị chuyên trách';
+  }
 
   return {
     uid: fbUser.uid,
     id: profile?.id || fbUser.uid,
-    code: profile?.code || (adminFlag ? 'CB07' : 'CB-QT'),
+    code: profile?.code || defaultCode,
     email: fbUser.email,
-    name: profile?.name || fbUser.displayName || (adminFlag ? 'Trịnh Đức Anh' : fbUser.email.split('@')[0]),
+    name: profile?.name || defaultName,
     role: resolvedRole,
-    department: profile?.department || (adminFlag ? 'Ban Quản trị (HĐQT)' : 'Phòng Tín dụng'),
-    position: profile?.position || (adminFlag ? 'Chủ tịch HĐQT' : 'Cán bộ'),
+    department: profile?.department || defaultDepartment,
+    position: profile?.position || defaultPosition,
     avatar: profile?.avatar || fbUser.photoURL || null,
     phone: profile?.phone || (adminFlag ? '0965122111' : ''),
     status: profile?.status || 'ACTIVE',
     partyMember: profile ? Boolean(profile.partyMember) : (adminFlag ? true : false),
-    politicalRole: profile?.politicalRole || (adminFlag ? 'Bí thư Chi bộ' : ''),
-    assignedArea: profile?.assignedArea || (adminFlag ? 'Lãnh đạo toàn diện HĐQT & Định hướng chiến lược Quỹ' : ''),
+    politicalRole: profile?.politicalRole || defaultPartyRole,
+    assignedArea: profile?.assignedArea || defaultArea,
     mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
   };
 };
@@ -258,11 +318,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Phân quyền chuẩn: Chủ tịch HĐQT & Giám đốc là Admin, các tài khoản khác là Staff
-  const isAdmin = role === ROLES.ADMIN || role === 'admin' || role === 'chairman' || role === 'manager';
-  const isStaff = role === ROLES.STAFF || role === 'staff';
-  const isManager = isAdmin;
-  const isChairman = isAdmin;
+  // Phân cấp quyền chuẩn:
+  // 1. Quản trị viên Cấp cao (SuperAdmin): DUY NHẤT qtdyentho@gmail.com
+  const isSuperAdmin = isSuperAdminEmail(currentUser?.email) || role === ROLES.SUPERADMIN || role === 'superadmin';
+
+  // 2. Ban Quản trị & Điều hành (Admin: CT HĐQT, Giám đốc, TV HĐQT + SuperAdmin)
+  const isAdmin = isSuperAdmin || role === ROLES.ADMIN || role === 'admin' || role === 'chairman' || role === 'manager';
+
+  // 3. Phân quyền chi tiết từng chức danh
+  const isChairman = isAdmin && (currentUser?.email?.toLowerCase().includes('ducanh') || currentUser?.position?.includes('Chủ tịch') || role === 'chairman');
+  const isManager = isAdmin && (currentUser?.email?.toLowerCase().includes('son') || currentUser?.position?.includes('Giám đốc') || role === 'manager');
+  const isBoardMember = isAdmin && (currentUser?.department?.includes('Hội đồng Quản trị') || currentUser?.position?.includes('HĐQT'));
+  const isStaff = !isAdmin;
+
+  // 4. Đặc quyền độc nhất của SuperAdmin: Bật/tắt Module Webapp & Cấu hình Tham số Webapp
+  const canToggleModules = isSuperAdmin;
+  const canConfigureWebapp = isSuperAdmin;
   const canAccessDashboard = isAdmin;
 
   const value = {
@@ -270,10 +341,14 @@ export const AuthProvider = ({ children }) => {
     role,
     loading,
     authError,
+    isSuperAdmin,
     isAdmin,
     isStaff,
     isManager,
     isChairman,
+    isBoardMember,
+    canToggleModules,
+    canConfigureWebapp,
     canAccessDashboard,
     isDemoMode: false,
     login,

@@ -15,35 +15,44 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // 2. Kiểm tra Super Admin / Lãnh đạo cấp cao theo Email trực tiếp từ Auth Token
-    // (Xác thực tức thì bằng JWT Token, độc lập 100% với việc đọc CSDL, không bao giờ lỗi)
+    // 2. Tài khoản Quản trị Cấp cao DUY NHẤT (SuperAdmin): qtdyentho@gmail.com
+    // Có đặc quyền duy nhất bật/tắt module webapp và cấu hình tham số webapp chung
     function isSuperAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.email in [
-          'ducanht@gmail.com',
-          'nguyenducthao.qtd@gmail.com',
-          'ducanht.gemini@gmail.com'
-        ] ||
-        request.auth.token.email.matches('.*admin.*') ||
-        request.auth.token.email.matches('.*chutich.*')
-      );
+      return isAuthenticated() && request.auth.token.email == 'qtdyentho@gmail.com';
     }
 
-    // 3. Kiểm tra vai trò quản lý trong CSDL (bọc an toàn bằng exists chống lỗi thiếu document)
+    // 3. Kiểm tra vai trò quản lý trong CSDL doc
     function hasAdminRoleInDoc() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'admin', 'ADMIN', 'manager', 'MANAGER', 'chairman', 'CHAIRMAN'
+          'superadmin', 'SUPERADMIN', 'admin', 'ADMIN', 'manager', 'MANAGER', 'chairman', 'CHAIRMAN'
         ];
     }
 
-    // 4. Kiểm tra quyền Quản lý / Lãnh đạo chung
-    function isManagerOrChairman() {
+    // 4. Ban Quản trị & Điều hành (Admin: CT HĐQT, Giám đốc, TV HĐQT + SuperAdmin)
+    function isBoardOrAdmin() {
       return isAuthenticated() && (
         isSuperAdmin() ||
-        hasAdminRoleInDoc() ||
-        request.auth.token.email.matches('.*quanly.*')
+        request.auth.token.email in [
+          'ducanht@gmail.com',
+          'ducanhqtdyt@gmail.com',
+          'nguyenducthao.qtd@gmail.com',
+          'ducanht.gemini@gmail.com',
+          'sonqtdyt@gmail.com',
+          'nguyenvansontdyt@gmail.com',
+          'qtdyentho.vuhien@gmail.com'
+        ] ||
+        request.auth.token.email.matches('.*admin.*') ||
+        request.auth.token.email.matches('.*chutich.*') ||
+        request.auth.token.email.matches('.*giamdoc.*') ||
+        request.auth.token.email.matches('.*hdqt.*') ||
+        hasAdminRoleInDoc()
       );
+    }
+
+    // Giữ alias tương thích
+    function isManagerOrChairman() {
+      return isBoardOrAdmin();
     }
 
     // 5. Kiểm tra quyền sở hữu hồ sơ (hỗ trợ cả UID, authUid và email)
@@ -134,20 +143,20 @@ service cloud.firestore {
 
     // ===============================================================
     // 8. Danh mục Phân hệ Hệ thống (system_modules)
+    // ĐẶC QUYỀN DUY NHẤT: Chỉ SuperAdmin (qtdyentho@gmail.com) mới được bật/tắt & cấu hình
     // ===============================================================
     match /system_modules/{moduleCode} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow write: if isSuperAdmin();
     }
 
     // ===============================================================
     // 9. Ma trận Phân quyền (roles_permissions)
+    // ĐẶC QUYỀN DUY NHẤT: Chỉ SuperAdmin (qtdyentho@gmail.com)
     // ===============================================================
     match /roles_permissions/{roleKey} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow write: if isSuperAdmin();
     }
 
     // ===============================================================
@@ -155,36 +164,37 @@ service cloud.firestore {
     // ===============================================================
     match /system_metadata/{docId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow create, update: if isSuperAdmin() || isBoardOrAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ===============================================================
     // 11. Danh mục Phòng ban (departments)
+    // Ban Quản trị & Điều hành (Admin) toàn quyền quản lý
     // ===============================================================
     match /departments/{deptId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow create, update, delete: if isBoardOrAdmin();
     }
 
     // ===============================================================
     // 12. Danh mục Chức danh (positions)
+    // Ban Quản trị & Điều hành (Admin) toàn quyền quản lý
     // ===============================================================
     match /positions/{posId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow create, update, delete: if isBoardOrAdmin();
     }
 
     // ===============================================================
     // 13. Cấu hình Hệ thống & Tham số (system_settings)
-    // Bao gồm cấu hình chung (general) và cấu hình từng phân hệ (module_*)
+    // - Cấu hình chung webapp (general): CHỈ DUY NHẤT SuperAdmin (qtdyentho@gmail.com)
+    // - Cấu hình từng phân hệ (module_*): Ban Quản trị & Điều hành (Admin) + SuperAdmin
     // ===============================================================
     match /system_settings/{settingId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow create, update: if isSuperAdmin() || (isBoardOrAdmin() && settingId != 'general');
+      allow delete: if isSuperAdmin();
     }
   }
 }

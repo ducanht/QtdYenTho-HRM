@@ -3,7 +3,10 @@
 
 export const DEFAULT_INITIAL_PASSWORD = 'Qtd@2003';
 
+export const SUPERADMIN_EMAIL = 'qtdyentho@gmail.com';
+
 export const ROLES = {
+  SUPERADMIN: 'superadmin',
   ADMIN: 'admin',
   STAFF: 'staff',
   // Giữ alias tương thích ngược:
@@ -12,11 +15,12 @@ export const ROLES = {
 };
 
 export const ROLE_LABELS = {
-  [ROLES.ADMIN]: 'Ban Lãnh đạo (Admin)',
+  [ROLES.SUPERADMIN]: 'Quản trị viên Cấp cao (SuperAdmin)',
+  [ROLES.ADMIN]: 'Ban Quản trị & Điều hành (Admin)',
   [ROLES.STAFF]: 'Cán bộ nhân viên',
   // Alias tương thích:
-  manager: 'Ban Lãnh đạo (Admin)',
-  chairman: 'Ban Lãnh đạo (Admin)',
+  manager: 'Ban Quản trị & Điều hành (Admin)',
+  chairman: 'Ban Quản trị & Điều hành (Admin)',
 };
 
 export const DEPARTMENTS = [

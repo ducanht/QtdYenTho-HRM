@@ -190,12 +190,14 @@ const PortalLauncher = () => {
                   <div className="flex flex-col items-end gap-1">
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                        isActive
+                        mod.code === 'MODULE_SETTINGS' || mod.isCore
+                          ? 'bg-teal-100 text-teal-900 border border-teal-300'
+                          : isActive
                           ? 'bg-emerald-100 text-[#047857] border border-emerald-200'
                           : 'bg-amber-100 text-amber-800 border border-amber-200'
                       }`}
                     >
-                      {isActive ? 'Đang vận hành' : 'Sẵn sàng CSDL'}
+                      {mod.code === 'MODULE_SETTINGS' || mod.isCore ? 'Hệ thống Cốt lõi' : isActive ? 'Đang vận hành' : 'Sẵn sàng CSDL'}
                     </span>
                     {mod.badge && (
                       <span className="text-[10px] font-semibold text-slate-400">

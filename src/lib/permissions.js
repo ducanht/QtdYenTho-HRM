@@ -113,14 +113,17 @@ export const SYSTEM_MODULES = {
     code: 'MODULE_SETTINGS',
     name: 'Cấu hình & Quản trị Hệ thống',
     shortName: 'Cấu hình Quản trị',
-    category: 'Quản trị Hệ thống',
+    category: 'Hệ thống Cốt lõi',
     description: 'Thiết lập danh mục Phòng ban, Chức danh, Tiêu chí tín nhiệm, Tỷ trọng KPI, Tiêu chuẩn quy hoạch và Tham số các phân hệ.',
     status: 'ACTIVE',
     icon: 'Settings',
     route: '/admin-settings',
     color: 'slate',
-    badge: 'Ban Quản trị',
-    features: ['Phòng ban & Chức danh', 'Tiêu chí tín nhiệm', 'Tỷ trọng KPI 40-30-30', 'Bật/tắt phân hệ Feature Flags'],
+    badge: 'Hệ thống Cốt lõi (Bắt buộc)',
+    isCore: true,             // Module Hệ Thống Đặc Biệt
+    isSystemCore: true,       // Không phải module webapp để có thể bật/tắt
+    canToggle: false,         // Không thể bật/tắt (Luôn luôn vận hành)
+    features: ['Hệ thống Cốt lõi', 'Phòng ban & Chức danh', 'Tiêu chí tín nhiệm', 'Tham số Nghiệp vụ'],
   },
 };
 
@@ -154,12 +157,17 @@ export const PERMISSIONS = {
   DASHBOARD_VIEW: 'dashboard:view',             // Truy cập Dashboard
   DASHBOARD_EXPORT: 'dashboard:export',         // Xuất báo cáo tổng hợp
 
-  // Quyền Quản trị hệ thống
-  SYSTEM_CONFIG: 'system:config',               // Cấu hình tham số, kết nối dữ liệu
-  SYSTEM_INIT_DB: 'system:init_db',             // Khởi tạo và tự động cập nhật CSDL
+  // Quyền Quản trị nghiệp vụ nội bộ Quỹ (Admin: CT HĐQT, Giám đốc, TV HĐQT)
+  SYSTEM_CONFIG: 'system:config',               // Cấu hình danh mục nghiệp vụ (Phòng ban, Chức danh, Tiêu chí...)
+  SYSTEM_INIT_DB: 'system:init_db',             // Khởi tạo và đồng bộ CSDL
+
+  // ĐẶC QUYỀN DUY NHẤT CỦA SUPERADMIN (qtdyentho@gmail.com):
+  SYSTEM_FEATURE_FLAGS: 'system:feature_flags', // Bật/tắt phân hệ Webapp (Feature Flags)
+  SYSTEM_WEBAPP_CONFIG: 'system:webapp_config', // Cấu hình tham số webapp & Thông tin pháp nhân Quỹ
 };
 
 // 3. MA TRẬN PHÂN QUYỀN THEO VAI TRÒ CHUẨN (ROLE-BASED PERMISSION MATRIX)
+// Quyền dành cho Admin nghiệp vụ (CT HĐQT, Giám đốc điều hành, Thành viên HĐQT):
 const ADMIN_PERMISSIONS = [
   PERMISSIONS.TRUST_VIEW,
   PERMISSIONS.TRUST_EVALUATE,
@@ -183,6 +191,13 @@ const ADMIN_PERMISSIONS = [
   PERMISSIONS.SYSTEM_INIT_DB,
 ];
 
+// Quyền SuperAdmin Tối Cao (Duy nhất qtdyentho@gmail.com): Có toàn quyền của Admin + Bật/tắt Webapp & Cấu hình Webapp
+const SUPERADMIN_PERMISSIONS = [
+  ...ADMIN_PERMISSIONS,
+  PERMISSIONS.SYSTEM_FEATURE_FLAGS,
+  PERMISSIONS.SYSTEM_WEBAPP_CONFIG,
+];
+
 export const ROLE_PERMISSIONS = {
   // 1. Cán bộ nghiệp vụ (Staff)
   staff: [
@@ -196,8 +211,11 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.HR_VIEW_HISTORY,
   ],
 
-  // 2. Ban Lãnh đạo & Quản trị (Admin - Chủ tịch HĐQT & Giám đốc điều hành)
+  // 2. Ban Quản trị & Điều hành (Admin - Chủ tịch HĐQT, Giám đốc điều hành, Thành viên HĐQT)
   admin: ADMIN_PERMISSIONS,
+
+  // 3. Quản trị viên Cấp cao duy nhất (SuperAdmin - qtdyentho@gmail.com)
+  superadmin: SUPERADMIN_PERMISSIONS,
 
   // Alias tương thích ngược:
   manager: ADMIN_PERMISSIONS,
