@@ -17,6 +17,43 @@ const AuthContext = createContext(null);
 let failedAttempts = 0;
 let lockUntilTime = 0;
 
+// Nhận diện tài khoản Lãnh đạo / Admin Quỹ
+export const isAdminEmail = (email) => {
+  if (!email) return false;
+  const lower = email.trim().toLowerCase();
+  return (
+    lower === 'ducanht@gmail.com' ||
+    lower === 'nguyenducthao.qtd@gmail.com' ||
+    lower === 'ducanht.gemini@gmail.com' ||
+    lower.includes('admin') ||
+    lower.includes('chutich')
+  );
+};
+
+// Hàm chuẩn hóa hồ sơ cán bộ khi đăng nhập
+export const buildUserData = (fbUser, profile) => {
+  const adminFlag = isAdminEmail(fbUser?.email);
+  const resolvedRole = profile?.role || (adminFlag ? ROLES.ADMIN : ROLES.STAFF);
+
+  return {
+    uid: fbUser.uid,
+    id: profile?.id || fbUser.uid,
+    code: profile?.code || (adminFlag ? 'CB07' : 'CB-QT'),
+    email: fbUser.email,
+    name: profile?.name || fbUser.displayName || (adminFlag ? 'Trịnh Đức Anh' : fbUser.email.split('@')[0]),
+    role: resolvedRole,
+    department: profile?.department || (adminFlag ? 'Ban Quản trị (HĐQT)' : 'Phòng Tín dụng'),
+    position: profile?.position || (adminFlag ? 'Chủ tịch HĐQT' : 'Cán bộ'),
+    avatar: profile?.avatar || fbUser.photoURL || null,
+    phone: profile?.phone || (adminFlag ? '0965122111' : ''),
+    status: profile?.status || 'ACTIVE',
+    partyMember: profile ? Boolean(profile.partyMember) : (adminFlag ? true : false),
+    politicalRole: profile?.politicalRole || (adminFlag ? 'Bí thư Chi bộ' : ''),
+    assignedArea: profile?.assignedArea || (adminFlag ? 'Lãnh đạo toàn diện HĐQT & Định hướng chiến lược Quỹ' : ''),
+    mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
+  };
+};
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [role, setRole] = useState(null);
@@ -42,30 +79,16 @@ export const AuthProvider = ({ children }) => {
               return;
             }
 
-            const userData = {
-              uid: fbUser.uid,
-              id: profile?.id || fbUser.uid,
-              code: profile?.code || 'CB-QT',
-              email: fbUser.email,
-              name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
-              role: profile?.role || ROLES.STAFF,
-              department: profile?.department || 'Phòng Tín dụng',
-              position: profile?.position || 'Cán bộ',
-              avatar: profile?.avatar || null,
-              phone: profile?.phone || '',
-              status: profile?.status || 'ACTIVE',
-              partyMember: Boolean(profile?.partyMember),
-              politicalRole: profile?.politicalRole || '',
-              assignedArea: profile?.assignedArea || '',
-              mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
-            };
+            const userData = buildUserData(fbUser, profile);
 
             setCurrentUser(userData);
             setRole(userData.role);
           } catch (err) {
             console.error('Lỗi tải thông tin user Firestore:', err);
-            setCurrentUser(null);
-            setRole(null);
+            // Fallback an toàn nếu lỗi mạng: vẫn cấp quyền admin nếu email là ducanht@gmail.com
+            const fallbackData = buildUserData(fbUser, null);
+            setCurrentUser(fallbackData);
+            setRole(fallbackData.role);
           }
         } else {
           setCurrentUser(null);
@@ -111,23 +134,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Tài khoản của đồng chí đã bị tạm dừng hoạt động bởi Ban Quản trị.');
       }
 
-      const userData = {
-        uid: fbUser.uid,
-        id: profile?.id || fbUser.uid,
-        code: profile?.code || 'CB-QT',
-        email: fbUser.email,
-        name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
-        role: profile?.role || ROLES.STAFF,
-        department: profile?.department || 'Phòng Tín dụng',
-        position: profile?.position || 'Cán bộ',
-        avatar: profile?.avatar || null,
-        phone: profile?.phone || '',
-        status: profile?.status || 'ACTIVE',
-        partyMember: Boolean(profile?.partyMember),
-        politicalRole: profile?.politicalRole || '',
-        assignedArea: profile?.assignedArea || '',
-        mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
-      };
+      const userData = buildUserData(fbUser, profile);
       
       failedAttempts = 0; // Reset số lần sai
       setCurrentUser(userData);
@@ -177,23 +184,13 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Tài khoản đã bị tạm dừng hoạt động. Vui lòng liên hệ Văn phòng Quỹ!');
       }
 
-      const userData = {
-        uid: fbUser.uid,
-        id: profile?.id || fbUser.uid,
-        code: profile?.code || 'CB-QT',
-        email: fbUser.email,
-        name: profile?.name || fbUser.displayName || fbUser.email.split('@')[0],
-        role: profile?.role || ROLES.STAFF,
-        department: profile?.department || 'Phòng Tín dụng',
-        position: profile?.position || 'Cán bộ',
-        avatar: profile?.avatar || fbUser.photoURL || null,
-        phone: profile?.phone || '',
-        status: profile?.status || 'ACTIVE',
-        partyMember: Boolean(profile?.partyMember),
-        politicalRole: profile?.politicalRole || '',
-        assignedArea: profile?.assignedArea || '',
-        mustChangePassword: profile ? (profile.mustChangePassword ?? false) : false,
-      };
+      const userData = buildUserData(fbUser, profile);
+
+      failedAttempts = 0;
+      setCurrentUser(userData);
+      setRole(userData.role);
+      setLoading(false);
+      return { success: true, user: userData };
 
       failedAttempts = 0;
       setCurrentUser(userData);

@@ -81,8 +81,8 @@ if (isDeployAll) {
   console.log('Chế độ deploy toàn bộ: Hosting, Firestore Rules & Firestore Indexes...');
   run(`${fbCmd} deploy --only hosting,firestore:rules,firestore:indexes --non-interactive`);
 } else {
-  console.log('Chế độ deploy hosting mặc định...');
-  run(`${fbCmd} deploy --only hosting --non-interactive`);
+  console.log('Chế độ deploy hosting & firestore rules...');
+  run(`${fbCmd} deploy --only hosting,firestore:rules --non-interactive`);
 }
 
 const latestCommit = runSilent('git rev-parse --short HEAD');
