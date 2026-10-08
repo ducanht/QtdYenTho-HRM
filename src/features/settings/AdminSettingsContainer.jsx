@@ -16,7 +16,9 @@ import {
   subscribeSystemModules,
   updateSystemModule,
   subscribeSubsystemConfig,
-  saveSubsystemConfig
+  saveSubsystemConfig,
+  subscribeRolePermissions,
+  saveRolePermissions
 } from '../../lib/services';
 import {
   DEFAULT_SYSTEM_SETTINGS,
@@ -28,6 +30,7 @@ import {
   DEFAULT_MODULE_PAYROLL_SETTINGS,
   DEFAULT_MODULE_AWARDS_SETTINGS
 } from '../../lib/systemDefaults';
+import { DEFAULT_ROLE_PERMISSIONS } from '../../lib/permissions';
 
 // Các components con phân rã sạch sẽ
 import SettingsScopeToggle from './components/SettingsScopeToggle';
@@ -37,6 +40,7 @@ import SettingsTabsNav from './components/SettingsTabsNav';
 import GeneralLegalSettings from './components/global/GeneralLegalSettings';
 import OrganizationSettings from './components/global/OrganizationSettings';
 import ModuleActivationSettings from './components/global/ModuleActivationSettings';
+import GlobalRolePermissionsSettings from './components/global/GlobalRolePermissionsSettings';
 
 // Khu vực 2: Cấu hình chuyên sâu 7 phân hệ
 import TrustCriteriaSettings from './components/subsystems/TrustCriteriaSettings';
@@ -70,6 +74,7 @@ const AdminSettingsContainer = () => {
   const [trustCriteria, setTrustCriteria] = useState([]);
   const [systemSettings, setSystemSettings] = useState(DEFAULT_SYSTEM_SETTINGS);
   const [modulesList, setModulesList] = useState([]);
+  const [rolePermissions, setRolePermissions] = useState(DEFAULT_ROLE_PERMISSIONS);
 
   // Dữ liệu Realtime Firestore: Cấu hình chuyên biệt từng phân hệ
   const [trustConfig, setTrustConfig] = useState(DEFAULT_MODULE_TRUST_SETTINGS);
@@ -88,6 +93,9 @@ const AdminSettingsContainer = () => {
     const unsubMod = subscribeSystemModules((list) => setModulesList(list));
     const unsubSet = subscribeSystemSettings((data) => {
       if (data) setSystemSettings((prev) => ({ ...prev, ...data }));
+    });
+    const unsubPerms = subscribeRolePermissions((data) => {
+      if (data) setRolePermissions((prev) => ({ ...prev, ...data }));
     });
 
     // Subsystem configs
@@ -119,6 +127,7 @@ const AdminSettingsContainer = () => {
       unsubCrit();
       unsubMod();
       unsubSet();
+      unsubPerms();
       unsubTrust();
       unsubHr();
       unsubKpi();
@@ -294,6 +303,19 @@ const AdminSettingsContainer = () => {
     setSystemSettings((prev) => ({ ...prev, planningPositions: updated }));
   };
 
+  // Handler: Lưu phân quyền vai trò toàn hệ thống
+  const handleSaveRolePermissions = async () => {
+    setSavingSection('ROLE_PERMS');
+    try {
+      await saveRolePermissions(rolePermissions);
+      toast.success('Đã lưu cấu hình phân quyền vai trò toàn hệ thống thành công!');
+    } catch (err) {
+      toast.error('Lỗi khi lưu phân quyền hệ thống: ' + err.message);
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Thanh Tác Vụ & Chuyển Đổi Khu Vực Cấu Hình */}
@@ -343,6 +365,20 @@ const AdminSettingsContainer = () => {
           modulesList={modulesList}
           onToggleStatus={handleToggleModuleStatus}
           canToggleModules={canToggleModules}
+        />
+      )}
+
+      {activeGroup === 'GLOBAL' && activeTab === 'GENERAL_PERMISSIONS' && (
+        <GlobalRolePermissionsSettings
+          globalPermissions={rolePermissions.global || DEFAULT_ROLE_PERMISSIONS.global}
+          onChangeGlobalPermissions={(newGlobal) =>
+            setRolePermissions((prev) => ({ ...prev, global: newGlobal }))
+          }
+          onSavePermissions={handleSaveRolePermissions}
+          onResetDefault={() =>
+            setRolePermissions((prev) => ({ ...prev, global: DEFAULT_ROLE_PERMISSIONS.global }))
+          }
+          isSaving={savingSection === 'ROLE_PERMS'}
         />
       )}
 

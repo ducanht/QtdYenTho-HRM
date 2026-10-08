@@ -786,3 +786,46 @@ export const getSubsystemConfig = async (moduleKey) => {
   }
 };
 
+// ============================================================================
+// 12. PHÂN QUYỀN HỆ THỐNG & PHÂN HỆ (ROLE-BASED ACCESS CONTROL - RBAC)
+// Lưu trữ tại collection: system_settings, document: role_permissions
+// ============================================================================
+
+export const subscribeRolePermissions = (callback) => {
+  if (!db) {
+    callback(null);
+    return () => {};
+  }
+  try {
+    return onSnapshot(
+      doc(db, 'system_settings', 'role_permissions'),
+      (snap) => {
+        if (snap.exists()) {
+          callback(snap.data());
+        } else {
+          callback(null);
+        }
+      },
+      (err) => {
+        console.error('Lỗi onSnapshot role_permissions:', err);
+        callback(null);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi subscribeRolePermissions:', err);
+    callback(null);
+    return () => {};
+  }
+};
+
+export const saveRolePermissions = async (permissionsData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const payload = {
+    ...permissionsData,
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(doc(db, 'system_settings', 'role_permissions'), payload, { merge: true });
+  return { success: true };
+};
+
+

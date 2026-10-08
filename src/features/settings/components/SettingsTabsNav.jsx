@@ -68,6 +68,22 @@ const SettingsTabsNav = ({
             Feature Flags
           </span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => onTabChange('GENERAL_PERMISSIONS')}
+          className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'GENERAL_PERMISSIONS'
+              ? 'bg-white text-teal-900 shadow-xs border border-teal-200'
+              : 'text-slate-600 hover:bg-white/60'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
+          <span>4. Phân Quyền Vai Trò Toàn Hệ Thống</span>
+          <span className="px-1.5 py-0.2 rounded-full bg-teal-100 text-teal-800 text-[10px]">
+            RBAC
+          </span>
+        </button>
       </div>
     );
   }

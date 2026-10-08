@@ -9,10 +9,16 @@ import {
   subscribeTrustEvaluations,
   saveTrustEvaluation,
   saveEvaluationPeriod,
-  deleteEvaluationPeriod
+  deleteEvaluationPeriod,
+  subscribeSubsystemConfig
 } from '../../lib/services';
 import { classifyTrustScore } from '../../lib/schema';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../lib/constants';
+import { 
+  checkUserPermission, 
+  TRUST_PERMISSIONS, 
+  DEFAULT_ROLE_PERMISSIONS 
+} from '../../lib/permissions';
 
 import TrustActionBar from './components/TrustActionBar';
 import CriteriaTabsNav from './components/CriteriaTabsNav';
@@ -80,10 +86,55 @@ const TrustEvaluationContainer = () => {
     customCriteria: DEFAULT_CRITERIA,
   });
 
-  // Kiểm tra quyền quản trị đợt
+  // Quản lý Phân quyền theo ma trận RBAC Phân hệ Tín nhiệm
+  const [trustPermissions, setTrustPermissions] = useState(DEFAULT_ROLE_PERMISSIONS.trust);
+
+  useEffect(() => {
+    const unsubConfig = subscribeSubsystemConfig('trust', (cfg) => {
+      if (cfg?.permissions) {
+        setTrustPermissions(cfg.permissions);
+      }
+    });
+    return () => unsubConfig();
+  }, []);
+
+  // Kiểm tra quyền hạn chuyên sâu từng thao tác
   const canManagePeriods = useMemo(() => {
-    return role === 'admin' || role === 'chairman' || role === 'manager';
-  }, [role]);
+    return checkUserPermission(currentUser, TRUST_PERMISSIONS.MANAGE_PERIODS, { trust: trustPermissions });
+  }, [currentUser, trustPermissions]);
+
+  const canManageCriteria = useMemo(() => {
+    return checkUserPermission(currentUser, TRUST_PERMISSIONS.MANAGE_CRITERIA, { trust: trustPermissions });
+  }, [currentUser, trustPermissions]);
+
+  const canVote = useMemo(() => {
+    return checkUserPermission(currentUser, TRUST_PERMISSIONS.VOTE, { trust: trustPermissions });
+  }, [currentUser, trustPermissions]);
+
+  const canViewOwnResults = useMemo(() => {
+    return checkUserPermission(currentUser, TRUST_PERMISSIONS.VIEW_OWN_RESULTS, { trust: trustPermissions });
+  }, [currentUser, trustPermissions]);
+
+  const canViewSubmitted = useMemo(() => {
+    return checkUserPermission(currentUser, TRUST_PERMISSIONS.VIEW_OWN_SUBMITTED, { trust: trustPermissions });
+  }, [currentUser, trustPermissions]);
+
+  const canViewOverview = useMemo(() => {
+    return checkUserPermission(currentUser, TRUST_PERMISSIONS.VIEW_AGGREGATE_REPORT, { trust: trustPermissions });
+  }, [currentUser, trustPermissions]);
+
+  const canPrintReport = useMemo(() => {
+    return checkUserPermission(currentUser, TRUST_PERMISSIONS.PRINT_OFFICIAL_REPORT, { trust: trustPermissions });
+  }, [currentUser, trustPermissions]);
+
+  // Tự động chuyển tab nếu người dùng không có quyền truy cập tab hiện tại
+  useEffect(() => {
+    if (activeTab === 'OVERVIEW' && !canViewOverview) {
+      setActiveTab('SCORING');
+    } else if (activeTab === 'SCORING' && !canVote) {
+      setActiveTab(canViewOwnResults ? 'MY_RESULTS' : 'MY_VOTES');
+    }
+  }, [activeTab, canViewOverview, canVote, canViewOwnResults]);
 
   // 1. Subscribe Tiêu chí gốc
   useEffect(() => {
@@ -476,6 +527,11 @@ const TrustEvaluationContainer = () => {
         currentPeriod={currentPeriod}
         timeRemainingBadge={timeRemainingBadge}
         canManagePeriods={canManagePeriods}
+        canPrintReport={canPrintReport}
+        canViewOverview={canViewOverview}
+        canViewSubmitted={canViewSubmitted}
+        canViewOwnResults={canViewOwnResults}
+        canVote={canVote}
         currentUser={currentUser}
         onOpenCreatePeriod={handleOpenCreatePeriod}
         onOpenEditPeriod={handleOpenEditPeriod}

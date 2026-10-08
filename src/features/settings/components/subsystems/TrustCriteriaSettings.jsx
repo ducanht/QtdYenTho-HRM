@@ -4,6 +4,8 @@ import Card from '../../../../components/common/Card';
 import Button from '../../../../components/common/Button';
 import Input from '../../../../components/common/Input';
 import Modal from '../../../../components/common/Modal';
+import TrustPermissionsMatrix from './TrustPermissionsMatrix';
+import { DEFAULT_ROLE_PERMISSIONS } from '../../../../lib/permissions';
 
 /**
  * Cấu hình chuyên sâu Phân hệ Đánh giá Tín nhiệm (10 Tiêu chí chuẩn NHNN)
@@ -242,6 +244,17 @@ const TrustCriteriaSettings = ({
           </div>
         </div>
       </Card>
+
+      {/* Ma trận Phân quyền chuyên biệt Phân hệ Bỏ phiếu tín nhiệm */}
+      <TrustPermissionsMatrix
+        permissions={trustConfig.permissions || DEFAULT_ROLE_PERMISSIONS.trust}
+        onChangePermissions={(newPerms) =>
+          setTrustConfig((prev) => ({ ...prev, permissions: newPerms }))
+        }
+        onResetDefault={() =>
+          setTrustConfig((prev) => ({ ...prev, permissions: DEFAULT_ROLE_PERMISSIONS.trust }))
+        }
+      />
 
       {/* Modal Thêm/Sửa Tiêu chí */}
       <Modal

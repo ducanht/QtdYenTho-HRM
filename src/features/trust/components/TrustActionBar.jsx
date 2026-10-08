@@ -26,7 +26,12 @@ const TrustActionBar = ({
   onSelectPeriod,
   currentPeriod,
   timeRemainingBadge,
-  canManagePeriods,
+  canManagePeriods = false,
+  canPrintReport = true,
+  canViewOverview = true,
+  canViewSubmitted = true,
+  canViewOwnResults = true,
+  canVote = true,
   currentUser,
   onOpenCreatePeriod,
   onOpenEditPeriod,
@@ -113,15 +118,17 @@ const TrustActionBar = ({
         {/* Cụm nút thao tác nghiệp vụ bên phải */}
         <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
           {/* Nút In biên bản kiểm phiếu A4 */}
-          <Button
-            variant="outline"
-            size="sm"
-            icon={Printer}
-            onClick={onOpenPrintModal}
-            className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50"
-          >
-            In Biên Bản A4
-          </Button>
+          {canPrintReport && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Printer}
+              onClick={onOpenPrintModal}
+              className="text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              In Biên Bản A4
+            </Button>
+          )}
 
           {/* Nút Admin: Tạo đợt mới */}
           {canManagePeriods && (
@@ -150,58 +157,67 @@ const TrustActionBar = ({
         </div>
       </div>
 
-      {/* 2. Menu phân vùng tính năng (Tab Bar trực quan) */}
+      {/* 2. Menu phân vùng tính năng (Tab Bar trực quan theo phân quyền RBAC) */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
-        <button
-          type="button"
-          onClick={() => onChangeTab('SCORING')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeTab === 'SCORING'
-              ? 'bg-[#0f766e] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
-          }`}
-        >
-          1. Lấy Phiếu Tín Nhiệm Theo Tiêu Chí
-        </button>
+        {canVote && (
+          <button
+            type="button"
+            onClick={() => onChangeTab('SCORING')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'SCORING'
+                ? 'bg-[#0f766e] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+            }`}
+          >
+            1. Lấy Phiếu Tín Nhiệm Theo Tiêu Chí
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => onChangeTab('MY_VOTES')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeTab === 'MY_VOTES'
-              ? 'bg-[#0f766e] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
-          }`}
-        >
-          2. Phiếu Tôi Đã Nộp
-        </button>
+        {canViewSubmitted && (
+          <button
+            type="button"
+            onClick={() => onChangeTab('MY_VOTES')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'MY_VOTES'
+                ? 'bg-[#0f766e] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+            }`}
+          >
+            2. Phiếu Tôi Đã Nộp
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => onChangeTab('MY_RESULTS')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeTab === 'MY_RESULTS'
-              ? 'bg-[#0f766e] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
-          }`}
-        >
-          3. Kết Quả Của Tôi
-        </button>
+        {canViewOwnResults && (
+          <button
+            type="button"
+            onClick={() => onChangeTab('MY_RESULTS')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'MY_RESULTS'
+                ? 'bg-[#0f766e] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+            }`}
+          >
+            3. Kết Quả Của Tôi
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => onChangeTab('OVERVIEW')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeTab === 'OVERVIEW'
-              ? 'bg-[#0f766e] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
-          }`}
-        >
-          4. Tổng Quan Kết Quả Toàn Quỹ
-        </button>
+        {canViewOverview && (
+          <button
+            type="button"
+            onClick={() => onChangeTab('OVERVIEW')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'OVERVIEW'
+                ? 'bg-[#0f766e] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+            }`}
+          >
+            4. Tổng Quan Kết Quả Toàn Quỹ
+          </button>
+        )}
       </div>
     </div>
   );
 };
+
 
 export default React.memo(TrustActionBar);
