@@ -36,7 +36,7 @@ const TrustPeriodModal = ({
       const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
       setFormData((prev) => ({
         ...prev,
-        targetEmployeeIds: Array.from(new Set([...prev.targetEmployeeIds, ...matchingIds])),
+        targetEmployeeIds: Array.from(new Set([...(prev?.targetEmployeeIds || []), ...matchingIds])),
       }));
     }
   };

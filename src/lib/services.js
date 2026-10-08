@@ -166,11 +166,16 @@ export const subscribeEvaluationPeriods = (callback) => {
   }
 
   try {
-    const q = query(collection(db, 'evaluation_periods'), orderBy('startDate', 'desc'));
     return onSnapshot(
-      q,
+      collection(db, 'evaluation_periods'),
       (snapshot) => {
         const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // Sắp xếp giảm dần theo startDate / createdAt
+        list.sort((a, b) => {
+          const dateA = a.startDate || a.createdAt || '';
+          const dateB = b.startDate || b.createdAt || '';
+          return dateB.localeCompare(dateA);
+        });
         callback(list);
       },
       (error) => {
@@ -185,20 +190,50 @@ export const subscribeEvaluationPeriods = (callback) => {
   }
 };
 
-export const saveEvaluationPeriod = async (periodData) => {
+export const saveEvaluationPeriod = async (arg1, arg2) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
 
-  const periodId = periodData.id || `PERIOD-${periodData.year}-Q${periodData.quarter || 'ALL'}-${Date.now()}`;
+  let targetId;
+  let rawData;
+
+  // Hỗ trợ linh hoạt cả 2 kiểu gọi:
+  // Signature 1: saveEvaluationPeriod(periodId, periodFormData)
+  // Signature 2: saveEvaluationPeriod(periodFormData) với periodFormData.id
+  if (typeof arg1 === 'string' && typeof arg2 === 'object' && arg2 !== null) {
+    targetId = arg1;
+    rawData = arg2;
+  } else if (typeof arg1 === 'object' && arg1 !== null) {
+    rawData = arg1;
+    targetId =
+      arg1.id ||
+      `PERIOD-${arg1.year || new Date().getFullYear()}-Q${arg1.quarter || 'ALL'}-${Date.now().toString().slice(-4)}`;
+  } else {
+    throw new Error('Dữ liệu đợt đánh giá không hợp lệ');
+  }
+
+  // Làm sạch các trường undefined để Firestore setDoc không báo lỗi
+  const cleanData = {};
+  Object.keys(rawData).forEach((key) => {
+    if (rawData[key] !== undefined) {
+      cleanData[key] = rawData[key];
+    }
+  });
+
+  const nowIso = new Date().toISOString();
   const payload = {
-    ...periodData,
-    id: periodId,
-    createdAt: new Date().toISOString(),
+    ...cleanData,
+    id: targetId,
+    updatedAt: nowIso,
     serverTime: serverTimestamp(),
   };
 
+  if (!payload.createdAt) {
+    payload.createdAt = nowIso;
+  }
+
   try {
-    await setDoc(doc(db, 'evaluation_periods', periodId), payload, { merge: true });
-    return { success: true, id: periodId };
+    await setDoc(doc(db, 'evaluation_periods', targetId), payload, { merge: true });
+    return { success: true, id: targetId, data: payload };
   } catch (error) {
     console.error('Lỗi setDoc evaluation_periods trên Firestore:', error);
     throw error;

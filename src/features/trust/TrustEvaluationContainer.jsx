@@ -594,7 +594,7 @@ const TrustEvaluationContainer = () => {
   };
 
   const handleSavePeriod = async () => {
-    if (!periodFormData.name.trim()) {
+    if (!periodFormData.name || !periodFormData.name.trim()) {
       toast.error('Vui lòng nhập tên đợt đánh giá tín nhiệm!');
       return;
     }
@@ -602,19 +602,50 @@ const TrustEvaluationContainer = () => {
     try {
       const periodId =
         periodFormMode === 'CREATE'
-          ? `PERIOD-${periodFormData.year}-Q${periodFormData.quarter}-${Date.now().toString().slice(-4)}`
+          ? (periodFormData.id || `PERIOD-${periodFormData.year || 2026}-Q${periodFormData.quarter || 4}-${Date.now().toString().slice(-4)}`)
           : periodFormData.id;
 
-      await saveEvaluationPeriod(periodId, periodFormData);
-      toast.success(
-        periodFormMode === 'CREATE'
-          ? `Đã tạo đợt lấy phiếu tín nhiệm "${periodFormData.name}" thành công!`
-          : `Đã cập nhật cấu hình đợt "${periodFormData.name}"!`
-      );
+      const payload = {
+        ...periodFormData,
+        id: periodId,
+        name: periodFormData.name.trim(),
+        year: Number(periodFormData.year) || 2026,
+        quarter: Number(periodFormData.quarter) || 4,
+        votingMode: periodFormData.votingMode || 'ANONYMOUS',
+        status: periodFormData.status || 'ACTIVE',
+        startDate: periodFormData.startDate || new Date().toISOString().split('T')[0],
+        endDate: periodFormData.endDate || '',
+        description: periodFormData.description || '',
+        targetEmployeeIds: Array.isArray(periodFormData.targetEmployeeIds) ? periodFormData.targetEmployeeIds : [],
+        customCriteria: Array.isArray(periodFormData.customCriteria) ? periodFormData.customCriteria : [],
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveEvaluationPeriod(periodId, payload);
+
+      // Cập nhật lạc quan (Optimistic update) để giao diện phản ánh thay đổi tức thì 0ms
+      setPeriods((prev) => {
+        const existingIdx = prev.findIndex((p) => p.id === periodId);
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          updated[existingIdx] = { ...updated[existingIdx], ...payload };
+          return updated;
+        } else {
+          return [payload, ...prev];
+        }
+      });
+
       setSelectedPeriodId(periodId);
       setIsPeriodModalOpen(false);
-    } catch {
-      toast.error('Có lỗi xảy ra khi lưu đợt đánh giá.');
+
+      toast.success(
+        periodFormMode === 'CREATE'
+          ? `Đã tạo đợt lấy phiếu tín nhiệm "${payload.name}" thành công!`
+          : `Đã cập nhật cấu hình đợt "${payload.name}" thành công!`
+      );
+    } catch (err) {
+      console.error('Lỗi khi lưu đợt đánh giá tín nhiệm:', err);
+      toast.error(`Có lỗi khi lưu đợt đánh giá: ${err.message || 'Vui lòng thử lại'}`);
     } finally {
       setSubmittingPeriod(false);
     }
@@ -628,9 +659,11 @@ const TrustEvaluationContainer = () => {
       await deleteEvaluationPeriod(periodId);
       toast.success(`Đã xóa đợt đánh giá "${periodName}" thành công.`);
       const remaining = periods.filter((p) => p.id !== periodId);
+      setPeriods(remaining);
       if (remaining.length > 0) setSelectedPeriodId(remaining[0].id);
-    } catch {
-      toast.error('Lỗi khi xóa đợt đánh giá.');
+    } catch (err) {
+      console.error('Lỗi khi xóa đợt đánh giá:', err);
+      toast.error(`Lỗi khi xóa đợt đánh giá: ${err.message || 'Vui lòng thử lại'}`);
     }
   };
 
