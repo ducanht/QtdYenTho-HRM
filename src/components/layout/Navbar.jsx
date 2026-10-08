@@ -34,17 +34,22 @@ const Navbar = ({ onToggleSidebar }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          <Link to="/portal" className="group text-left">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[#047857] uppercase tracking-wider hidden sm:inline group-hover:underline">
-                Quỹ Tín Dụng Nhân Dân Yên Thọ
-              </span>
-              <span className="text-slate-300 hidden sm:inline">•</span>
-              <span className="text-xs text-slate-500 font-medium">HRM Portal 2026</span>
+          <Link to="/portal" className="group flex items-center gap-2.5 text-left">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white p-0.5 shadow-xs border border-amber-300/60 overflow-hidden shrink-0 flex items-center justify-center">
+              <img src="/logo.png" alt="Logo Quỹ TDND Yên Thọ" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight group-hover:text-[#047857] transition-colors">
-              Cổng Đánh Giá Tín Nhiệm & Quản Trị Nhân Sự
-            </h1>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[#047857] uppercase tracking-wider hidden sm:inline group-hover:underline">
+                  Quỹ Tín Dụng Nhân Dân Yên Thọ
+                </span>
+                <span className="text-slate-300 hidden sm:inline">•</span>
+                <span className="text-xs text-slate-500 font-medium">HRM Portal 2026</span>
+              </div>
+              <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight group-hover:text-[#047857] transition-colors">
+                Cổng Đánh Giá Tín Nhiệm & Quản Trị Nhân Sự
+              </h1>
+            </div>
           </Link>
         </div>
 

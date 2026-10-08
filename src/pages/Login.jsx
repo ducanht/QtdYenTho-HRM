@@ -81,8 +81,8 @@ const Login = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
         {/* Unit Branding - Chuẩn phong cách QTDND Yên Thọ */}
         <div className="text-center mb-7">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#047857] via-[#059669] to-[#10b981] text-amber-300 shadow-2xl shadow-emerald-950/80 mb-4 border-2 border-amber-400/50">
-            <Building2 className="w-10 h-10 drop-shadow-md" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-white p-2 shadow-2xl shadow-emerald-950/80 mb-4 border-2 border-amber-400/80 ring-4 ring-emerald-500/20">
+            <img src="/logo.png" alt="Logo Quỹ Tín Dụng Nhân Dân Yên Thọ" className="w-full h-full object-contain drop-shadow" />
           </div>
 
           <div className="text-[11px] font-bold text-amber-300 tracking-wider uppercase mb-1">

@@ -108,8 +108,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-800/80 bg-slate-950/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0f766e] to-[#14b8a6] flex items-center justify-center text-white shadow-md shadow-[#0f766e]/30">
-              <Building2 className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-full bg-white p-0.5 flex items-center justify-center shadow-md shadow-emerald-950/40 border border-amber-400/50 overflow-hidden shrink-0">
+              <img src="/logo.png" alt="Logo QTDND Yên Thọ" className="w-full h-full object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-white tracking-wide truncate">

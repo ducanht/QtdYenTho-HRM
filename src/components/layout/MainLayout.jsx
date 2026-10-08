@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
@@ -6,11 +6,19 @@ import { useAuth } from '../../context/AuthContext';
 import { Database, Server } from 'lucide-react';
 import AutoInitDbModal from '../common/AutoInitDbModal';
 import ForceChangePasswordModal from '../auth/ForceChangePasswordModal';
+import { autoSyncDatabaseSchema } from '../../lib/autoInitDb';
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dbModalOpen, setDbModalOpen] = useState(false);
   const { isDemoMode } = useAuth();
+
+  // Tự động kiểm tra & đồng bộ CSDL Firebase ngầm (Self-healing & Auto-provisioning)
+  useEffect(() => {
+    autoSyncDatabaseSchema().catch((err) => {
+      console.warn('Lỗi kiểm tra đồng bộ CSDL tự động:', err);
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 flex">

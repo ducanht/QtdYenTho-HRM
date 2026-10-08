@@ -159,5 +159,14 @@ service cloud.firestore {
       allow create, update: if isAuthenticated();
       allow delete: if isManagerOrChairman();
     }
+
+    // ===============================================================
+    // 10. Siêu dữ liệu & Phiên bản CSDL Tự Động (system_metadata)
+    // ===============================================================
+    match /system_metadata/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isManagerOrChairman();
+    }
   }
 }

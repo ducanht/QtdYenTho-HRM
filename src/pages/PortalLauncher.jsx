@@ -78,22 +78,27 @@ const PortalLauncher = () => {
         <div className="absolute bottom-0 left-1/3 -mb-10 w-80 h-80 rounded-full bg-emerald-400/15 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/20 border border-amber-400/30">
-                Hệ Thống Quản Trị Nhân Sự & Đánh Giá Tín Nhiệm
-              </span>
-              <span className="text-emerald-200 text-xs hidden sm:inline">•</span>
-              <span className="text-xs text-emerald-100 hidden sm:inline">QTDND Yên Thọ</span>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white p-1.5 shadow-xl border-2 border-amber-400/80 shrink-0 flex items-center justify-center">
+              <img src="/logo.png" alt="Logo Quỹ TDND Yên Thọ" className="w-full h-full object-contain" />
             </div>
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/20 border border-amber-400/30">
+                  Hệ Thống Quản Trị Nhân Sự & Đánh Giá Tín Nhiệm
+                </span>
+                <span className="text-emerald-200 text-xs hidden sm:inline">•</span>
+                <span className="text-xs text-emerald-100 hidden sm:inline">QTDND Yên Thọ</span>
+              </div>
 
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Xin chào, đồng chí {currentUser?.name || 'Cán bộ Quỹ'}!
-            </h2>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                Xin chào, đồng chí {currentUser?.name || 'Cán bộ Quỹ'}!
+              </h2>
 
-            <p className="text-xs sm:text-sm text-emerald-100 max-w-2xl leading-relaxed">
-              Đồng chí đang đăng nhập với chức danh: <strong className="text-amber-300">{currentUser?.position}</strong> ({currentUser?.department}) • Vai trò hệ thống: <strong className="text-white">{ROLE_LABELS[role] || role}</strong>.
-            </p>
+              <p className="text-xs sm:text-sm text-emerald-100 max-w-2xl leading-relaxed">
+                Đồng chí đang đăng nhập với chức danh: <strong className="text-amber-300">{currentUser?.position}</strong> ({currentUser?.department}) • Vai trò hệ thống: <strong className="text-white">{ROLE_LABELS[role] || role}</strong>.
+              </p>
+            </div>
           </div>
 
           {/* Quick Stats Badges */}
