@@ -17,8 +17,8 @@ import {
   MapPin,
   Award
 } from 'lucide-react';
-import { DEPARTMENTS, ROLE_LABELS } from '../lib/constants';
-import { subscribeEmployees, subscribeWorkHistory } from '../lib/services';
+import { DEPARTMENTS as FALLBACK_DEPARTMENTS, ROLE_LABELS } from '../lib/constants';
+import { subscribeEmployees, subscribeWorkHistory, subscribeDepartments } from '../lib/services';
 import { formatDateVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
@@ -28,6 +28,7 @@ import Spinner from '../components/common/Spinner';
 
 const Employees = () => {
   const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
@@ -37,11 +38,21 @@ const Employees = () => {
   const [empWorkHistory, setEmpWorkHistory] = useState([]);
 
   useEffect(() => {
-    const unsub = subscribeEmployees((list) => {
+    const unsubEmp = subscribeEmployees((list) => {
       setEmployees(list || []);
       setLoading(false);
     });
-    return () => unsub();
+    const unsubDept = subscribeDepartments((list) => {
+      if (list && list.length > 0) {
+        setDepartments(list.map((d) => d.name));
+      } else {
+        setDepartments(FALLBACK_DEPARTMENTS);
+      }
+    });
+    return () => {
+      unsubEmp();
+      unsubDept();
+    };
   }, []);
 
   // Lắng nghe lịch sử luân chuyển khi mở modal cho 1 cán bộ
@@ -113,7 +124,7 @@ const Employees = () => {
               className="text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none"
             >
               <option value="ALL">Tất cả phòng ban</option>
-              {DEPARTMENTS.map((d) => (
+              {departments.map((d) => (
                 <option key={d} value={d}>
                   {d}
                 </option>

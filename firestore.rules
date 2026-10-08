@@ -175,5 +175,29 @@ service cloud.firestore {
       allow create, update: if isAuthenticated();
       allow delete: if isManagerOrChairman();
     }
+
+    // ===============================================================
+    // 11. Danh mục Phòng ban (departments)
+    // ===============================================================
+    match /departments/{deptId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 12. Danh mục Chức danh (positions)
+    // ===============================================================
+    match /positions/{posId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 13. Cấu hình Hệ thống & Tham số (system_settings)
+    // ===============================================================
+    match /system_settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isManagerOrChairman();
+    }
   }
 }

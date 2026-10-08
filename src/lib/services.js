@@ -514,3 +514,182 @@ export const subscribePlanningVotes = (callback) => {
     return () => {};
   }
 };
+
+// ============================================================================
+// 8. CẤU HÌNH PHÒNG BAN & CHỨC DANH (departments, positions)
+// ============================================================================
+export const subscribeDepartments = (callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+  try {
+    const q = query(collection(db, 'departments'), orderBy('order', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (err) => {
+        console.error('Lỗi onSnapshot departments:', err);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi subscribeDepartments:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const saveDepartment = async (deptData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const deptId = deptData.id || `dept-${Date.now()}`;
+  const payload = {
+    ...deptData,
+    id: deptId,
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(doc(db, 'departments', deptId), payload, { merge: true });
+  return { success: true, id: deptId };
+};
+
+export const deleteDepartment = async (deptId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await deleteDoc(doc(db, 'departments', deptId));
+  return { success: true };
+};
+
+export const subscribePositions = (callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+  try {
+    const q = query(collection(db, 'positions'), orderBy('order', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (err) => {
+        console.error('Lỗi onSnapshot positions:', err);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi subscribePositions:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const savePosition = async (posData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const posId = posData.id || `pos-${Date.now()}`;
+  const payload = {
+    ...posData,
+    id: posId,
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(doc(db, 'positions', posId), payload, { merge: true });
+  return { success: true, id: posId };
+};
+
+export const deletePosition = async (posId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await deleteDoc(doc(db, 'positions', posId));
+  return { success: true };
+};
+
+// ============================================================================
+// 9. CẤU HÌNH HỆ THỐNG & MODULES (system_settings, system_modules)
+// ============================================================================
+export const subscribeSystemSettings = (callback) => {
+  if (!db) {
+    callback(null);
+    return () => {};
+  }
+  try {
+    return onSnapshot(
+      doc(db, 'system_settings', 'general'),
+      (snap) => {
+        if (snap.exists()) {
+          callback(snap.data());
+        } else {
+          callback(null);
+        }
+      },
+      (err) => {
+        console.error('Lỗi onSnapshot system_settings:', err);
+        callback(null);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi subscribeSystemSettings:', err);
+    callback(null);
+    return () => {};
+  }
+};
+
+export const saveSystemSettings = async (settings) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await setDoc(doc(db, 'system_settings', 'general'), {
+    ...settings,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  return { success: true };
+};
+
+export const subscribeSystemModules = (callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+  try {
+    return onSnapshot(
+      collection(db, 'system_modules'),
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        callback(list);
+      },
+      (err) => {
+        console.error('Lỗi onSnapshot system_modules:', err);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi subscribeSystemModules:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const updateSystemModule = async (moduleCode, updateFields) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await setDoc(doc(db, 'system_modules', moduleCode), {
+    ...updateFields,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  return { success: true };
+};
+
+export const saveTrustCriterion = async (criterion) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const code = criterion.code || `TC${String(criterion.id || Date.now()).padStart(2, '0')}`;
+  const payload = {
+    ...criterion,
+    code,
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(doc(db, 'trust_criteria', code), payload, { merge: true });
+  return { success: true, code };
+};
+
+export const deleteTrustCriterion = async (code) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await deleteDoc(doc(db, 'trust_criteria', code));
+  return { success: true };
+};

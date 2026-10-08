@@ -17,7 +17,8 @@ import {
   Database,
   Calendar,
   Layers,
-  Info
+  Info,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -38,6 +39,7 @@ const ICON_MAP = {
   Clock,
   Coins,
   Award,
+  Settings,
 };
 
 const PortalLauncher = () => {

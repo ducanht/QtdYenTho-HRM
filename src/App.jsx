@@ -14,6 +14,7 @@ const TrustEvaluation = lazy(() => import('./pages/TrustEvaluation'));
 const KpiEvaluation = lazy(() => import('./pages/KpiEvaluation'));
 const PlanningVote = lazy(() => import('./pages/PlanningVote'));
 const Employees = lazy(() => import('./pages/Employees'));
+const AdminSettings = lazy(() => import('./pages/AdminSettings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading Fallback Component
@@ -72,8 +73,18 @@ function AppRoutes() {
           <Route
             path="dashboard"
             element={
-              <ProtectedRoute allowedRoles={['manager', 'chairman']}>
+              <ProtectedRoute allowedRoles={['manager', 'chairman', 'admin']}>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Module F: Cấu hình & Quản trị Hệ thống (Chỉ cho phép admin, chairman, manager) */}
+          <Route
+            path="admin-settings"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'chairman', 'manager']}>
+                <AdminSettings />
               </ProtectedRoute>
             }
           />

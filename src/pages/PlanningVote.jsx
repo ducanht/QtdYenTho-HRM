@@ -16,11 +16,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { PLANNING_POSITIONS } from '../lib/constants';
+import { PLANNING_POSITIONS as FALLBACK_PLANNING_POSITIONS } from '../lib/constants';
 import { 
   savePlanningVote, 
   subscribePlanningVotes, 
-  subscribeEmployees 
+  subscribeEmployees,
+  subscribeSystemSettings
 } from '../lib/services';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -35,6 +36,7 @@ const PlanningVote = () => {
 
   const [employees, setEmployees] = useState([]);
   const [votes, setVotes] = useState([]);
+  const [planningPositions, setPlanningPositions] = useState(FALLBACK_PLANNING_POSITIONS);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,7 +53,17 @@ const PlanningVote = () => {
     const unsubEmp = subscribeEmployees((list) => {
       if (list) setEmployees(list);
     });
-    return () => unsubEmp();
+    const unsubSettings = subscribeSystemSettings((settings) => {
+      if (settings?.planningPositions && settings.planningPositions.length > 0) {
+        setPlanningPositions(settings.planningPositions);
+      } else {
+        setPlanningPositions(FALLBACK_PLANNING_POSITIONS);
+      }
+    });
+    return () => {
+      unsubEmp();
+      unsubSettings();
+    };
   }, []);
 
   useEffect(() => {
@@ -236,7 +248,7 @@ const PlanningVote = () => {
 
                   {/* Quick Pill options */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {PLANNING_POSITIONS.slice(0, 5).map((pos) => (
+                    {planningPositions.slice(0, 6).map((pos) => (
                       <button
                         key={pos}
                         type="button"

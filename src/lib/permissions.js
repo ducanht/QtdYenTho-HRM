@@ -109,6 +109,19 @@ export const SYSTEM_MODULES = {
     badge: 'Sắp ra mắt',
     features: ['Chiến sĩ thi đua', 'Khen thưởng đột xuất', 'Kỷ luật lao động', 'Hồ sơ thi đua'],
   },
+  SETTINGS: {
+    code: 'MODULE_SETTINGS',
+    name: 'Cấu hình & Quản trị Hệ thống',
+    shortName: 'Cấu hình Quản trị',
+    category: 'Quản trị Hệ thống',
+    description: 'Thiết lập danh mục Phòng ban, Chức danh, Tiêu chí tín nhiệm, Tỷ trọng KPI, Tiêu chuẩn quy hoạch và Tham số các phân hệ.',
+    status: 'ACTIVE',
+    icon: 'Settings',
+    route: '/admin-settings',
+    color: 'slate',
+    badge: 'Ban Quản trị',
+    features: ['Phòng ban & Chức danh', 'Tiêu chí tín nhiệm', 'Tỷ trọng KPI 40-30-30', 'Bật/tắt phân hệ Feature Flags'],
+  },
 };
 
 // 2. DANH MỤC QUYỀN HẠN CHI TIẾT (GRANULAR PERMISSIONS)
@@ -231,6 +244,8 @@ export const canAccessModule = (userOrRole, moduleCode) => {
       return hasPermission(user, PERMISSIONS.PLANNING_VIEW);
     case SYSTEM_MODULES.HR.code:
       return hasPermission(user, PERMISSIONS.HR_VIEW);
+    case SYSTEM_MODULES.SETTINGS.code:
+      return hasPermission(user, PERMISSIONS.SYSTEM_CONFIG);
     default:
       return false;
   }

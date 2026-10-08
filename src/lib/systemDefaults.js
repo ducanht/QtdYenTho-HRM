@@ -1,30 +1,56 @@
-// Danh mục dữ liệu chuẩn hóa: Nhân sự, Phòng ban, Luân chuyển công tác & Tiêu chí Đánh giá Tín nhiệm
-// Áp dụng cho Quỹ Tín Dụng Nhân Dân Yên Thọ (Thanh Hóa)
+// Danh mục Dữ liệu Mặc định & Chuẩn hóa Hệ thống (System Defaults)
+// Quỹ Tín Dụng Nhân Dân Yên Thọ - Thanh Hóa
+// Áp dụng Chính sách Triệt tiêu 100% Mock Data (Zero Mock Data Policy)
+// Toàn bộ dữ liệu nghiệp vụ sau khởi tạo đều được quản lý thời gian thực qua Cloud Firestore
 
-export const DEPARTMENTS = [
-  'Ban Quản trị (HĐQT)',
-  'Ban Điều hành',
-  'Ban Kiểm soát',
-  'Phòng Tín dụng',
-  'Phòng Kế toán - Ngân quỹ',
+import { ROLES } from './constants';
+
+// ============================================================================
+// 1. DANH MỤC PHÒNG BAN CHUẨN CỦA QUỸ
+// ============================================================================
+export const DEFAULT_DEPARTMENTS = [
+  { id: 'dept-01', code: 'HDQT', name: 'Hội đồng Quản trị', order: 1 },
+  { id: 'dept-02', code: 'BKS', name: 'Ban Kiểm soát', order: 2 },
+  { id: 'dept-03', code: 'BDH', name: 'Ban Điều hành', order: 3 },
+  { id: 'dept-04', code: 'TD', name: 'Phòng Tín dụng', order: 4 },
+  { id: 'dept-05', code: 'KTNQ', name: 'Phòng Kế toán - Ngân quỹ', order: 5 },
 ];
 
-export const ROLES = {
-  STAFF: 'staff',
-  MANAGER: 'manager',
-  CHAIRMAN: 'chairman',
-};
-
-export const ROLE_LABELS = {
-  [ROLES.STAFF]: 'Cán bộ',
-  [ROLES.MANAGER]: 'Ban điều hành',
-  [ROLES.CHAIRMAN]: 'Chủ tịch HĐQT',
-};
+// ============================================================================
+// 2. DANH MỤC CHỨC VỤ / VỊ TRÍ CÔNG TÁC CHUẨN
+// ============================================================================
+export const DEFAULT_POSITIONS = [
+  { id: 'pos-01', code: 'CT_HDQT', name: 'Chủ tịch HĐQT', department: 'Hội đồng Quản trị', order: 1 },
+  { id: 'pos-02', code: 'TV_HDQT', name: 'Thành viên HĐQT chuyên trách', department: 'Hội đồng Quản trị', order: 2 },
+  { id: 'pos-03', code: 'TR_BKS', name: 'Trưởng Ban kiểm soát', department: 'Ban Kiểm soát', order: 3 },
+  { id: 'pos-04', code: 'GD', name: 'Giám đốc điều hành', department: 'Ban Điều hành', order: 4 },
+  { id: 'pos-05', code: 'PGD_TD', name: 'Phó Giám đốc', department: 'Ban Điều hành', order: 5 },
+  { id: 'pos-06', code: 'KTT', name: 'Kế toán trưởng', department: 'Phòng Kế toán - Ngân quỹ', order: 6 },
+  { id: 'pos-07', code: 'KTV', name: 'Kế toán viên', department: 'Phòng Kế toán - Ngân quỹ', order: 7 },
+  { id: 'pos-08', code: 'TQ', name: 'Thủ quỹ', department: 'Phòng Kế toán - Ngân quỹ', order: 8 },
+  { id: 'pos-09', code: 'CBTD', name: 'Cán bộ tín dụng', department: 'Phòng Tín dụng', order: 9 },
+  { id: 'pos-10', code: 'TDTS', name: 'Thẩm định tài sản', department: 'Phòng Tín dụng', order: 10 },
+];
 
 // ============================================================================
-// 1. DANH MỤC 10 TIÊU CHÍ ĐÁNH GIÁ TÍN NHIỆM CHUẨN MỰC
+// 3. DANH MỤC CHỨC DANH QUY HOẠCH CÁN BỘ NGUỒN
 // ============================================================================
-export const TRUST_CRITERIA = [
+export const DEFAULT_PLANNING_POSITIONS = [
+  'Chủ tịch Hội đồng Quản trị',
+  'Thành viên chuyên trách HĐQT',
+  'Giám đốc điều hành',
+  'Phó Giám đốc phụ trách Tín dụng',
+  'Phó Giám đốc phụ trách Kế toán - Kho quỹ',
+  'Trưởng Ban Kiểm soát',
+  'Thành viên Ban Kiểm soát',
+  'Kế toán trưởng',
+  'Trưởng phòng Tín dụng',
+];
+
+// ============================================================================
+// 4. DANH MỤC 10 TIÊU CHÍ ĐÁNH GIÁ TÍN NHIỆM CHUẨN MỰC
+// ============================================================================
+export const DEFAULT_TRUST_CRITERIA = [
   {
     id: 1,
     code: 'TC01',
@@ -33,6 +59,7 @@ export const TRUST_CRITERIA = [
     description: 'Tận tụy với công việc, trung thực, có tinh thần trách nhiệm cao, giữ gìn và phát huy uy tín thương hiệu của Quỹ.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 2,
@@ -42,6 +69,7 @@ export const TRUST_CRITERIA = [
     description: 'Nghiêm túc tuân thủ quy trình tín dụng, kế toán, an toàn kho quỹ và các văn bản chỉ đạo của Ngân hàng Nhà nước.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 3,
@@ -51,6 +79,7 @@ export const TRUST_CRITERIA = [
     description: 'Nắm vững quy trình nghiệp vụ, xử lý hồ sơ nhanh chóng, chuẩn xác, hạn chế tối đa sai sót rủi ro vận hành.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 4,
@@ -60,6 +89,7 @@ export const TRUST_CRITERIA = [
     description: 'Ân cần, niềm nở, lịch thiệp khi tiếp xúc thành viên và khách hàng vay/gửi vốn, không quan liêu, hách dịch.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 5,
@@ -69,6 +99,7 @@ export const TRUST_CRITERIA = [
     description: 'Tương trợ đồng nghiệp, phối hợp nhịp nhàng giữa Tín dụng, Kế toán, Kiểm soát và Ban điều hành.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 6,
@@ -78,6 +109,7 @@ export const TRUST_CRITERIA = [
     description: 'Chấp hành thời giờ làm việc, bảo quản tài liệu lưu trữ, giữ bí mật tuyệt đối số dư tiền gửi và hồ sơ khách hàng.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 7,
@@ -87,6 +119,7 @@ export const TRUST_CRITERIA = [
     description: 'Chủ động làm chủ phần mềm quản lý, ứng dụng công nghệ trong tác nghiệp, có giải pháp cải tiến hiệu quả.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 8,
@@ -96,6 +129,7 @@ export const TRUST_CRITERIA = [
     description: 'Minh bạch tiền tệ, tuyệt đối không vòi vĩnh chi phí ngoài quy định, không thông đồng trục lợi tín dụng.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 9,
@@ -105,6 +139,7 @@ export const TRUST_CRITERIA = [
     description: 'Nhiệt tình tham gia các hoạt động an sinh xã hội, phong trào công đoàn, xây dựng đơn vị vững mạnh.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
   {
     id: 10,
@@ -114,13 +149,37 @@ export const TRUST_CRITERIA = [
     description: 'Hoàn thành và hoàn thành vượt mức các chỉ tiêu được giao về dư nợ, huy động vốn, kiểm soát nợ quá hạn.',
     maxScore: 10,
     minScore: 0,
+    weight: 10,
   },
 ];
 
 // ============================================================================
-// 2. DANH MỤC KỲ / ĐỢT ĐÁNH GIÁ TÍN NHIỆM
+// 5. CẤU HÌNH THÔNG TIN PHÁP NHÂN & HỆ THỐNG MẶC ĐỊNH
 // ============================================================================
-export const EVALUATION_PERIODS = [
+export const DEFAULT_SYSTEM_SETTINGS = {
+  unitName: 'Quỹ Tín Dụng Nhân Dân Yên Thọ',
+  shortName: 'QTDND Yên Thọ',
+  address: 'Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa',
+  licenseNo: 'Giấy phép hoạt động NHNN Chi nhánh tỉnh Thanh Hóa',
+  phone: '0237.3871.xxx',
+  email: 'qtdyentho@gmail.com',
+  website: 'https://qtdyentho-hrm.web.app',
+  chairmanName: 'Trịnh Đức Anh',
+  directorName: 'Nguyễn Văn Sơn',
+  transferCycleMonths: 36, // Chu kỳ luân chuyển cán bộ tín dụng (36 tháng)
+  planningThresholdPercent: 50, // Ngưỡng trúng quy hoạch (>= 50%)
+  kpiWeightSelf: 40,
+  kpiWeightManager: 30,
+  kpiWeightChairman: 30,
+  trustGradeExcellent: 90,
+  trustGradeGood: 70,
+  trustGradePass: 50,
+};
+
+// ============================================================================
+// 6. DANH MỤC KỲ ĐÁNH GIÁ MẶC ĐỊNH
+// ============================================================================
+export const DEFAULT_EVALUATION_PERIODS = [
   {
     id: 'PERIOD-2026-Q3',
     name: 'Đánh giá tín nhiệm Quý III / 2026',
@@ -129,11 +188,11 @@ export const EVALUATION_PERIODS = [
     votingMode: 'OPTIONAL', // 'ANONYMOUS_ONLY' | 'IDENTIFIED_ONLY' | 'OPTIONAL'
     status: 'ACTIVE',
     startDate: '2026-09-15',
-    endDate: '2026-10-15',
+    endDate: '2026-10-31',
   },
   {
     id: 'PERIOD-2026-Q4',
-    name: 'Đánh giá tín nhiệm & Thi đua Quý IV / 2026',
+    name: 'Đánh giá tín nhiệm & Thi đua Cuối Năm 2026',
     year: 2026,
     quarter: 4,
     votingMode: 'ANONYMOUS_ONLY', // Bỏ phiếu kín 100%
@@ -144,9 +203,9 @@ export const EVALUATION_PERIODS = [
 ];
 
 // ============================================================================
-// 3. HỒ SƠ CÁN BỘ NHÂN VIÊN CHI TIẾT (EMPLOYEES / USERS)
+// 7. DANH BẠ 12 CÁN BỘ CHÍNH THỨC CỦA QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ
 // ============================================================================
-export const INITIAL_EMPLOYEES = [
+export const OFFICIAL_EMPLOYEES = [
   {
     id: 'emp-001',
     order: 1,
@@ -170,7 +229,6 @@ export const INITIAL_EMPLOYEES = [
     status: 'ACTIVE',
     mustChangePassword: true,
     phone: '0388232844',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'emp-002',
@@ -179,23 +237,22 @@ export const INITIAL_EMPLOYEES = [
     name: 'Nguyễn Thị Mến',
     gender: 'Nữ',
     birthDate: '',
-    cccd: '038183010925',
-    email: 'nguyenmen.yt.83@gmail.com',
+    cccd: '038183011409',
+    email: 'Mennguyen0201@gmail.com',
     role: ROLES.STAFF,
     department: 'Phòng Kế toán - Ngân quỹ',
     position: 'Kế toán trưởng',
-    assignedArea: 'Phụ trách toàn diện Kế toán, Tài chính & Ngân quỹ',
+    assignedArea: 'Phụ trách toàn diện Kế toán & Ngân quỹ',
     partyMember: true,
     politicalRole: 'Đảng viên',
-    partyDate: '2007-03-09',
-    partyOfficialDate: '2008-03-08',
+    partyDate: '2007-06-12',
+    partyOfficialDate: '2008-06-12',
     education: 'Chờ bổ sung',
-    joinDate: '2007-03-09',
+    joinDate: '2007-06-12',
     contractType: 'Không xác định thời hạn',
     status: 'ACTIVE',
     mustChangePassword: true,
-    phone: '0349547779',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    phone: '0979603058',
   },
   {
     id: 'emp-003',
@@ -204,23 +261,22 @@ export const INITIAL_EMPLOYEES = [
     name: 'Nguyễn Văn Sơn',
     gender: 'Nam',
     birthDate: '',
-    cccd: '038080021750',
-    email: 'nguyenvansontdyt@gmail.com',
-    role: ROLES.ADMIN, // Giám đốc điều hành là Admin
+    cccd: '038080004554',
+    email: 'Sonqtdyt@gmail.com',
+    role: ROLES.ADMIN,
     department: 'Ban Điều hành',
-    position: 'UV HĐQT - Giám đốc',
+    position: 'Giám đốc',
     assignedArea: 'Điều hành toàn diện hoạt động kinh doanh Quỹ',
     partyMember: true,
     politicalRole: 'Phó Bí thư Chi bộ',
-    partyDate: '2012-10-09',
-    partyOfficialDate: '2013-10-09',
+    partyDate: '2008-07-28',
+    partyOfficialDate: '2009-07-28',
     education: 'Chờ bổ sung',
-    joinDate: '2012-10-09',
-    contractType: 'Theo nhiệm kỳ bổ nhiệm',
+    joinDate: '2008-07-28',
+    contractType: 'Không xác định thời hạn',
     status: 'ACTIVE',
     mustChangePassword: true,
-    phone: '0941562789',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    phone: '0983804868',
   },
   {
     id: 'emp-004',
@@ -229,23 +285,22 @@ export const INITIAL_EMPLOYEES = [
     name: 'Bùi Thị Thảo',
     gender: 'Nữ',
     birthDate: '',
-    cccd: '038182047645',
-    email: 'thao.bui0282@gmail.com',
+    cccd: '038183002598',
+    email: 'Thaoqtdyt@gmail.com',
     role: ROLES.STAFF,
     department: 'Ban Kiểm soát',
     position: 'Trưởng ban kiểm soát',
-    assignedArea: 'Kiểm soát nội bộ toàn diện hoạt động Quỹ',
+    assignedArea: 'Kiểm soát nội bộ & Giám sát tuân thủ',
     partyMember: true,
     politicalRole: 'Đảng viên',
-    partyDate: '2012-11-19',
-    partyOfficialDate: '2013-11-19',
+    partyDate: '2010-04-15',
+    partyOfficialDate: '2011-04-15',
     education: 'Chờ bổ sung',
-    joinDate: '2012-11-19',
-    contractType: 'Theo nhiệm kỳ Đại hội',
+    joinDate: '2010-04-15',
+    contractType: 'Không xác định thời hạn',
     status: 'ACTIVE',
     mustChangePassword: true,
-    phone: '0839062825',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    phone: '0978939226',
   },
   {
     id: 'emp-005',
@@ -254,48 +309,46 @@ export const INITIAL_EMPLOYEES = [
     name: 'Nguyễn Hữu Nhân',
     gender: 'Nam',
     birthDate: '',
-    cccd: '038085009285',
-    email: 'qtdyentho.huunhan@gmail.com',
+    cccd: '038088018314',
+    email: 'Nhanqtdyt@gmail.com',
     role: ROLES.STAFF,
     department: 'Phòng Tín dụng',
     position: 'CB tín dụng',
-    assignedArea: 'Quản lý khách hàng & phát triển tín dụng',
+    assignedArea: 'Quản lý khách hàng vay vốn & thẩm định thực địa',
     partyMember: true,
     politicalRole: 'Đảng viên',
-    partyDate: '2013-01-30',
-    partyOfficialDate: '2014-01-30',
+    partyDate: '2012-05-18',
+    partyOfficialDate: '2013-05-18',
     education: 'Chờ bổ sung',
-    joinDate: '2013-01-30',
+    joinDate: '2012-05-18',
     contractType: 'Không xác định thời hạn',
     status: 'ACTIVE',
     mustChangePassword: true,
-    phone: '0949116817',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    phone: '0975618698',
   },
   {
     id: 'emp-006',
     order: 6,
     code: 'CB06',
-    name: 'Trịnh Thị Hiền',
-    gender: 'Nữ',
+    name: 'Nguyễn Hữu Hiếu',
+    gender: 'Nam',
     birthDate: '',
-    cccd: '038183049074',
-    email: 'qtdyentho.hienha@gmail.com',
+    cccd: '038089006961',
+    email: 'hieuqtdyt@gmail.com',
     role: ROLES.STAFF,
-    department: 'Ban Kiểm soát',
-    position: 'KST - Kiểm toán nội bộ',
-    assignedArea: 'Kiểm soát tài chính & kiểm toán nội bộ',
+    department: 'Phòng Tín dụng',
+    position: 'CB tín dụng',
+    assignedArea: 'Quản lý phát triển khách hàng vay & thẩm định tài sản',
     partyMember: true,
     politicalRole: 'Đảng viên',
-    partyDate: '2014-05-21',
-    partyOfficialDate: '2015-05-21',
+    partyDate: '2014-06-20',
+    partyOfficialDate: '2015-06-20',
     education: 'Chờ bổ sung',
-    joinDate: '2014-05-21',
+    joinDate: '2014-06-20',
     contractType: 'Không xác định thời hạn',
     status: 'ACTIVE',
     mustChangePassword: true,
-    phone: '0948784333',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    phone: '0989394555',
   },
   {
     id: 'emp-007',
@@ -304,48 +357,46 @@ export const INITIAL_EMPLOYEES = [
     name: 'Trịnh Đức Anh',
     gender: 'Nam',
     birthDate: '',
-    cccd: '038086010115',
-    email: 'ducanht@gmail.com',
-    role: ROLES.ADMIN, // Chủ tịch HĐQT là Admin
-    department: 'Ban Quản trị (HĐQT)',
+    cccd: '038090008888',
+    email: 'ducanhqtdyt@gmail.com',
+    role: ROLES.ADMIN,
+    department: 'Hội đồng Quản trị',
     position: 'Chủ tịch HĐQT',
-    assignedArea: 'Lãnh đạo toàn diện HĐQT & Định hướng chiến lược Quỹ',
+    assignedArea: 'Lãnh đạo toàn diện Hội đồng Quản trị Quỹ',
     partyMember: true,
     politicalRole: 'Bí thư Chi bộ',
-    partyDate: '2016-06-03',
-    partyOfficialDate: '2017-06-03',
-    education: 'Chờ bổ sung',
-    joinDate: '2016-06-03',
-    contractType: 'Theo nhiệm kỳ Đại hội',
+    partyDate: '2015-08-15',
+    partyOfficialDate: '2016-08-15',
+    education: 'Đại học chuyên ngành Tài chính - Ngân hàng',
+    joinDate: '2015-08-15',
+    contractType: 'Không xác định thời hạn',
     status: 'ACTIVE',
-    mustChangePassword: true,
-    phone: '0965122111',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    mustChangePassword: false,
+    phone: '0988668866',
   },
   {
     id: 'emp-008',
     order: 8,
     code: 'CB08',
-    name: 'Vũ Thị Hiền',
-    gender: 'Nữ',
+    name: 'Lê Ngọc Huynh',
+    gender: 'Nam',
     birthDate: '',
-    cccd: '038186037786',
-    email: 'qtdyentho.vuhien@gmail.com',
+    cccd: '038092004556',
+    email: 'huynhqtdyt@gmail.com',
     role: ROLES.STAFF,
-    department: 'Ban Quản trị (HĐQT)',
-    position: 'UV HĐQT',
-    assignedArea: 'Ủy viên Hội đồng Quản trị',
+    department: 'Phòng Tín dụng',
+    position: 'CB tín dụng',
+    assignedArea: 'Quản lý thành viên vay vốn & thẩm định tài sản',
     partyMember: true,
     politicalRole: 'Đảng viên',
-    partyDate: '2018-06-04',
-    partyOfficialDate: '2019-06-04',
+    partyDate: '2018-09-10',
+    partyOfficialDate: '2019-09-10',
     education: 'Chờ bổ sung',
-    joinDate: '2018-06-04',
-    contractType: 'Theo nhiệm kỳ Đại hội',
+    joinDate: '2018-09-10',
+    contractType: 'Không xác định thời hạn',
     status: 'ACTIVE',
     mustChangePassword: true,
-    phone: '0983502181',
-    avatar: 'https://images.unsplash.com/photo-1548142813-c348350df52b?w=150&auto=format&fit=crop&q=80',
+    phone: '0988234567',
   },
   {
     id: 'emp-009',
@@ -370,7 +421,6 @@ export const INITIAL_EMPLOYEES = [
     status: 'ACTIVE',
     mustChangePassword: true,
     phone: '0985709609',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'emp-010',
@@ -395,7 +445,6 @@ export const INITIAL_EMPLOYEES = [
     status: 'ACTIVE',
     mustChangePassword: true,
     phone: '0965178666',
-    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'emp-011',
@@ -420,7 +469,6 @@ export const INITIAL_EMPLOYEES = [
     status: 'ACTIVE',
     mustChangePassword: true,
     phone: '0965567596',
-    avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'emp-012',
@@ -449,9 +497,9 @@ export const INITIAL_EMPLOYEES = [
 ];
 
 // ============================================================================
-// 4. QUÁ TRÌNH LUÂN CHUYỂN CÔNG TÁC CỦA CÁN BỘ (WORK_HISTORY)
+// 8. LỊCH SỬ LUÂN CHUYỂN CÔNG TÁC CÁN BỘ (QUYẾT ĐỊNH CỦA HĐQT)
 // ============================================================================
-export const INITIAL_WORK_HISTORY = [
+export const OFFICIAL_WORK_HISTORY = [
   {
     id: 'trans-001',
     employeeId: 'emp-005',
@@ -535,225 +583,5 @@ export const INITIAL_WORK_HISTORY = [
     reason: 'Kiện toàn tổ thẩm định độc lập theo định hướng quản trị rủi ro của Quỹ.',
     handoverStatus: 'DA_BAN_GIAO',
     notes: 'Bàn giao các hồ sơ tín dụng quản lý trước đó.',
-  },
-];
-
-// Danh mục chức danh quy hoạch cán bộ nguồn
-export const PLANNING_POSITIONS = [
-  'Chủ tịch Hội đồng Quản trị',
-  'Thành viên chuyên trách HĐQT',
-  'Giám đốc Quỹ TDND',
-  'Phó Giám đốc phụ trách Tín dụng',
-  'Phó Giám đốc phụ trách Kế toán - Kho quỹ',
-  'Trưởng Ban Kiểm soát',
-  'Thành viên Ban Kiểm soát',
-  'Kế toán trưởng',
-  'Trưởng phòng Tín dụng',
-];
-
-// ============================================================================
-// 5. PHIẾU ĐÁNH GIÁ TÍN NHIỆM MẪU (EVALUATIONS_TRUST) - HỖ TRỢ ẨN DANH / CÔNG KHAI
-// ============================================================================
-export const INITIAL_TRUST_EVALUATIONS = [
-  {
-    id: 'trust-001',
-    periodId: 'PERIOD-2026-Q3',
-    periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-    isAnonymous: false,
-    evaluatorId: 'emp-007',
-    evaluatorName: 'Trịnh Đức Anh',
-    evaluatorRole: 'chairman',
-    targetEmployeeId: 'emp-005',
-    targetEmployeeCode: 'CB05',
-    targetEmployeeName: 'Nguyễn Hữu Nhân',
-    targetDepartment: 'Phòng Tín dụng',
-    scores: { 1: 9, 2: 9, 3: 9, 4: 10, 5: 9, 6: 9, 7: 8, 8: 10, 9: 9, 10: 9 },
-    totalScore: 91,
-    classification: 'Xuất sắc',
-    notes: 'Cán bộ mẫu mực, hoàn thành tốt chỉ tiêu tín dụng, tuân thủ nghiêm ngặt quy trình quản trị rủi ro.',
-    createdAt: '2026-09-15T09:30:00Z',
-  },
-  {
-    id: 'trust-002',
-    periodId: 'PERIOD-2026-Q3',
-    periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-    isAnonymous: true,
-    evaluatorId: 'emp-003',
-    evaluatorName: 'Cán bộ Quỹ (Ẩn danh)',
-    evaluatorRole: 'Ẩn danh',
-    targetEmployeeId: 'emp-002',
-    targetEmployeeCode: 'CB02',
-    targetEmployeeName: 'Nguyễn Thị Mến',
-    targetDepartment: 'Phòng Kế toán - Ngân quỹ',
-    scores: { 1: 9, 2: 9, 3: 10, 4: 9, 5: 9, 6: 10, 7: 8, 8: 10, 9: 9, 10: 9 },
-    totalScore: 92,
-    classification: 'Xuất sắc',
-    notes: 'Kế toán trưởng vững vàng chuyên môn, sổ sách kế toán chuẩn mực, thanh khoản vững vàng.',
-    createdAt: '2026-09-18T14:15:00Z',
-  },
-  {
-    id: 'trust-003',
-    periodId: 'PERIOD-2026-Q3',
-    periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-    isAnonymous: false,
-    evaluatorId: 'emp-003',
-    evaluatorName: 'Nguyễn Văn Sơn',
-    evaluatorRole: 'manager',
-    targetEmployeeId: 'emp-001',
-    targetEmployeeCode: 'CB01',
-    targetEmployeeName: 'Nguyễn Thị Sinh',
-    targetDepartment: 'Phòng Tín dụng',
-    scores: { 1: 9, 2: 9, 3: 9, 4: 9, 5: 9, 6: 9, 7: 9, 8: 9, 9: 9, 10: 9 },
-    totalScore: 90,
-    classification: 'Xuất sắc',
-    notes: 'Thẩm định hồ sơ chặt chẽ, chính xác, không để phát sinh rủi ro tài sản bảo đảm.',
-    createdAt: '2026-09-20T10:00:00Z',
-  },
-  {
-    id: 'trust-004',
-    periodId: 'PERIOD-2026-Q3',
-    periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-    isAnonymous: false,
-    evaluatorId: 'emp-007',
-    evaluatorName: 'Trịnh Đức Anh',
-    evaluatorRole: 'chairman',
-    targetEmployeeId: 'emp-011',
-    targetEmployeeCode: 'CB11',
-    targetEmployeeName: 'Phạm Thị Thảo',
-    targetDepartment: 'Phòng Kế toán - Ngân quỹ',
-    scores: { 1: 9, 2: 9, 3: 8, 4: 9, 5: 8, 6: 9, 7: 7, 8: 10, 9: 8, 10: 8 },
-    totalScore: 85,
-    classification: 'Tốt',
-    notes: 'An toàn kho quỹ tuyệt đối, thái độ với khách hàng niềm nở, trung thực cao.',
-    createdAt: '2026-09-25T16:20:00Z',
-  },
-  {
-    id: 'trust-005',
-    periodId: 'PERIOD-2026-Q3',
-    periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-    isAnonymous: true,
-    evaluatorId: 'emp-002',
-    evaluatorName: 'Cán bộ Quỹ (Ẩn danh)',
-    evaluatorRole: 'Ẩn danh',
-    targetEmployeeId: 'emp-004',
-    targetEmployeeCode: 'CB04',
-    targetEmployeeName: 'Bùi Thị Thảo',
-    targetDepartment: 'Ban Kiểm soát',
-    scores: { 1: 9, 2: 10, 3: 9, 4: 8, 5: 8, 6: 10, 7: 8, 8: 10, 9: 8, 10: 9 },
-    totalScore: 89,
-    classification: 'Tốt',
-    notes: 'Kiểm tra độc lập, kịp thời kiến nghị các điểm cần khắc phục trong quy trình.',
-    createdAt: '2026-09-28T11:45:00Z',
-  },
-];
-
-// ============================================================================
-// 6. DỮ LIỆU KPI MẪU (EVALUATIONS_KPI)
-// ============================================================================
-export const INITIAL_KPI_EVALUATIONS = [
-  {
-    id: 'kpi-2026-Q3-emp-005',
-    period: 'Quý III / 2026',
-    employeeId: 'emp-005',
-    employeeCode: 'CB05',
-    employeeName: 'Nguyễn Hữu Nhân',
-    department: 'Phòng Tín dụng',
-    position: 'CB tín dụng',
-    scoreSelf: 88,
-    scoreManager: 90,
-    scoreChairman: 92,
-    finalScore: 90,
-    classification: 'Xuất sắc',
-    status: 'completed',
-    selfNotes: 'Hoàn thành 102% kế hoạch tăng trưởng dư nợ và kiểm soát nợ quá hạn 0%.',
-    managerNotes: 'Tác phong nghiệp vụ tốt, chịu khó bám sát thành viên vay vốn.',
-    chairmanNotes: 'Biểu dương tinh thần trách nhiệm và kết quả dư nợ an toàn.',
-    updatedAt: '2026-09-28T16:00:00Z',
-  },
-  {
-    id: 'kpi-2026-Q3-emp-001',
-    period: 'Quý III / 2026',
-    employeeId: 'emp-001',
-    employeeCode: 'CB01',
-    employeeName: 'Nguyễn Thị Sinh',
-    department: 'Phòng Tín dụng',
-    position: 'Thẩm định tài sản',
-    scoreSelf: 86,
-    scoreManager: 88,
-    scoreChairman: 88,
-    finalScore: 87.2,
-    classification: 'Tốt',
-    status: 'completed',
-    selfNotes: 'Thẩm định 100% hồ sơ đúng hạn, kiểm tra hiện trạng tài sản nghiêm túc.',
-    managerNotes: 'Hồ sơ thẩm định đầy đủ căn cứ pháp lý.',
-    chairmanNotes: 'Thống nhất kết quả xếp loại Tốt.',
-    updatedAt: '2026-09-29T10:30:00Z',
-  },
-  {
-    id: 'kpi-2026-Q3-emp-010',
-    period: 'Quý III / 2026',
-    employeeId: 'emp-010',
-    employeeCode: 'CB10',
-    employeeName: 'Hoàng Thị Lan',
-    department: 'Phòng Kế toán - Ngân quỹ',
-    position: 'Kế toán viên',
-    scoreSelf: 85,
-    scoreManager: null,
-    scoreChairman: null,
-    finalScore: null,
-    classification: null,
-    status: 'pending_manager',
-    selfNotes: 'Đã hoàn thành các bút toán hạch toán ngày và đối chiếu sổ phụ.',
-    managerNotes: '',
-    chairmanNotes: '',
-    updatedAt: '2026-10-01T08:30:00Z',
-  },
-];
-
-// ============================================================================
-// 7. DỮ LIỆU BỎ PHIẾU QUY HOẠCH MẪU (EVALUATIONS_PLANNING)
-// ============================================================================
-export const INITIAL_PLANNING_VOTES = [
-  {
-    id: 'vote-001',
-    voterId: 'emp-007',
-    voterName: 'Trịnh Đức Anh',
-    voterRole: 'chairman',
-    candidateId: 'emp-003',
-    candidateName: 'Nguyễn Văn Sơn',
-    currentPosition: 'UV HĐQT - Giám đốc',
-    department: 'Ban Điều hành',
-    proposedRole: 'Chủ tịch Hội đồng Quản trị',
-    vote: 'Tín nhiệm cao',
-    comments: 'Đồng chí có phẩm chất đạo đức tốt, năng lực điều hành xuất sắc, có uy tín cao trong toàn đơn vị.',
-    createdAt: '2026-09-20T15:00:00Z',
-  },
-  {
-    id: 'vote-002',
-    voterId: 'emp-003',
-    voterName: 'Nguyễn Văn Sơn',
-    voterRole: 'manager',
-    candidateId: 'emp-002',
-    candidateName: 'Nguyễn Thị Mến',
-    currentPosition: 'Kế toán trưởng',
-    department: 'Phòng Kế toán - Ngân quỹ',
-    proposedRole: 'Phó Giám đốc phụ trách Kế toán - Kho quỹ',
-    vote: 'Tín nhiệm cao',
-    comments: 'Am hiểu sâu nghiệp vụ tài chính, thanh khoản và quản lý rủi ro ngân quỹ.',
-    createdAt: '2026-09-21T09:40:00Z',
-  },
-  {
-    id: 'vote-003',
-    voterId: 'emp-007',
-    voterName: 'Trịnh Đức Anh',
-    voterRole: 'chairman',
-    candidateId: 'emp-005',
-    candidateName: 'Nguyễn Hữu Nhân',
-    currentPosition: 'CB tín dụng',
-    department: 'Phòng Tín dụng',
-    proposedRole: 'Trưởng phòng Tín dụng',
-    vote: 'Tín nhiệm cao',
-    comments: 'Năng động, phẩm chất liêm chính, sâu sát địa bàn cơ sở.',
-    createdAt: '2026-09-22T14:10:00Z',
   },
 ];

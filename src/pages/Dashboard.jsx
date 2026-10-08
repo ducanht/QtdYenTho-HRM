@@ -33,9 +33,10 @@ import {
   subscribeTrustEvaluations, 
   subscribeKpiEvaluations, 
   subscribePlanningVotes,
-  subscribeEmployees
+  subscribeEmployees,
+  subscribeDepartments
 } from '../lib/services';
-import { DEPARTMENTS } from '../lib/constants';
+import { DEPARTMENTS as FALLBACK_DEPARTMENTS } from '../lib/constants';
 import { formatDateVN, formatDateTimeVN } from '../lib/dateUtils';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
@@ -49,6 +50,7 @@ const Dashboard = () => {
   const [kpiData, setKpiData] = useState([]);
   const [planningData, setPlanningData] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Subscribe real-time onSnapshot to all Firestore collections
@@ -57,7 +59,7 @@ const Dashboard = () => {
     let countLoaded = 0;
     const checkLoaded = () => {
       countLoaded += 1;
-      if (countLoaded >= 4) setLoading(false);
+      if (countLoaded >= 5) setLoading(false);
     };
 
     const unsubTrust = subscribeTrustEvaluations((data) => {
@@ -80,11 +82,21 @@ const Dashboard = () => {
       checkLoaded();
     });
 
+    const unsubDept = subscribeDepartments((list) => {
+      if (list && list.length > 0) {
+        setDepartments(list.map((d) => d.name));
+      } else {
+        setDepartments(FALLBACK_DEPARTMENTS);
+      }
+      checkLoaded();
+    });
+
     return () => {
       unsubTrust();
       unsubKpi();
       unsubPlanning();
       unsubEmp();
+      unsubDept();
     };
   }, []);
 
@@ -150,7 +162,8 @@ const Dashboard = () => {
   const departmentKpiBarData = useMemo(() => {
     const deptScores = {};
 
-    DEPARTMENTS.forEach((dept) => {
+    const targetDepts = departments.length > 0 ? departments : FALLBACK_DEPARTMENTS;
+    targetDepts.forEach((dept) => {
       deptScores[dept] = { total: 0, count: 0 };
     });
 
@@ -186,7 +199,7 @@ const Dashboard = () => {
         };
       })
       .filter((d) => d['Điểm KPI'] > 0);
-  }, [kpiData]);
+  }, [kpiData, departments]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
