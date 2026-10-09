@@ -886,6 +886,108 @@ const TrustEvaluationContainer = () => {
     }
   };
 
+  // Dữ liệu bảng xếp hạng thực tế của đợt hiện hành phục vụ In A4 & Xuất báo cáo (Zero Mock Data)
+  const fallbackRealLeaderboard = useMemo(() => {
+    if (!currentPeriod || !employees.length) return [];
+
+    const targetIds = currentPeriodConfig?.targetEmployeeIds || currentPeriod.targetEmployeeIds;
+    const targetEmployees = getEligibleTargetEmployees(employees, targetIds);
+
+    const empStatsMap = {};
+    targetEmployees.forEach((emp) => {
+      empStatsMap[emp.id] = {
+        employee: emp,
+        totalScoreSum: 0,
+        count: 0,
+        critSums: {},
+        critCounts: {},
+        votes: [],
+      };
+    });
+
+    evaluations
+      .filter((ev) => ev.periodId === currentPeriod.id && !ev.isDraft)
+      .forEach((ev) => {
+        if (empStatsMap[ev.targetEmployeeId]) {
+          const score = ev.totalScore !== undefined ? Number(ev.totalScore) : 0;
+          empStatsMap[ev.targetEmployeeId].totalScoreSum += score;
+          empStatsMap[ev.targetEmployeeId].count += 1;
+          empStatsMap[ev.targetEmployeeId].votes.push(ev);
+
+          if (ev.scores && typeof ev.scores === 'object') {
+            Object.entries(ev.scores).forEach(([critId, cScore]) => {
+              const num = Number(cScore) || 0;
+              empStatsMap[ev.targetEmployeeId].critSums[critId] =
+                (empStatsMap[ev.targetEmployeeId].critSums[critId] || 0) + num;
+              empStatsMap[ev.targetEmployeeId].critCounts[critId] =
+                (empStatsMap[ev.targetEmployeeId].critCounts[critId] || 0) + 1;
+            });
+          }
+        }
+      });
+
+    const effectiveThresholds = currentPeriodConfig?.excellentThreshold !== undefined
+      ? {
+          excellent: currentPeriodConfig.excellentThreshold,
+          excellentMinCrit: currentPeriodConfig.excellentMinCrit ?? 7,
+          good: currentPeriodConfig.goodThreshold ?? 70,
+          goodMinCrit: currentPeriodConfig.goodMinCrit ?? 5,
+          pass: currentPeriodConfig.passThreshold ?? 50,
+          weakVotesThresholdPercent: currentPeriodConfig.weakVotesThresholdPercent ?? 50,
+        }
+      : currentPeriod?.thresholds;
+
+    const list = Object.values(empStatsMap).map((item) => {
+      const count = item.count;
+      const avgScore100 = count > 0 ? Number((item.totalScoreSum / count).toFixed(1)) : 0;
+      const avgScore10 = Number((avgScore100 / (activeCriteria.length || 10)).toFixed(1));
+
+      const critAverages = activeCriteria.map((c) => {
+        const cCnt = item.critCounts[c.id] || 0;
+        return cCnt > 0 ? Number((item.critSums[c.id] / cCnt).toFixed(1)) : 0;
+      });
+
+      const classification = classifyTrustScore(avgScore100, {
+        critAverages,
+        votes: item.votes,
+        thresholds: effectiveThresholds,
+        evaluationsCount: count,
+        votesCount: count,
+      });
+
+      return {
+        id: item.employee.id,
+        name: item.employee.name,
+        code: item.employee.code,
+        department: item.employee.department,
+        position: item.employee.position,
+        evaluationsCount: count,
+        avgScore100,
+        avgScore10,
+        classification,
+      };
+    });
+
+    list.sort((a, b) => {
+      if (a.evaluationsCount === 0 && b.evaluationsCount > 0) return 1;
+      if (a.evaluationsCount > 0 && b.evaluationsCount === 0) return -1;
+      return b.avgScore100 - a.avgScore100;
+    });
+
+    return list;
+  }, [currentPeriod, currentPeriodConfig, employees, evaluations, activeCriteria]);
+
+  const [printModalData, setPrintModalData] = useState(null);
+
+  const handleOpenPrintModal = useCallback((data) => {
+    if (Array.isArray(data) && data.length > 0) {
+      setPrintModalData({ periodId: selectedPeriodId, data });
+    } else {
+      setPrintModalData(null);
+    }
+    setIsPrintModalOpen(true);
+  }, [selectedPeriodId]);
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-200">
       {/* 1. Thanh Menu Tab tinh gọn chuyển nhanh trên Desktop / iPad (Không còn Header rườm rà) */}
@@ -1153,7 +1255,7 @@ const TrustEvaluationContainer = () => {
               periodConfig={currentPeriodConfig}
               criteria={activeCriteria}
               isAdmin={canManagePeriods}
-              onOpenPrintModal={() => setIsPrintModalOpen(true)}
+              onOpenPrintModal={handleOpenPrintModal}
             />
           </div>
         </div>
@@ -1207,17 +1309,12 @@ const TrustEvaluationContainer = () => {
       <TrustA4PrintModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
-        currentPeriod={currentPeriod}
-        leaderboard={evaluatableEmployees.map((emp) => {
-          return {
-            id: emp.id,
-            name: emp.name,
-            position: emp.position,
-            department: emp.department,
-            avgScore: 8.5,
-            classification: 'Tốt',
-          };
-        })}
+        currentPeriod={effectivePeriod}
+        leaderboard={
+          printModalData?.periodId === currentPeriod?.id && printModalData.data?.length > 0
+            ? printModalData.data
+            : fallbackRealLeaderboard
+        }
       />
 
       {/* Modal bảo mật xác nhận xóa đợt đánh giá (Bắt buộc nhập mật khẩu quản trị) */}

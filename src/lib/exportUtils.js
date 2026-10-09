@@ -443,14 +443,27 @@ export const exportToPdfFromElement = async (
     const html2canvas = html2canvasModule.default || html2canvasModule;
     const { jsPDF } = jsPDFModule;
 
-    // Chụp lại toàn bộ phần tử với độ nét cao 2x
+    // 1. Chờ nạp xong toàn bộ fonts hệ thống và web fonts để chống lỗi vỡ chữ tiếng Việt
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
+    // 2. Chụp lại toàn bộ phần tử với độ nét cao 2x
     const canvas = await html2canvas(targetElement, {
-      scale,
+      scale: scale || 2,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
-      windowWidth: targetElement.scrollWidth,
-      windowHeight: targetElement.scrollHeight,
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      windowWidth: targetElement.scrollWidth || 1024,
+      onclone: (clonedDoc) => {
+        const id = typeof elementOrId === 'string' ? elementOrId : targetElement.id;
+        const clonedEl = id ? clonedDoc.getElementById(id) : null;
+        if (clonedEl) {
+          clonedEl.style.fontFamily = '"Times New Roman", "Be Vietnam Pro", serif';
+        }
+      },
     });
 
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -517,14 +530,28 @@ export const exportToPng = async (
       throw new Error(`Không tìm thấy phần tử HTML để chụp ảnh: ${elementOrId}`);
     }
 
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
     const html2canvasModule = await import('html2canvas');
     const html2canvas = html2canvasModule.default || html2canvasModule;
 
     const canvas = await html2canvas(targetElement, {
-      scale,
+      scale: scale || 2,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      windowWidth: targetElement.scrollWidth || 1024,
+      onclone: (clonedDoc) => {
+        const id = typeof elementOrId === 'string' ? elementOrId : targetElement.id;
+        const clonedEl = id ? clonedDoc.getElementById(id) : null;
+        if (clonedEl) {
+          clonedEl.style.fontFamily = '"Times New Roman", "Be Vietnam Pro", serif';
+        }
+      },
     });
 
     canvas.toBlob((blob) => {

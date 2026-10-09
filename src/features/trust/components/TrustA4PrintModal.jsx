@@ -62,16 +62,25 @@ const TrustA4PrintModal = ({
   const handleExportWord = async () => {
     setExportingType('word');
     try {
-      const headers = ['STT', 'Họ và tên cán bộ', 'Chức vụ', 'Phòng ban', 'Điểm TB (10)', 'Điểm (100)', 'Xếp loại'];
-      const rows = leaderboard.map((item, idx) => [
-        idx + 1,
-        item.name || '',
-        item.position || 'Cán bộ',
-        item.department || '',
-        item.avgScore10 || item.avgScore || 0,
-        `${item.avgScore100 || (Number(item.avgScore || 0) * 10).toFixed(0)} đ`,
-        item.classification?.label || item.classification || 'Hoàn thành',
-      ]);
+      const headers = ['STT', 'Họ và tên cán bộ', 'Chức vụ', 'Phòng ban', 'Số phiếu', 'Điểm TB (10)', 'Điểm (100)', 'Xếp loại'];
+      const rows = leaderboard.map((item, idx) => {
+        const count = item.evaluationsCount !== undefined ? item.evaluationsCount : (item.count || 0);
+        const hasVotes = count > 0;
+        const score10 = hasVotes ? (item.avgScore10 !== undefined ? item.avgScore10 : (item.avgScore || 0)) : '—';
+        const score100 = hasVotes ? `${item.avgScore100 || (Number(item.avgScore || 0) * 10).toFixed(0)} đ` : '—';
+        const classificationLabel = hasVotes ? (item.classification?.label || item.classification || 'Hoàn thành') : 'Chưa hoàn thành';
+
+        return [
+          idx + 1,
+          item.name || '',
+          item.position || 'Cán bộ',
+          item.department || '',
+          count,
+          score10,
+          score100,
+          classificationLabel,
+        ];
+      });
 
       await exportToWord({
         filename: `Bien_Ban_Tin_Nhiem_${periodNameClean}.docx`,
@@ -100,17 +109,25 @@ const TrustA4PrintModal = ({
     setExportingType('excel');
     try {
       const headers = ['STT', 'Họ và tên cán bộ', 'Chức danh', 'Phòng ban', 'Số phiếu nhận', 'Điểm TB (10)', 'Điểm (100)', 'Xếp loại', 'Ghi chú khống chế'];
-      const rows = leaderboard.map((item, idx) => [
-        idx + 1,
-        item.name || '',
-        item.position || 'Cán bộ',
-        item.department || '',
-        item.evaluationsCount || 0,
-        item.avgScore10 || item.avgScore || 0,
-        item.avgScore100 || 0,
-        item.classification?.label || item.classification || 'Hoàn thành',
-        item.classification?.downgradeReason || '',
-      ]);
+      const rows = leaderboard.map((item, idx) => {
+        const count = item.evaluationsCount !== undefined ? item.evaluationsCount : (item.count || 0);
+        const hasVotes = count > 0;
+        const score10 = hasVotes ? (item.avgScore10 !== undefined ? item.avgScore10 : (item.avgScore || 0)) : '';
+        const score100 = hasVotes ? (item.avgScore100 || 0) : '';
+        const classificationLabel = hasVotes ? (item.classification?.label || item.classification || 'Hoàn thành') : 'Chưa hoàn thành';
+
+        return [
+          idx + 1,
+          item.name || '',
+          item.position || 'Cán bộ',
+          item.department || '',
+          count,
+          score10,
+          score100,
+          classificationLabel,
+          item.classification?.downgradeReason || '',
+        ];
+      });
 
       await exportToExcel({
         filename: `Ket_Qua_Tin_Nhiem_${periodNameClean}.xlsx`,
@@ -244,6 +261,7 @@ const TrustA4PrintModal = ({
       {/* Vùng in A4 có ID phục vụ xuất PDF & PNG chuẩn xác 100% */}
       <div 
         id="trust-a4-document-container"
+        style={{ fontFamily: '"Times New Roman", "Be Vietnam Pro", serif' }}
         className="p-8 sm:p-10 bg-white text-slate-900 space-y-6 font-serif border border-slate-200 rounded-xl shadow-xs print:m-0 print:border-none print:shadow-none print:p-0"
       >
         {/* Header Quốc hiệu & Đơn vị chuẩn thể thức văn bản hành chính */}
@@ -280,41 +298,53 @@ const TrustA4PrintModal = ({
               <th className="border border-slate-400 p-2">Họ và tên cán bộ</th>
               <th className="border border-slate-400 p-2">Chức vụ</th>
               <th className="border border-slate-400 p-2">Phòng ban</th>
+              <th className="border border-slate-400 p-2 w-16">Số phiếu</th>
               <th className="border border-slate-400 p-2 w-20">Điểm TB (10)</th>
               <th className="border border-slate-400 p-2 w-20">Điểm (100)</th>
-              <th className="border border-slate-400 p-2 w-28">Xếp loại</th>
+              <th className="border border-slate-400 p-2 w-32">Xếp loại</th>
             </tr>
           </thead>
           <tbody>
             {leaderboard.length === 0 ? (
               <tr>
-                <td colSpan={7} className="border border-slate-400 p-4 text-center text-slate-400">
+                <td colSpan={8} className="border border-slate-400 p-4 text-center text-slate-400">
                   Chưa có dữ liệu tổng hợp
                 </td>
               </tr>
             ) : (
-              leaderboard.map((item, idx) => (
-                <tr key={item.id || idx} className="hover:bg-slate-50/50">
-                  <td className="border border-slate-400 p-2 text-center font-semibold">{idx + 1}</td>
-                  <td className="border border-slate-400 p-2 font-bold text-slate-900">{item.name}</td>
-                  <td className="border border-slate-400 p-2 text-slate-700">{item.position || 'Cán bộ'}</td>
-                  <td className="border border-slate-400 p-2 text-slate-700">{item.department || ''}</td>
-                  <td className="border border-slate-400 p-2 text-center font-bold text-[#0f766e]">
-                    {item.avgScore10 || item.avgScore || 0}
-                  </td>
-                  <td className="border border-slate-400 p-2 text-center font-bold text-slate-900">
-                    {item.avgScore100 || (Number(item.avgScore || 0) * 10).toFixed(0)} đ
-                  </td>
-                  <td className="border border-slate-400 p-2 text-center font-medium">
-                    <div>{item.classification?.label || item.classification}</div>
-                    {item.classification?.downgradeReason && (
-                      <div className="text-[9px] text-amber-800 italic">
-                        ({item.classification.downgradeReason})
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+              leaderboard.map((item, idx) => {
+                const count = item.evaluationsCount !== undefined ? item.evaluationsCount : (item.count || 0);
+                const hasVotes = count > 0;
+                const score10 = hasVotes ? (item.avgScore10 !== undefined ? item.avgScore10 : (item.avgScore || 0)) : '—';
+                const score100 = hasVotes ? (item.avgScore100 !== undefined ? `${item.avgScore100} đ` : `${(Number(item.avgScore || 0) * 10).toFixed(0)} đ`) : '—';
+                const classificationLabel = hasVotes
+                  ? (item.classification?.label || item.classification || 'Hoàn thành')
+                  : 'Chưa hoàn thành';
+
+                return (
+                  <tr key={item.id || idx} className="hover:bg-slate-50/50">
+                    <td className="border border-slate-400 p-2 text-center font-semibold">{idx + 1}</td>
+                    <td className="border border-slate-400 p-2 font-bold text-slate-900">{item.name}</td>
+                    <td className="border border-slate-400 p-2 text-slate-700">{item.position || 'Cán bộ'}</td>
+                    <td className="border border-slate-400 p-2 text-slate-700">{item.department || ''}</td>
+                    <td className="border border-slate-400 p-2 text-center font-medium text-slate-700">{count}</td>
+                    <td className="border border-slate-400 p-2 text-center font-bold text-[#0f766e]">
+                      {score10}
+                    </td>
+                    <td className="border border-slate-400 p-2 text-center font-bold text-slate-900">
+                      {score100}
+                    </td>
+                    <td className="border border-slate-400 p-2 text-center font-medium">
+                      <div>{classificationLabel}</div>
+                      {hasVotes && item.classification?.downgradeReason && (
+                        <div className="text-[9px] text-amber-800 italic">
+                          ({item.classification.downgradeReason})
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

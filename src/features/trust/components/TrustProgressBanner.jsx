@@ -48,17 +48,17 @@ const TrustProgressBanner = ({
               </span>
             )}
 
-            {/* Chỉ báo tự động lưu ngầm */}
+            {/* Chỉ báo đã lưu tự động */}
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2 py-0.5 rounded-full">
               <Cloud className="w-3 h-3 text-emerald-400" />
-              <span>Tự động lưu ngầm</span>
+              <span>Đã lưu tự động</span>
             </span>
           </div>
 
           <div className="flex flex-wrap items-baseline gap-2">
             <h3 className="text-base sm:text-lg font-black text-white">
               {hasSubmitted
-                ? 'Đã hoàn tất đánh giá toàn diện'
+                ? 'Đã hoàn thành đánh giá'
                 : `Đã hoàn thành ${completedCriteriaCount} / ${totalCriteriaCount} tiêu chí`}
             </h3>
             <span className="text-xs font-bold text-teal-400">({overallPercent}%)</span>
@@ -81,17 +81,17 @@ const TrustProgressBanner = ({
             {hasSubmitted ? (
               <span className="text-emerald-300 font-semibold flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Phiếu tín nhiệm của đồng chí đã được ghi nhận an toàn vào cơ sở dữ liệu.</span>
+                <span>Phiếu tín nhiệm đã được nộp thành công.</span>
               </span>
             ) : isFullyReadyToSubmit ? (
               <span className="text-emerald-300 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                Đã hoàn tất đánh giá toàn bộ cán bộ. Sẵn sàng nộp phiếu chính thức.
+                Đã hoàn thành đánh giá tất cả cán bộ. Sẵn sàng nộp phiếu.
               </span>
             ) : (
               <span className="flex items-center gap-1 text-amber-200/90">
                 <Clock className="w-3.5 h-3.5 shrink-0" />
-                Cần chấm đủ điểm tất cả tiêu chí cho toàn bộ cán bộ mới được nộp phiếu.
+                Vui lòng chấm đủ điểm các tiêu chí cho toàn bộ cán bộ để nộp phiếu.
               </span>
             )}
           </div>

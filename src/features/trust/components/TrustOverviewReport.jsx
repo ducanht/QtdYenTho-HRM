@@ -365,7 +365,7 @@ const TrustOverviewReport = ({
               variant="outline"
               size="sm"
               icon={Printer}
-              onClick={onOpenPrintModal}
+              onClick={() => onOpenPrintModal && onOpenPrintModal(reportData.leaderboard)}
               className="text-xs font-bold"
             >
               In biên bản
@@ -453,7 +453,7 @@ const TrustOverviewReport = ({
                 variant="primary"
                 size="sm"
                 icon={Printer}
-                onClick={onOpenPrintModal}
+                onClick={() => onOpenPrintModal && onOpenPrintModal(reportData.leaderboard)}
                 disabled={Boolean(exportingType)}
                 className="text-xs font-bold"
               >
@@ -582,7 +582,7 @@ const TrustOverviewReport = ({
                           type="button"
                           onClick={() => setSelectedEmpForDetail(row)}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-300 transition-colors shadow-xs"
-                          title="Thẩm tra chi tiết điểm từng tiêu chí và người đánh giá"
+                          title="Xem chi tiết điểm từng tiêu chí"
                         >
                           <Eye className="w-3.5 h-3.5 text-teal-600" />
                           Xem chi tiết

@@ -11,12 +11,14 @@ import {
   ChevronDown,
   ChevronUp,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  FileSpreadsheet
 } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
 import Badge from '../../../components/common/Badge';
 import { classifyTrustScore } from '../../../lib/schema';
+import { exportToExcel } from '../../../lib/exportUtils';
 
 /**
  * EmployeeTrustDetailModal: Bảng kiểm tra chi tiết điểm đánh giá tín nhiệm của từng cán bộ
@@ -121,24 +123,82 @@ const EmployeeTrustDetailModal = ({
   }, [receivedEvaluations, criteria, criteriaAnalysis, currentPeriod?.thresholds]);
 
 
+  // Handler: Xuất dữ liệu bảng điểm cá nhân ra file Microsoft Excel (.xlsx)
+  const handleExportIndividualExcel = async () => {
+    if (!employee || !criteriaAnalysis.length) return;
+    try {
+      const isAnonymous = Boolean(
+        currentPeriod?.votingMode === 'ANONYMOUS' ||
+        currentPeriod?.votingMode === 'ANONYMOUS_ONLY'
+      );
+
+      // Bảng 1: Điểm theo tiêu chí
+      const headers = ['Mã TC', 'Tiêu chí đánh giá', 'Điểm trung bình (Thang 10)', 'Điểm cao nhất', 'Điểm thấp nhất', 'Số lượt chấm'];
+      const rows = criteriaAnalysis.map((crit) => [
+        crit.code || '',
+        crit.title || '',
+        crit.avg,
+        crit.max,
+        crit.min,
+        crit.totalVoters,
+      ]);
+
+      // Bổ sung danh sách chi tiết các phiếu phía dưới
+      rows.push([]);
+      rows.push(['DANH SÁCH CHI TIẾT TỪNG PHIẾU ĐÁNH GIÁ:']);
+      rows.push(['STT', 'Cử tri đánh giá', 'Tổng điểm phiếu', 'Xếp loại', 'Ý kiến / Ghi chú']);
+      receivedEvaluations.forEach((ev, idx) => {
+        const voterLabel = !isAnonymous ? (ev.evaluatorName || 'Cán bộ Quỹ') : `Cử tri #${idx + 1} (Kín)`;
+        rows.push([
+          idx + 1,
+          voterLabel,
+          ev.totalScore || 0,
+          ev.classification || 'Tốt',
+          ev.notes || '',
+        ]);
+      });
+
+      await exportToExcel({
+        filename: `Diem_Tin_Nhiem_${employee.name.replace(/\s+/g, '_')}_${currentPeriod?.name?.replace(/\s+/g, '_') || 'Ky'}.xlsx`,
+        sheetName: employee.name.slice(0, 31),
+        title: `BẢNG KÊ CHI TIẾT ĐIỂM TÍN NHIỆM: ${employee.name.toUpperCase()}`,
+        subtitle: `Chức vụ: ${employee.position || 'Cán bộ'} • Kỳ: ${currentPeriod?.name || 'Hiện hành'} • Điểm TB: ${overallStats.avg10}/10 (${overallStats.avg100}đ) - Xếp loại: ${overallStats.classification.label}`,
+        headers,
+        rows,
+      });
+    } catch (err) {
+      console.error('Lỗi khi xuất bảng kê cá nhân ra Excel:', err);
+      alert('Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại.');
+    }
+  };
+
   if (!employee) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Chi Tiết Điểm Tín Nhiệm: ${employee.name} (${employee.position})`}
-      subtitle={`Kỳ đánh giá: ${currentPeriod?.name || 'Hiện hành'} • Báo cáo đối soát Ban Lãnh đạo`}
+      title={`Chi tiết điểm tín nhiệm: ${employee.name} (${employee.position})`}
+      subtitle={`Kỳ đánh giá: ${currentPeriod?.name || 'Hiện hành'} • Phục vụ Ban Kiểm soát & Ban Quản trị`}
       maxWidth="max-w-5xl"
       footer={
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
           <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Dữ liệu bảo mật nội bộ phục vụ Ban Kiểm soát & Lãnh đạo QTDND Yên Thọ.</span>
+            <span>Dữ liệu bảo mật nội bộ QTDND Yên Thọ.</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={onClose}>
               Đóng
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={FileSpreadsheet}
+              onClick={handleExportIndividualExcel}
+              className="font-bold border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+            >
+              Xuất Excel (.xlsx)
             </Button>
             <Button
               variant="primary"
@@ -147,7 +207,7 @@ const EmployeeTrustDetailModal = ({
               onClick={() => window.print()}
               className="font-bold"
             >
-              In Bảng Kê (Ctrl + P)
+              In bảng kê (Ctrl + P)
             </Button>
           </div>
         </div>
@@ -196,15 +256,15 @@ const EmployeeTrustDetailModal = ({
 
 
 
-        {/* 3. Bảng điểm trung bình theo 10 tiêu chí chuẩn NHNN */}
+        {/* 1. Bảng điểm trung bình theo tiêu chí */}
         <div className="space-y-2">
           <div className="flex items-center justify-between pb-1">
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <Award className="w-4 h-4 text-[#0f766e]" />
-              <span>1. Thống Kê Điểm Trung Bình Theo 10 Tiêu Chí Chuẩn NHNN</span>
+              <span>1. Điểm trung bình theo tiêu chí</span>
             </h4>
             <span className="text-[11px] text-slate-500 italic hidden sm:inline">
-              (Bấm vào từng tiêu chí để xem chi tiết điểm cử tri đã chấm)
+              (Chọn tiêu chí để xem chi tiết điểm từng cử tri)
             </span>
           </div>
 
@@ -364,15 +424,15 @@ const EmployeeTrustDetailModal = ({
           </div>
         </div>
 
-        {/* 4. Ma trận chi tiết từng phiếu đánh giá nhận được */}
+        {/* 2. Danh sách phiếu đánh giá nhận được */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-[#0f766e]" />
-              <span>2. Chi Tiết Từng Phiếu Đánh Giá Nhận Được ({receivedEvaluations.length} phiếu)</span>
+              <span>2. Danh sách phiếu đánh giá đã nhận ({receivedEvaluations.length} phiếu)</span>
             </h4>
-            <span className="text-[11px] text-slate-500">
-              Mỗi dòng thể hiện điểm chấm của 1 cử tri cho cán bộ
+            <span className="text-[11px] text-slate-500 hidden sm:inline">
+              Chi tiết điểm số từng cử tri
             </span>
           </div>
 
