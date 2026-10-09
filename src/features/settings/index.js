@@ -6,6 +6,8 @@ export * from './components/global/GeneralLegalSettings';
 export * from './components/global/OrganizationSettings';
 export * from './components/global/ModuleActivationSettings';
 export * from './components/global/GlobalRolePermissionsSettings';
+export { default as DatabaseManagementSettings } from './components/global/DatabaseManagementSettings';
+export * from './components/global/DatabaseManagementSettings';
 export * from './components/subsystems/TrustCriteriaSettings';
 export * from './components/subsystems/TrustPermissionsMatrix';
 export * from './components/subsystems/HrSubsystemSettings';

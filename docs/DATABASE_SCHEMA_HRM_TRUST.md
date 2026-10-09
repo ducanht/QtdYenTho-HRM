@@ -302,6 +302,13 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
   - Loại bỏ hoàn toàn toggle thủ công "Chế độ xem đối soát của Ban Lãnh đạo", việc hiển thị danh tính cử tri tuân thủ 100% theo cấu hình đợt (`votingMode === 'ANONYMOUS'`).
   - Cán bộ chưa có phiếu đánh giá hiển thị Xếp loại "Chưa hoàn thành" (badge slate trung tính), điểm hiển thị `--`, không gán nhầm "Không hoàn thành nhiệm vụ".
   - Tích hợp `useSearchParams` cho `tab` và `periodId` trong Phân hệ Tín nhiệm, khắc phục triệt để lỗi Back/Refresh trình duyệt.
+- **`2026.10.09_v3.9_security_lockdown_rbac_and_backend_authorization`**:
+  - **Bảo Mật Tầng CSDL & Backend Rules (`firestore.rules`)**: Khóa 100% quyền ghi trên 16 collections (`system_modules`, `roles_permissions`, `system_metadata`, `departments`, `positions`, `system_settings`, `period_configs`, `trust_criteria`, `evaluation_periods`, `work_history`, `accounts`, `employees`, `users`). Chỉ Admin/SuperAdmin (`isBoardOrAdmin()`, `isSuperAdmin()`) mới được ghi. Bảng `accounts` chỉ cho phép Admin hoặc chính chủ đọc/sửa tài khoản của mình.
+  - **Kiểm Soát Quyền Trước Khi Kích Hoạt CSDL (`autoInitDb.js`, `MainLayout.jsx`)**: Bổ sung `checkCanProvisionDatabase()`, ngăn chặn mọi hành vi tự động ghi hoặc đồng bộ schema từ tài khoản nhân viên thường (`staff`).
+  - **Khu Vực Quản Trị CSDL Độc Lập (`DatabaseManagementSettings.jsx`)**: Di chuyển toàn bộ tính năng và modal "Tự động CSDL" từ Navbar/Portal vào Tab 5 trong Admin Settings dành riêng cho Quản trị viên/SuperAdmin.
+  - **Lọc Module & Ẩn Phân Hệ Chưa Kích Hoạt (`PortalLauncher.jsx`)**: Ẩn các phân hệ chưa hoàn thiện (`status !== 'ACTIVE'`) và phân hệ `MODULE_SETTINGS` đối với tài khoản nhân viên thường.
+  - **Bảo Vệ Route Đa Tầng (`ProtectedRoute.jsx`, `App.jsx`)**: Tích hợp kiểm tra `moduleCode` và ma trận RBAC `canAccessModule`, chặn truy cập trái phép bằng URL trực tiếp.
+
 
 
 

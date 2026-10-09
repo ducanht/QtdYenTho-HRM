@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from './Navbar';
 import ForceChangePasswordModal from '../auth/ForceChangePasswordModal';
 import FloatingTrustEvaluationReminder from '../common/FloatingTrustEvaluationReminder';
@@ -11,12 +12,16 @@ import { autoSyncDatabaseSchema } from '../../lib/autoInitDb';
  * Mỗi phân hệ hiển thị độc lập, có nút "Về Cổng Phân Hệ" tại Header để chuyển đổi.
  */
 const MainLayout = () => {
-  // Tự động kiểm tra & đồng bộ CSDL Firebase ngầm (Self-healing & Auto-provisioning)
+  const { isAdmin, isSuperAdmin } = useAuth();
+
+  // Tự động kiểm tra & đồng bộ CSDL Firebase ngầm CHỈ KHI tài khoản có quyền Quản trị (Admin / SuperAdmin)
   useEffect(() => {
-    autoSyncDatabaseSchema().catch((err) => {
-      console.warn('Lỗi kiểm tra đồng bộ CSDL tự động:', err);
-    });
-  }, []);
+    if (isAdmin || isSuperAdmin) {
+      autoSyncDatabaseSchema().catch((err) => {
+        console.warn('Lỗi kiểm tra đồng bộ CSDL tự động:', err);
+      });
+    }
+  }, [isAdmin, isSuperAdmin]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">

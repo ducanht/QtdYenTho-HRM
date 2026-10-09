@@ -69,37 +69,41 @@ service cloud.firestore {
     // ===============================================================
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && (isBoardOrAdmin() || request.auth.uid == userId);
       // Quản trị viên (Chủ tịch / Giám đốc) hoặc chính chủ được sửa
       allow update: if isAuthenticated() && (
-        isManagerOrChairman() ||
+        isBoardOrAdmin() ||
         isOwner(userId)
       );
-      allow delete: if isManagerOrChairman();
+      allow delete: if isBoardOrAdmin();
     }
 
     match /employees/{employeeId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow create, delete: if isBoardOrAdmin();
       allow update: if isAuthenticated() && (
-        isManagerOrChairman() ||
+        isBoardOrAdmin() ||
         isOwner(employeeId)
       );
-      allow delete: if isManagerOrChairman();
     }
 
     // ===============================================================
     // 1B. Bảng Tài Khoản & Phân Quyền (accounts)
+    // BẢO MẬT: Chỉ Admin/SuperAdmin hoặc chính chủ đọc được tài khoản của mình
     // ===============================================================
     match /accounts/{accountId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        isManagerOrChairman() ||
+      allow read: if isAuthenticated() && (
+        isBoardOrAdmin() ||
         request.auth.uid == accountId ||
         (resource != null && resource.data.uid == request.auth.uid)
       );
-      allow delete: if isManagerOrChairman();
+      allow create: if isBoardOrAdmin();
+      allow update: if isAuthenticated() && (
+        isBoardOrAdmin() ||
+        request.auth.uid == accountId ||
+        (resource != null && resource.data.uid == request.auth.uid)
+      );
+      allow delete: if isSuperAdmin();
     }
 
     // ===============================================================
@@ -107,8 +111,7 @@ service cloud.firestore {
     // ===============================================================
     match /work_history/{historyId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
@@ -116,8 +119,7 @@ service cloud.firestore {
     // ===============================================================
     match /evaluation_periods/{periodId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
@@ -125,8 +127,7 @@ service cloud.firestore {
     // ===============================================================
     match /trust_criteria/{criterionId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
@@ -142,10 +143,10 @@ service cloud.firestore {
         request.resource.data.allowSelfEvaluation == true
       );
       allow update: if isAuthenticated() && (
-        isManagerOrChairman() ||
+        isBoardOrAdmin() ||
         isOwner(resource.data.evaluatorId)
       );
-      allow delete: if isManagerOrChairman();
+      allow delete: if isBoardOrAdmin();
     }
 
     // ===============================================================
@@ -153,8 +154,8 @@ service cloud.firestore {
     // ===============================================================
     match /evaluations_kpi/{kpiId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isManagerOrChairman();
+      allow create: if isAuthenticated();
+      allow update, delete: if isBoardOrAdmin() || (resource != null && resource.data.employeeId == request.auth.uid);
     }
 
     // ===============================================================
@@ -163,50 +164,50 @@ service cloud.firestore {
     match /evaluations_planning/{planningId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if isManagerOrChairman();
+      allow update, delete: if isBoardOrAdmin();
     }
 
     // ===============================================================
-    // ===============================================================
     // 8. Danh mục Phân hệ Hệ thống (system_modules)
+    // BẢO MẬT: Chỉ SuperAdmin và Ban Lãnh đạo mới có quyền ghi/bật/tắt phân hệ
     // ===============================================================
     match /system_modules/{moduleCode} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
     // 9. Ma trận Phân quyền (roles_permissions)
+    // BẢO MẬT: Chỉ SuperAdmin mới có quyền sửa đổi ma trận quyền hệ thống
     // ===============================================================
     match /roles_permissions/{roleKey} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isSuperAdmin();
     }
 
     // ===============================================================
     // 10. Siêu dữ liệu & Phiên bản CSDL Tự Động (system_metadata)
+    // BẢO MẬT: Chỉ Admin/SuperAdmin mới được phép cập nhật version schema
     // ===============================================================
     match /system_metadata/{docId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
     // 11. Danh mục Phòng ban (departments)
-    // Ban Quản trị & Điều hành (Admin) toàn quyền quản lý
     // ===============================================================
     match /departments/{deptId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
     // 12. Danh mục Chức danh (positions)
-    // Ban Quản trị & Điều hành (Admin) toàn quyền quản lý
     // ===============================================================
     match /positions/{posId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
@@ -214,17 +215,15 @@ service cloud.firestore {
     // ===============================================================
     match /system_settings/{settingId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isSuperAdmin();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
     // 14. Cấu hình Riêng Biệt Từng Đợt Đánh Giá (period_configs)
-    // Mỗi đợt đánh giá có một bảng cấu hình riêng biệt, không dùng chung
     // ===============================================================
     match /period_configs/{periodId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isManagerOrChairman();
+      allow write: if isBoardOrAdmin();
     }
   }
 }

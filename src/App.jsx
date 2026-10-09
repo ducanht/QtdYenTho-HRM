@@ -78,26 +78,85 @@ function AppRoutes() {
           <Route path="portal" element={<PortalLauncher />} />
 
           {/* Module A: Đánh giá tín nhiệm 10 tiêu chí (Trọng tâm) - Hỗ trợ cả /trust và /trust-evaluation */}
-          <Route path="trust" element={<TrustEvaluation />} />
-          <Route path="trust-evaluation" element={<TrustEvaluation />} />
+          <Route
+            path="trust"
+            element={
+              <ProtectedRoute moduleCode="MODULE_TRUST">
+                <TrustEvaluation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="trust-evaluation"
+            element={
+              <ProtectedRoute moduleCode="MODULE_TRUST">
+                <TrustEvaluation />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Module B: Chấm điểm KPI 3 cấp - Hỗ trợ cả /kpi và /kpi-evaluation */}
-          <Route path="kpi" element={<KpiEvaluation />} />
-          <Route path="kpi-evaluation" element={<KpiEvaluation />} />
+          <Route
+            path="kpi"
+            element={
+              <ProtectedRoute moduleCode="MODULE_KPI">
+                <KpiEvaluation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="kpi-evaluation"
+            element={
+              <ProtectedRoute moduleCode="MODULE_KPI">
+                <KpiEvaluation />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Module C: Bỏ phiếu quy hoạch cán bộ - Hỗ trợ cả /planning và /planning-vote */}
-          <Route path="planning" element={<PlanningVote />} />
-          <Route path="planning-vote" element={<PlanningVote />} />
+          <Route
+            path="planning"
+            element={
+              <ProtectedRoute moduleCode="MODULE_PLANNING">
+                <PlanningVote />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="planning-vote"
+            element={
+              <ProtectedRoute moduleCode="MODULE_PLANNING">
+                <PlanningVote />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Module D: Danh bạ & Quá trình luân chuyển cán bộ - Hỗ trợ cả /employees và /hr */}
-          <Route path="employees" element={<Employees />} />
-          <Route path="hr" element={<Employees />} />
+          <Route
+            path="employees"
+            element={
+              <ProtectedRoute moduleCode="MODULE_HR">
+                <Employees />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr"
+            element={
+              <ProtectedRoute moduleCode="MODULE_HR">
+                <Employees />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Module E: Dashboard & Giám sát (Chỉ cho phép manager, chairman và admin) */}
+          {/* Module E: Dashboard & Giám sát */}
           <Route
             path="dashboard"
             element={
-              <ProtectedRoute allowedRoles={['manager', 'chairman', 'admin']}>
+              <ProtectedRoute 
+                allowedRoles={['superadmin', 'admin', 'chairman', 'manager', 'supervisor', 'board_member']} 
+                moduleCode="MODULE_DASHBOARD"
+              >
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -107,7 +166,10 @@ function AppRoutes() {
           <Route
             path="admin-settings"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'chairman', 'manager']}>
+              <ProtectedRoute 
+                allowedRoles={['superadmin', 'admin', 'chairman', 'manager']} 
+                moduleCode="MODULE_SETTINGS"
+              >
                 <AdminSettings />
               </ProtectedRoute>
             }
@@ -115,7 +177,10 @@ function AppRoutes() {
           <Route
             path="settings"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'chairman', 'manager']}>
+              <ProtectedRoute 
+                allowedRoles={['superadmin', 'admin', 'chairman', 'manager']} 
+                moduleCode="MODULE_SETTINGS"
+              >
                 <AdminSettings />
               </ProtectedRoute>
             }

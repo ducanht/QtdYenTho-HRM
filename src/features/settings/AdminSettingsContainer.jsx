@@ -24,6 +24,7 @@ import GeneralLegalSettings from './components/global/GeneralLegalSettings';
 import OrganizationSettings from './components/global/OrganizationSettings';
 import ModuleActivationSettings from './components/global/ModuleActivationSettings';
 import GlobalRolePermissionsSettings from './components/global/GlobalRolePermissionsSettings';
+import DatabaseManagementSettings from './components/global/DatabaseManagementSettings';
 
 /**
  * Container Quản trị Cấu hình Hệ thống Chung (Global Settings)
@@ -31,7 +32,12 @@ import GlobalRolePermissionsSettings from './components/global/GlobalRolePermiss
  */
 const AdminSettingsContainer = () => {
   const toast = useToast();
-  const { canToggleModules, canConfigureWebapp } = useAuth();
+  const { 
+    canToggleModules, 
+    canConfigureWebapp, 
+    canManageDatabase, 
+    isSuperAdmin 
+  } = useAuth();
 
   // Tab cụ thể đang chọn trong Cấu hình chung toàn hệ thống
   const [activeTab, setActiveTab] = useState('GENERAL_LEGAL');
@@ -66,6 +72,17 @@ const AdminSettingsContainer = () => {
       unsubPerms();
     };
   }, []);
+
+  // 2. Tự động chuyển về Tab an toàn nếu quyền không cho phép xem tab nhạy cảm
+  useEffect(() => {
+    if (activeTab === 'GENERAL_MODULES' && !canToggleModules) {
+      setActiveTab('GENERAL_LEGAL');
+    } else if (activeTab === 'GENERAL_PERMISSIONS' && !(isSuperAdmin || canConfigureWebapp)) {
+      setActiveTab('GENERAL_LEGAL');
+    } else if (activeTab === 'GENERAL_DATABASE' && !canManageDatabase) {
+      setActiveTab('GENERAL_LEGAL');
+    }
+  }, [activeTab, canToggleModules, isSuperAdmin, canConfigureWebapp, canManageDatabase]);
 
   // Handler: Lưu Cài đặt hệ thống chung
   const handleSaveGeneralSettings = async (e) => {
@@ -201,12 +218,16 @@ const AdminSettingsContainer = () => {
         </div>
       </div>
 
-      {/* 2. Thanh Điều Hướng 4 Tabs Cấu Hình Chung */}
+      {/* 2. Thanh Điều Hướng 5 Tabs Cấu Hình Chung */}
       <SettingsTabsNav
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
         departmentsCount={departments.length}
         positionsCount={positions.length}
+        canToggleModules={canToggleModules}
+        canConfigureWebapp={canConfigureWebapp}
+        canManageDatabase={canManageDatabase}
+        isSuperAdmin={isSuperAdmin}
       />
 
       {/* 3. Nội Dung Chi Tiết Theo Tab Đang Chọn */}
@@ -231,7 +252,7 @@ const AdminSettingsContainer = () => {
         />
       )}
 
-      {activeTab === 'GENERAL_MODULES' && (
+      {activeTab === 'GENERAL_MODULES' && canToggleModules && (
         <ModuleActivationSettings
           modulesList={modulesList}
           onToggleStatus={handleToggleModuleStatus}
@@ -239,7 +260,7 @@ const AdminSettingsContainer = () => {
         />
       )}
 
-      {activeTab === 'GENERAL_PERMISSIONS' && (
+      {activeTab === 'GENERAL_PERMISSIONS' && (isSuperAdmin || canConfigureWebapp) && (
         <GlobalRolePermissionsSettings
           globalPermissions={rolePermissions.global || DEFAULT_ROLE_PERMISSIONS.global}
           onChangeGlobalPermissions={(newGlobal) =>
@@ -250,6 +271,13 @@ const AdminSettingsContainer = () => {
             setRolePermissions((prev) => ({ ...prev, global: DEFAULT_ROLE_PERMISSIONS.global }))
           }
           isSaving={savingSection === 'ROLE_PERMS'}
+        />
+      )}
+
+      {activeTab === 'GENERAL_DATABASE' && canManageDatabase && (
+        <DatabaseManagementSettings
+          canManageDatabase={canManageDatabase}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
     </div>

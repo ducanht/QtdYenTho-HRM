@@ -45,7 +45,7 @@ const ICON_MAP = {
 
 const PortalLauncher = () => {
   const navigate = useNavigate();
-  const { currentUser, role } = useAuth();
+  const { currentUser, role, isAdmin, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [isDbModalOpen, setIsDbModalOpen] = useState(false);
   const [firestoreModules, setFirestoreModules] = useState([]);
@@ -58,19 +58,18 @@ const PortalLauncher = () => {
     return () => unsub();
   }, []);
 
-  // Hợp nhất danh sách mặc định với cấu hình thực tế từ Firestore
+  // Hợp nhất danh sách mặc định với cấu hình thực tế từ Firestore & Phân quyền bảo mật
   const modulesList = useMemo(() => {
     const defaults = Object.values(SYSTEM_MODULES);
-    if (!firestoreModules || firestoreModules.length === 0) {
-      return defaults;
-    }
     const fsMap = new Map();
-    firestoreModules.forEach((m) => {
-      if (m.code) fsMap.set(m.code, m);
-      if (m.id) fsMap.set(m.id, m);
-    });
+    if (firestoreModules && firestoreModules.length > 0) {
+      firestoreModules.forEach((m) => {
+        if (m.code) fsMap.set(m.code, m);
+        if (m.id) fsMap.set(m.id, m);
+      });
+    }
 
-    return defaults.map((def) => {
+    const merged = defaults.map((def) => {
       const fsData = fsMap.get(def.code);
       if (!fsData) return def;
 
@@ -85,7 +84,24 @@ const PortalLauncher = () => {
         status: fsData.status || def.status,
       };
     });
-  }, [firestoreModules]);
+
+    // BẢO MẬT & PHÂN ĐỊNH HIỂN THỊ CHẶT CHẼ:
+    // 1. Cán bộ thường (không phải Admin / SuperAdmin):
+    //    - TUYỆT ĐỐI KHÔNG hiển thị các module chưa kích hoạt / kế hoạch (status !== 'ACTIVE')
+    //    - TUYỆT ĐỐI KHÔNG hiển thị module Quản trị Cấu hình (MODULE_SETTINGS)
+    //    - CHỈ hiển thị các phân hệ ĐANG VẬN HÀNH mà người dùng CÓ QUYỀN TRUY CẬP
+    if (!isAdmin && !isSuperAdmin) {
+      return merged.filter((mod) => {
+        if (mod.status !== 'ACTIVE') return false;
+        if (mod.code === 'MODULE_SETTINGS') return false;
+        return canAccessModule(role, mod.code);
+      });
+    }
+
+    // 2. Với Quản trị viên / Lãnh đạo Quỹ:
+    //    - Hiển thị đầy đủ các module vận hành, Dashboard, Quản trị Cấu hình và danh sách kế hoạch
+    return merged;
+  }, [firestoreModules, isAdmin, isSuperAdmin, role]);
 
   const activeModulesCount = modulesList.filter((m) => m.status === 'ACTIVE').length;
   const plannedModulesCount = modulesList.filter((m) => m.status !== 'ACTIVE').length;
@@ -144,25 +160,29 @@ const PortalLauncher = () => {
             <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-center min-w-[110px]">
               <span className="block text-2xl font-black text-amber-300">{activeModulesCount}</span>
               <span className="text-[10px] uppercase font-bold text-emerald-100 tracking-wider">
-                Phân hệ vận hành
+                Phân hệ tác nghiệp
               </span>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-center min-w-[110px]">
-              <span className="block text-2xl font-black text-white">{plannedModulesCount}</span>
-              <span className="text-[10px] uppercase font-bold text-emerald-100 tracking-wider">
-                Sẵn sàng CSDL
-              </span>
-            </div>
+            {(isAdmin || isSuperAdmin) && (
+              <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-center min-w-[110px]">
+                <span className="block text-2xl font-black text-white">{plannedModulesCount}</span>
+                <span className="text-[10px] uppercase font-bold text-emerald-100 tracking-wider">
+                  Kế hoạch mở rộng
+                </span>
+              </div>
+            )}
 
-            <button
-              type="button"
-              onClick={() => setIsDbModalOpen(true)}
-              className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold px-4 py-3 rounded-2xl text-xs transition-colors shadow-lg cursor-pointer flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-center"
-            >
-              <Database className="w-4 h-4" />
-              <span>Tự động CSDL</span>
-            </button>
+            {(isAdmin || isSuperAdmin) && (
+              <button
+                type="button"
+                onClick={() => setIsDbModalOpen(true)}
+                className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold px-4 py-3 rounded-2xl text-xs transition-colors shadow-lg cursor-pointer flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-center"
+              >
+                <Database className="w-4 h-4" />
+                <span>Tự động CSDL</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -305,25 +325,39 @@ const PortalLauncher = () => {
         })}
       </div>
 
-      {/* Thông tin hỗ trợ & CSDL Module */}
-      <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 text-xs text-teal-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Info className="w-4 h-4 text-[#047857] shrink-0" />
-          <span>
-            Hệ thống thiết kế theo kiến trúc <strong>Data-Driven Modular</strong>. Khi Ban Quản trị phê duyệt bổ sung phân hệ mới, ô lưới truy cập sẽ tự động hiển thị và kết nối CSDL ngay lập tức.
-          </span>
+      {/* Thông tin hỗ trợ & CSDL Module (Bảo mật phân quyền) */}
+      {(isAdmin || isSuperAdmin) ? (
+        <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 text-xs text-teal-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-[#047857] shrink-0" />
+            <span>
+              Hệ thống thiết kế theo kiến trúc <strong>Data-Driven Modular</strong>. Khi Ban Quản trị phê duyệt bổ sung phân hệ mới, ô lưới truy cập sẽ tự động hiển thị và kết nối CSDL ngay lập tức.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDbModalOpen(true)}
+            className="text-xs font-bold text-[#047857] hover:underline shrink-0 cursor-pointer"
+          >
+            Quản trị & Đồng bộ CSDL →
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsDbModalOpen(true)}
-          className="text-xs font-bold text-[#047857] hover:underline shrink-0"
-        >
-          Xem cấu trúc CSDL 9 bảng →
-        </button>
-      </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-[#047857] shrink-0" />
+            <span>
+              Hệ thống Quản Trị Nhân Sự & Đánh Giá Tín Nhiệm • <strong>Quỹ Tín Dụng Nhân Dân Yên Thọ</strong>.
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-400 font-medium">Phiên bản 2026 Pro V3.8</span>
+        </div>
+      )}
 
-      {/* Modal Tự Động CSDL */}
-      <AutoInitDbModal isOpen={isDbModalOpen} onClose={() => setIsDbModalOpen(false)} />
+      {/* Modal Tự Động CSDL (Chỉ mount khi là Admin/SuperAdmin) */}
+      {(isAdmin || isSuperAdmin) && (
+        <AutoInitDbModal isOpen={isDbModalOpen} onClose={() => setIsDbModalOpen(false)} />
+      )}
     </div>
   );
 };

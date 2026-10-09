@@ -331,10 +331,13 @@ export const AuthProvider = ({ children }) => {
   const isBoardMember = isAdmin && (currentUser?.department?.includes('Hội đồng Quản trị') || currentUser?.position?.includes('HĐQT'));
   const isStaff = !isAdmin;
 
-  // 4. Quyền Bật/tắt Module Webapp & Cấu hình Tham số Hệ thống (SuperAdmin & Ban Lãnh đạo Quỹ)
-  const canToggleModules = isSuperAdmin || isAdmin;
+  // 4. Quyền Bật/tắt Module Webapp & Cấu hình Tham số Hệ thống
+  // - Bật/tắt Module (Feature Flags): Chỉ SuperAdmin và Chủ tịch HĐQT (Chairman)
+  // - Cấu hình CSDL: SuperAdmin và Ban Lãnh đạo Quỹ
+  const canToggleModules = isSuperAdmin || isChairman;
   const canConfigureWebapp = isSuperAdmin || isAdmin;
-  const canAccessDashboard = isAdmin;
+  const canManageDatabase = isSuperAdmin || isAdmin;
+  const canAccessDashboard = isAdmin || role === 'supervisor' || role === 'board_member' || currentUser?.department?.includes('Ban Kiểm soát') || currentUser?.department?.includes('Hội đồng Quản trị');
 
   const value = {
     currentUser,
@@ -349,6 +352,7 @@ export const AuthProvider = ({ children }) => {
     isBoardMember,
     canToggleModules,
     canConfigureWebapp,
+    canManageDatabase,
     canAccessDashboard,
     isDemoMode: false,
     login,

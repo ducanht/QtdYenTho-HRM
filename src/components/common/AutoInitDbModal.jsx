@@ -20,16 +20,50 @@ import Badge from './Badge';
 import { isFirebaseConfigured } from '../../lib/firebase';
 import { autoInitializeFirebaseDatabase } from '../../lib/autoInitDb';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 const AutoInitDbModal = ({ isOpen, onClose }) => {
   const toast = useToast();
+  const { isAdmin, isSuperAdmin } = useAuth();
   const [running, setRunning] = useState(false);
   const [currentStepText, setCurrentStepText] = useState('');
   const [logs, setLogs] = useState([]);
   const [progressPercent, setProgressPercent] = useState(0);
   const [resultSummary, setResultSummary] = useState(null);
 
+  if (!isOpen) return null;
+
+  // BẢO MẬT: Chặn hoàn toàn nếu tài khoản không có quyền Quản trị
+  if (!isAdmin && !isSuperAdmin) {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Từ Chối Truy Cập"
+        subtitle="Quyền hạn không đủ để thực hiện thao tác"
+        maxWidth="max-w-md"
+      >
+        <div className="p-6 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h4 className="text-base font-bold text-slate-900">Không Có Quyền Cập Nhật CSDL</h4>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Thao tác khởi tạo và đồng bộ Cơ sở Dữ liệu chỉ dành riêng cho Quản trị viên cấp cao (SuperAdmin) và Ban Lãnh đạo Quỹ.
+          </p>
+          <Button variant="outline" onClick={onClose} className="mt-4">
+            Đóng cửa sổ
+          </Button>
+        </div>
+      </Modal>
+    );
+  }
+
   const handleStartAutoInit = async () => {
+    if (!isAdmin && !isSuperAdmin) {
+      toast.error('Chỉ Quản trị viên mới có quyền cập nhật CSDL!');
+      return;
+    }
     setRunning(true);
     setLogs([]);
     setProgressPercent(5);

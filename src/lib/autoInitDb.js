@@ -11,7 +11,26 @@ import {
   setDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from './firebase';
+import { auth, db, isFirebaseConfigured } from './firebase';
+
+/**
+ * Kiểm tra quyền Quản trị viên trước khi thực thi bất kỳ thao tác ghi CSDL cấu trúc nào
+ */
+export const checkCanProvisionDatabase = () => {
+  const user = auth?.currentUser;
+  if (!user || !user.email) return false;
+  const emailLower = user.email.trim().toLowerCase();
+  if (emailLower === 'qtdyentho@gmail.com') return true;
+  return (
+    emailLower.includes('ducanh') ||
+    emailLower.includes('nguyenducthao') ||
+    emailLower.includes('son') ||
+    emailLower.includes('admin') ||
+    emailLower.includes('chutich') ||
+    emailLower.includes('giamdoc') ||
+    emailLower.includes('hdqt')
+  );
+};
 import { 
   DEFAULT_DEPARTMENTS,
   DEFAULT_POSITIONS,
@@ -36,7 +55,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.8_separate_accounts_and_employees_table';
+export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.9_security_lockdown_rbac_and_backend_authorization';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ
@@ -94,6 +113,14 @@ export const autoSyncDatabaseSchema = async (force = false) => {
     result.success = true;
     result.synced = true;
     result.message = 'Đã tự động đồng bộ CSDL cục bộ (Chế độ Local Engine).';
+    return result;
+  }
+
+  // BẢO MẬT: Chỉ người dùng có thẩm quyền Quản trị mới được phép thực thi ghi CSDL
+  if (!checkCanProvisionDatabase()) {
+    result.success = true;
+    result.synced = false;
+    result.message = 'Chế độ người dùng: Bỏ qua đồng bộ cấu trúc CSDL.';
     return result;
   }
 
@@ -392,6 +419,11 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
     result.success = true;
     result.message = 'Đã tự động khởi tạo và đồng bộ toàn bộ bảng dữ liệu cục bộ thành công!';
     return result;
+  }
+
+  // BẢO MẬT: Chỉ người dùng có thẩm quyền Quản trị mới được phép thực thi ghi CSDL
+  if (!checkCanProvisionDatabase()) {
+    throw new Error('Từ chối quyền hạn: Chỉ Quản trị viên cấp cao mới có quyền khởi tạo CSDL.');
   }
 
   try {

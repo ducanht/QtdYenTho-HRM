@@ -99,7 +99,7 @@ const MODULE_HEADER_MAP = {
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, role, logout } = useAuth();
+  const { currentUser, role, logout, isAdmin, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [isDbModalOpen, setIsDbModalOpen] = useState(false);
 
@@ -193,8 +193,8 @@ const Navbar = () => {
         {/* PHẦN PHẢI: USER PROFILE, VAI TRÒ & THAO TÁC HỆ THỐNG        */}
         {/* ============================================================ */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Nút Tự động CSDL (chỉ hiện khi ở portal hoặc admin) */}
-          {isPortal && (
+          {/* Nút Tự động CSDL: TUYỆT ĐỐI CHỈ HIỂN THỊ VỚI ADMIN / SUPERADMIN */}
+          {isPortal && (isAdmin || isSuperAdmin) && (
             <button
               type="button"
               onClick={() => setIsDbModalOpen(true)}
@@ -252,11 +252,13 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Modal Tự động Khởi tạo & Cập nhật CSDL */}
-      <AutoInitDbModal 
-        isOpen={isDbModalOpen} 
-        onClose={() => setIsDbModalOpen(false)} 
-      />
+      {/* Modal Tự động Khởi tạo & Cập nhật CSDL (Chỉ mount khi là Admin/SuperAdmin) */}
+      {(isAdmin || isSuperAdmin) && (
+        <AutoInitDbModal 
+          isOpen={isDbModalOpen} 
+          onClose={() => setIsDbModalOpen(false)} 
+        />
+      )}
     </header>
   );
 };
