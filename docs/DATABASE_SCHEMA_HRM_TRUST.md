@@ -259,15 +259,20 @@ Dữ liệu thực tế 12 CBNV đã được chuẩn hóa và nạp thành côn
 | `periodName` | `string` | Tên hiển thị của đợt đánh giá. |
 | `votingMode` | `string` | `'ANONYMOUS'` (Bỏ phiếu kín) hoặc `'IDENTIFIED'` (Công khai). |
 | `allowSelfEvaluation` | `boolean` | Cho phép cán bộ tự đánh giá chính mình hay không (Mặc định: `false`). |
-| `excellentThreshold` | `number` | Ngưỡng điểm đạt Xuất sắc (Mặc định: 90 điểm). |
-| `goodThreshold` | `number` | Ngưỡng điểm đạt Tốt (Mặc định: 70 điểm). |
-| `passThreshold` | `number` | Ngưỡng điểm Hoàn thành (Mặc định: 50 điểm). |
+| `excellentThreshold` | `number` | Ngưỡng điểm đạt Hoàn thành xuất sắc nhiệm vụ (Mặc định: 90 điểm). |
+| `excellentMinCrit` | `number` | Điều kiện bắt buộc Xuất sắc: Không có tiêu chí nào dưới ngưỡng này (Mặc định: 7 điểm). |
+| `goodThreshold` | `number` | Ngưỡng điểm đạt Hoàn thành tốt nhiệm vụ (Mặc định: 70 điểm). |
+| `goodMinCrit` | `number` | Điều kiện bắt buộc Tốt: Không có tiêu chí nào dưới ngưỡng này (Mặc định: 5 điểm). |
+| `passThreshold` | `number` | Ngưỡng điểm Hoàn thành nhiệm vụ (Mặc định: 50 điểm). |
+| `weakVotesThresholdPercent` | `number` | Ngưỡng % số phiếu Yếu (<=50đ) dẫn đến Không hoàn thành (Mặc định: 50%). |
 | `scale` | `number` | Thang điểm quy đổi chuẩn (100). |
-| `targetEmployeeIds` | `string[]` | Danh sách các cán bộ áp dụng lấy phiếu tín nhiệm trong đợt này. |
+| `voterEmployeeIds` | `string[]` | Danh sách cán bộ được tham gia bỏ phiếu (Cử tri) trong đợt này. |
+| `targetEmployeeIds` | `string[]` | Danh sách cán bộ áp dụng lấy phiếu tín nhiệm (Đối tượng) trong đợt này. |
 | `criteria` | `Array<Criterion>` | Bộ tiêu chí và thang điểm áp dụng riêng cho đợt này. |
 | `updatedAt` | `timestamp` | Thời gian cập nhật cấu hình lần gần nhất. |
 
 ---
+
 
 ## ⚙️ 7. Module Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động (`autoInitDb.js`)
 

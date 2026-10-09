@@ -4,36 +4,41 @@
 // ============================================================================
 
 /**
- * Xếp loại kết quả đánh giá tín nhiệm dựa trên tổng điểm 10 tiêu chí (Thang điểm 100)
- * Chuẩn mực quy chế thi đua & đánh giá nội bộ QTDND
+ * Xếp loại kết quả đánh giá tín nhiệm theo quy chế 4 mức mới:
+ * 1. Hoàn thành xuất sắc nhiệm vụ (>= 90đ)
+ * 2. Hoàn thành tốt nhiệm vụ (70 - <90đ)
+ * 3. Hoàn thành nhiệm vụ (50 - <70đ)
+ * 4. Không hoàn thành nhiệm vụ (< 50đ)
  */
 export const getTrustClassification = (totalScore) => {
   const score = Number(totalScore) || 0;
-  if (score >= 90) return 'Xuất sắc';
-  if (score >= 80) return 'Tốt';
-  if (score >= 70) return 'Khá';
-  if (score >= 50) return 'Trung bình';
-  return 'Cần cải thiện';
+  if (score >= 90) return 'Hoàn thành xuất sắc nhiệm vụ';
+  if (score >= 70) return 'Hoàn thành tốt nhiệm vụ';
+  if (score >= 50) return 'Hoàn thành nhiệm vụ';
+  return 'Không hoàn thành nhiệm vụ';
 };
 
 /**
  * Trả về cấu hình hiển thị Badge (màu sắc, biến thể) theo kết quả xếp loại
+ * Hỗ trợ linh hoạt cả tên đầy đủ mới và tên rút gọn cũ
  */
 export const getClassificationBadgeVariant = (classification) => {
-  switch (classification) {
-    case 'Xuất sắc':
-      return 'bg-emerald-50 text-emerald-800 border-emerald-300';
-    case 'Tốt':
-      return 'bg-teal-50 text-teal-800 border-teal-300';
-    case 'Khá':
-      return 'bg-blue-50 text-blue-800 border-blue-300';
-    case 'Trung bình':
-      return 'bg-amber-50 text-amber-800 border-amber-300';
-    case 'Cần cải thiện':
-    default:
-      return 'bg-rose-50 text-rose-800 border-rose-300';
+  const c = String(classification || '').toLowerCase();
+  if (c.includes('xuất sắc')) {
+    return 'bg-emerald-50 text-emerald-800 border-emerald-300';
   }
+  if (c.includes('tốt')) {
+    return 'bg-teal-50 text-teal-800 border-teal-300';
+  }
+  if (c.includes('không hoàn thành') || c.includes('cần cải thiện') || c.includes('yếu')) {
+    return 'bg-rose-50 text-rose-800 border-rose-300';
+  }
+  if (c.includes('hoàn thành')) {
+    return 'bg-amber-50 text-amber-800 border-amber-300';
+  }
+  return 'bg-slate-50 text-slate-700 border-slate-300';
 };
+
 
 /**
  * Chuẩn hóa thông tin trạng thái Đợt Đánh giá

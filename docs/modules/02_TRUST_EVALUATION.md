@@ -42,14 +42,24 @@ Thang điểm từ $0$ đến $10$ điểm cho mỗi tiêu chí (Tổng điểm 
 
 ---
 
-## 📊 3. KHUNG PHÂN LOẠI TÍN NHIỆM
+## 📊 3. KHUNG 4 MỨC PHÂN LOẠI XẾP LOẠI TÍN NHIỆM CHUẨN MỰC MỚI
 
-- $\ge 90$ điểm: **Xuất sắc** (Huy hiệu xanh lá)
-- $70 - 89$ điểm: **Tốt** (Huy hiệu xanh ngọc)
-- $50 - 69$ điểm: **Hoàn thành** (Huy hiệu hổ phách)
-- Dưới $50$ điểm: **Không hoàn thành** (Huy hiệu đỏ hoa hồng)
+Áp dụng quy chế đánh giá tín nhiệm mới của Quỹ Tín Dụng Nhân Dân Yên Thọ:
 
----
+1. **Hoàn thành xuất sắc nhiệm vụ**:
+   - Điểm trung bình từ $90$ đến $100$ điểm.
+   - **Điều kiện bắt buộc**: Không có tiêu chí nào bị chấm dưới $7$ điểm (tất cả các tiêu chí đều đạt $\ge 7.0$ điểm).
+   - Huy hiệu: 🟢 Xanh lá (`bg-emerald-50 text-emerald-800`).
+2. **Hoàn thành tốt nhiệm vụ**:
+   - Điểm trung bình từ $70$ đến dưới $90$ điểm (hoặc $\ge 90$ điểm nhưng bị khống chế do có tiêu chí $< 7.0$ điểm).
+   - **Điều kiện bắt buộc**: Không có tiêu chí nào bị chấm dưới $5$ điểm (tất cả các tiêu chí đều đạt $\ge 5.0$ điểm).
+   - Huy hiệu: 🔵 Xanh ngọc (`bg-teal-50 text-teal-800`).
+3. **Hoàn thành nhiệm vụ**:
+   - Điểm trung bình từ $50$ đến dưới $70$ điểm (hoặc $\ge 70$ điểm nhưng bị khống chế do có tiêu chí $< 5.0$ điểm).
+   - Huy hiệu: 🟡 Hổ phách (`bg-amber-50 text-amber-800`).
+4. **Không hoàn thành nhiệm vụ**:
+   - Điểm trung bình dưới $50$ điểm, **HOẶC** có trên $50\%$ số phiếu đánh giá xếp ở mức Yếu ($0 - 5$ điểm / $\le 50$ điểm).
+   - Huy hiệu: 🔴 Hoa hồng đỏ (`bg-rose-50 text-rose-800`).
 
 ---
 
@@ -62,12 +72,13 @@ Toàn bộ các phân hệ con của Module Tín nhiệm tuân thủ nghiêm ng�
   - Danh sách thẻ đợt đánh giá trực quan, highlight đợt đang chọn, tự động render badge theo ngữ cảnh từng tab (Tiến độ chấm %, Số phiếu đã nộp, Trạng thái đợt, Tỷ lệ cử tri tham gia).
   - Tích hợp công cụ quản trị đợt: Nút **Tạo đợt**, **Sửa đợt**, **Xóa đợt** (bảo mật mật khẩu quản trị).
 - **Cột Phải (Detail Content - 8 đến 9/12 cột trên Desktop/Tablet)**:
-  - **Tab 1: Đánh giá (`SCORING`)**: Banner tiến độ + Bộ chuyển tiêu chí + Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10, tự động lưu ngầm).
+  - **Tab 1: Đánh giá (`SCORING`)**: Banner tiến độ + Bộ chuyển tiêu chí + Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10, tự động lưu ngầm). Tự động kiểm tra quyền cử tri (`isEligibleVoter`), hiển thị cảnh báo nếu không thuộc danh sách cử tri được chỉ định bỏ phiếu.
   - **Tab 2: Lịch sử (`MY_VOTES`)**: Lịch sử các đợt đánh giá của Cá nhân, hỗ trợ xem theo từng đợt được chọn hoặc tùy chọn "Tất cả các đợt đánh giá" (`allowSelectAll`), hiển thị chi tiết điểm và đánh giá đã nộp. Cột chức vụ được gộp tinh gọn dưới tên cán bộ để chống tràn ngang.
-  - **Tab 3: Cá nhân (`MY_RESULTS`)**: Bảng điểm tổng kết cá nhân của chính mình (chỉ hiển thị khi đợt đã đóng/công bố theo quy chế). Tự động phân tích điểm trung bình từng tiêu chí, gắn huy hiệu nổi bật **Cao nhất** (xanh lá) và **Thấp nhất** (hổ phách). Khi bấm vào bất kỳ dòng tiêu chí nào, hệ thống mở rộng chi tiết danh sách cử tri đã chấm điểm theo đúng cấu hình Đợt (**Ẩn danh** hiển thị `Cử tri #X (Bỏ phiếu kín)` hoặc **Công khai** hiển thị họ tên cử tri).
-  - **Tab 4: Tổng quan (`OVERVIEW`)**: Báo cáo tổng thể phân bổ xếp loại toàn Quỹ, danh sách cử tri đã nộp / chưa nộp phản ánh 100% dữ liệu thực tế từ CSDL Firestore (triệt tiêu toàn bộ mock data). Cột chức vụ được gộp tinh gọn dưới họ tên cán bộ. Khi bấm xem chi tiết cán bộ trong bảng kết quả, modal `EmployeeTrustDetailModal` hiển thị bảng điểm tiêu chí trực quan với đầy đủ cột điểm trung bình, huy hiệu Cao nhất/Thấp nhất và cơ chế click xem danh sách cử tri chấm điểm.
-  - **Tab 5: Cấu hình (`CRITERIA_SETTINGS`)**: Cấu hình độc lập cho từng đợt đánh giá (`period_configs`), nút Lưu cấu hình nổi bật ở Header Card và **Sticky Bottom Action Toolbar** cố định đáy màn hình.
+  - **Tab 3: Cá nhân (`MY_RESULTS`)**: Bảng điểm tổng kết cá nhân của chính mình (chỉ hiển thị khi đợt đã đóng/công bố theo quy chế). Tự động phân tích điểm trung bình từng tiêu chí, gắn huy hiệu nổi bật **Cao nhất** (xanh lá) và **Thấp nhất** (hổ phách), hiển thị lý do nếu bị khống chế hạ mức. Khi bấm vào bất kỳ dòng tiêu chí nào, hệ thống mở rộng chi tiết danh sách cử tri đã chấm điểm theo đúng cấu hình Đợt (**Ẩn danh** hiển thị `Cử tri #X (Bỏ phiếu kín)` hoặc **Công khai** hiển thị họ tên cử tri).
+  - **Tab 4: Tổng quan (`OVERVIEW`)**: Báo cáo tổng thể phân bổ xếp loại toàn Quỹ theo 4 mức mới, danh sách cử tri đã nộp / chưa nộp phản ánh 100% dữ liệu thực tế từ CSDL Firestore căn cứ theo danh sách cử tri `voterEmployeeIds`. Cột chức vụ được gộp tinh gọn dưới họ tên cán bộ. Khi bấm xem chi tiết cán bộ trong bảng kết quả, modal `EmployeeTrustDetailModal` hiển thị bảng điểm tiêu chí trực quan với đầy đủ cột điểm trung bình, huy hiệu Cao nhất/Thấp nhất, lý do khống chế và cơ chế click xem danh sách cử tri chấm điểm.
+  - **Tab 5: Cấu hình (`CRITERIA_SETTINGS`)**: Cấu hình độc lập cho từng đợt đánh giá (`period_configs`), bao gồm 2 phân khu cán bộ rõ ràng: **Người được tham gia bỏ phiếu (Cử tri)** (`voterEmployeeIds`) và **Cán bộ được lấy phiếu tín nhiệm** (`targetEmployeeIds`), cùng bảng cấu hình 4 mức xếp loại tín nhiệm (ngưỡng 90/70/50, khống chế tiêu chí 7/5, phiếu yếu 50%). Nút Lưu cấu hình nổi bật ở Header Card và **Sticky Bottom Action Toolbar** cố định đáy màn hình.
   - **Tab 6: Phân quyền (`PERMISSIONS_SETTINGS`)**: Ma trận phân quyền RBAC chuyên biệt của Phân hệ Tín nhiệm.
+
 - **Thanh Menu Tinh Gọn**:
   - Desktop/iPad: Thanh tab ngang tinh gọn `TrustModuleTabsNav.jsx`, triệt tiêu 100% header rườm rà.
   - Mobile: Thanh Bottom Navigation `TrustBottomNav.jsx` cho phép chuyển tab 1 chạm, tự động xếp chồng (stack) dọc mượt mà.

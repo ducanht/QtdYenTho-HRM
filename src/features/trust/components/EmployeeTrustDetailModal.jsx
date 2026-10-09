@@ -110,7 +110,12 @@ const EmployeeTrustDetailModal = ({
     );
     const avg100 = Number((totalScoresSum / totalVoters).toFixed(1));
     const avg10 = Number((avg100 / (criteria.length || 10)).toFixed(1));
-    const classification = classifyTrustScore(avg100);
+    const critAverages = criteriaAnalysis.map((c) => c.avg);
+    const classification = classifyTrustScore(avg100, {
+      critAverages,
+      votes: receivedEvaluations,
+      thresholds: currentPeriod?.thresholds,
+    });
 
     return {
       avg100,
@@ -118,7 +123,8 @@ const EmployeeTrustDetailModal = ({
       classification,
       totalVoters,
     };
-  }, [receivedEvaluations, criteria]);
+  }, [receivedEvaluations, criteria, criteriaAnalysis, currentPeriod?.thresholds]);
+
 
   if (!employee) return null;
 
@@ -182,10 +188,16 @@ const EmployeeTrustDetailModal = ({
             <div className="w-px h-8 bg-white/20" />
             <div className="text-center px-2">
               <div className="text-[10px] uppercase font-bold text-teal-200">Xếp Loại</div>
-              <div className="text-sm font-black text-white">{overallStats.classification.label}</div>
+              <div className="text-xs sm:text-sm font-black text-white">{overallStats.classification.label}</div>
+              {overallStats.classification.downgradeReason && (
+                <div className="text-[9px] text-amber-200 italic font-medium">
+                  ({overallStats.classification.downgradeReason})
+                </div>
+              )}
             </div>
           </div>
         </div>
+
 
         {/* 2. Thanh công cụ Lãnh đạo: Toggle ẩn danh cử tri */}
         {isAdmin && (

@@ -6,9 +6,7 @@ import {
   Trash2, 
   RotateCcw, 
   CheckSquare, 
-  Users, 
-  CheckCircle2,
-  Lock
+  Users
 } from 'lucide-react';
 import Card from '../../../../components/common/Card';
 import Button from '../../../../components/common/Button';
@@ -62,12 +60,17 @@ const TrustCriteriaSettings = ({
   const [periodToDelete, setPeriodToDelete] = useState(null);
 
   // State cấu hình cục bộ của đợt đang chọn (Cột phải)
+  // State cấu hình cục bộ của đợt đang chọn (Cột phải)
   const [localConfig, setLocalConfig] = useState({
     excellentThreshold: 90,
+    excellentMinCrit: 7,
     goodThreshold: 70,
+    goodMinCrit: 5,
     passThreshold: 50,
+    weakVotesThresholdPercent: 50,
     votingMode: 'ANONYMOUS',
     allowSelfEvaluation: false,
+    voterEmployeeIds: [],
     targetEmployeeIds: [],
     criteria: [...DEFAULT_CRITERIA],
   });
@@ -90,10 +93,17 @@ const TrustCriteriaSettings = ({
     if (periodConfig) {
       setLocalConfig({
         excellentThreshold: periodConfig.excellentThreshold ?? 90,
+        excellentMinCrit: periodConfig.excellentMinCrit ?? 7,
         goodThreshold: periodConfig.goodThreshold ?? 70,
+        goodMinCrit: periodConfig.goodMinCrit ?? 5,
         passThreshold: periodConfig.passThreshold ?? 50,
+        weakVotesThresholdPercent: periodConfig.weakVotesThresholdPercent ?? 50,
         votingMode: periodConfig.votingMode || currentPeriod?.votingMode || 'ANONYMOUS',
         allowSelfEvaluation: periodConfig.allowSelfEvaluation ?? currentPeriod?.allowSelfEvaluation ?? false,
+        voterEmployeeIds:
+          periodConfig.voterEmployeeIds ||
+          currentPeriod?.voterEmployeeIds ||
+          employees.map((e) => e.id),
         targetEmployeeIds:
           periodConfig.targetEmployeeIds ||
           currentPeriod?.targetEmployeeIds ||
@@ -108,10 +118,14 @@ const TrustCriteriaSettings = ({
     } else if (currentPeriod) {
       setLocalConfig({
         excellentThreshold: currentPeriod.thresholds?.excellent ?? currentPeriod.excellentThreshold ?? 90,
+        excellentMinCrit: currentPeriod.thresholds?.excellentMinCrit ?? 7,
         goodThreshold: currentPeriod.thresholds?.good ?? currentPeriod.goodThreshold ?? 70,
+        goodMinCrit: currentPeriod.thresholds?.goodMinCrit ?? 5,
         passThreshold: currentPeriod.thresholds?.pass ?? currentPeriod.passThreshold ?? 50,
+        weakVotesThresholdPercent: currentPeriod.thresholds?.weakVotesThresholdPercent ?? 50,
         votingMode: currentPeriod.votingMode || 'ANONYMOUS',
         allowSelfEvaluation: currentPeriod.allowSelfEvaluation ?? false,
+        voterEmployeeIds: currentPeriod.voterEmployeeIds || employees.map((e) => e.id),
         targetEmployeeIds: currentPeriod.targetEmployeeIds || employees.map((e) => e.id),
         criteria:
           currentPeriod.customCriteria && currentPeriod.customCriteria.length > 0
@@ -121,7 +135,28 @@ const TrustCriteriaSettings = ({
     }
   }, [periodConfig, currentPeriod, employees]);
 
-  // Handler: Chọn nhanh cán bộ theo phòng ban
+  // Handler: Chọn nhanh Người tham gia bỏ phiếu (Cử tri) theo phòng ban
+  const handleSelectVotersByDept = (dept) => {
+    if (dept === 'ALL') {
+      setLocalConfig((prev) => ({
+        ...prev,
+        voterEmployeeIds: employees.map((e) => e.id),
+      }));
+    } else if (dept === 'NONE') {
+      setLocalConfig((prev) => ({
+        ...prev,
+        voterEmployeeIds: [],
+      }));
+    } else {
+      const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
+      setLocalConfig((prev) => ({
+        ...prev,
+        voterEmployeeIds: Array.from(new Set([...(prev.voterEmployeeIds || []), ...matchingIds])),
+      }));
+    }
+  };
+
+  // Handler: Chọn nhanh Cán bộ được lấy phiếu theo phòng ban
   const handleSelectEmployeesByDept = (dept) => {
     if (dept === 'ALL') {
       setLocalConfig((prev) => ({
@@ -141,6 +176,7 @@ const TrustCriteriaSettings = ({
       }));
     }
   };
+
 
   // Handler: Mở modal thêm/sửa tiêu chí cho riêng đợt này
   const handleOpenCritModal = (crit = null, index = null) => {
@@ -205,16 +241,20 @@ const TrustCriteriaSettings = ({
     }));
   };
 
-  // Handler: Khôi phục cấu hình chuẩn NHNN cho đợt này
+  // Handler: Khôi phục cấu hình chuẩn cho đợt này
   const handleResetStandard = () => {
-    if (!window.confirm('Khôi phục cấu hình đợt này về chuẩn mặc định 10 tiêu chí NHNN và ngưỡng 90/70/50?')) return;
+    if (!window.confirm('Khôi phục cấu hình đợt này về chuẩn mặc định 10 tiêu chí và 4 mức xếp loại quy chuẩn (90/70/50, khống chế tiêu chí 7/5, phiếu yếu 50%)?')) return;
     setLocalConfig((prev) => ({
       ...prev,
       excellentThreshold: 90,
+      excellentMinCrit: 7,
       goodThreshold: 70,
+      goodMinCrit: 5,
       passThreshold: 50,
+      weakVotesThresholdPercent: 50,
       votingMode: 'ANONYMOUS',
       allowSelfEvaluation: false,
+      voterEmployeeIds: employees.map((e) => e.id),
       targetEmployeeIds: employees.map((e) => e.id),
       criteria: [...DEFAULT_CRITERIA],
     }));
@@ -252,7 +292,7 @@ const TrustCriteriaSettings = ({
             title="Đợt Đánh Giá"
             badgeRenderer={(p) => (
               <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-                {(p.targetEmployeeIds || employees).length} cán bộ
+                {(p.targetEmployeeIds || employees).length} đối tượng
               </span>
             )}
           />
@@ -275,7 +315,7 @@ const TrustCriteriaSettings = ({
                     onClick={handleResetStandard}
                     className="text-xs font-bold border-slate-300 text-slate-700"
                   >
-                    Chuẩn NHNN
+                    Chuẩn quy chế
                   </Button>
                   <Button
                     variant="primary"
@@ -290,170 +330,370 @@ const TrustCriteriaSettings = ({
                 </div>
               }
             >
-              {/* 1. THAM SỐ XẾP LOẠI & QUY CHẾ */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-5">
-                {/* Ngưỡng điểm xếp loại */}
-                <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-2">
-                  <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider block">
-                    Ngưỡng Điểm (Scale 100)
-                  </span>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-700">Xuất sắc (&ge;):</span>
-                      <input
-                        type="number"
-                        value={localConfig.excellentThreshold ?? 90}
-                        onChange={(e) =>
-                          setLocalConfig((prev) => ({ ...prev, excellentThreshold: Number(e.target.value) }))
-                        }
-                        className="w-14 p-1 text-center font-bold bg-white border border-emerald-300 rounded-lg text-xs"
-                      />
+              {/* 1. THAM SỐ XẾP LOẠI TÍN NHIỆM (4 MỨC CHUẨN MỰC) & QUY CHẾ BỎ PHIẾU */}
+              <div className="space-y-3.5 mb-5">
+                {/* Khung cấu hình 4 mức xếp loại */}
+                <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider block">
+                      Cấu Hình 4 Mức Xếp Loại Tín Nhiệm (Thang 100 điểm)
+                    </span>
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-300">
+                      Quy chế mới QTDND
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
+                    {/* Mức 1: Hoàn thành xuất sắc nhiệm vụ */}
+                    <div className="p-2.5 rounded-lg border border-emerald-200 bg-white space-y-1.5 shadow-2xs">
+                      <div className="flex items-center justify-between font-bold text-emerald-900">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          1. Hoàn thành xuất sắc nhiệm vụ
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-normal text-slate-500">Từ</span>
+                          <input
+                            type="number"
+                            value={localConfig.excellentThreshold ?? 90}
+                            onChange={(e) =>
+                              setLocalConfig((prev) => ({ ...prev, excellentThreshold: Number(e.target.value) }))
+                            }
+                            className="w-12 p-0.5 text-center font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded text-xs"
+                          />
+                          <span className="text-[11px] font-normal text-slate-500">- 100đ</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-600 bg-slate-50 px-2 py-1 rounded">
+                        <span>Điều kiện: Không tiêu chí nào &lt;</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={localConfig.excellentMinCrit ?? 7}
+                            onChange={(e) =>
+                              setLocalConfig((prev) => ({ ...prev, excellentMinCrit: Number(e.target.value) }))
+                            }
+                            className="w-10 p-0.5 text-center font-bold text-emerald-800 bg-white border border-slate-300 rounded text-xs"
+                          />
+                          <span>điểm</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-700">Tốt (&ge;):</span>
-                      <input
-                        type="number"
-                        value={localConfig.goodThreshold ?? 70}
-                        onChange={(e) =>
-                          setLocalConfig((prev) => ({ ...prev, goodThreshold: Number(e.target.value) }))
-                        }
-                        className="w-14 p-1 text-center font-bold bg-white border border-emerald-300 rounded-lg text-xs"
-                      />
+
+                    {/* Mức 2: Hoàn thành tốt nhiệm vụ */}
+                    <div className="p-2.5 rounded-lg border border-teal-200 bg-white space-y-1.5 shadow-2xs">
+                      <div className="flex items-center justify-between font-bold text-teal-900">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-teal-500" />
+                          2. Hoàn thành tốt nhiệm vụ
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-normal text-slate-500">Từ</span>
+                          <input
+                            type="number"
+                            value={localConfig.goodThreshold ?? 70}
+                            onChange={(e) =>
+                              setLocalConfig((prev) => ({ ...prev, goodThreshold: Number(e.target.value) }))
+                            }
+                            className="w-12 p-0.5 text-center font-bold text-teal-800 bg-teal-50 border border-teal-300 rounded text-xs"
+                          />
+                          <span className="text-[11px] font-normal text-slate-500">- &lt;{localConfig.excellentThreshold ?? 90}đ</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-600 bg-slate-50 px-2 py-1 rounded">
+                        <span>Điều kiện: Không tiêu chí nào &lt;</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={localConfig.goodMinCrit ?? 5}
+                            onChange={(e) =>
+                              setLocalConfig((prev) => ({ ...prev, goodMinCrit: Number(e.target.value) }))
+                            }
+                            className="w-10 p-0.5 text-center font-bold text-teal-800 bg-white border border-slate-300 rounded text-xs"
+                          />
+                          <span>điểm</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-700">Hoàn thành (&ge;):</span>
-                      <input
-                        type="number"
-                        value={localConfig.passThreshold ?? 50}
-                        onChange={(e) =>
-                          setLocalConfig((prev) => ({ ...prev, passThreshold: Number(e.target.value) }))
-                        }
-                        className="w-14 p-1 text-center font-bold bg-white border border-emerald-300 rounded-lg text-xs"
-                      />
+
+                    {/* Mức 3: Hoàn thành nhiệm vụ */}
+                    <div className="p-2.5 rounded-lg border border-amber-200 bg-white space-y-1.5 shadow-2xs">
+                      <div className="flex items-center justify-between font-bold text-amber-900">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          3. Hoàn thành nhiệm vụ
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-normal text-slate-500">Từ</span>
+                          <input
+                            type="number"
+                            value={localConfig.passThreshold ?? 50}
+                            onChange={(e) =>
+                              setLocalConfig((prev) => ({ ...prev, passThreshold: Number(e.target.value) }))
+                            }
+                            className="w-12 p-0.5 text-center font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded text-xs"
+                          />
+                          <span className="text-[11px] font-normal text-slate-500">- &lt;{localConfig.goodThreshold ?? 70}đ</span>
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-slate-600 bg-slate-50 px-2 py-1 rounded">
+                        <span>Điểm trung bình từ {localConfig.passThreshold ?? 50} đến dưới {localConfig.goodThreshold ?? 70} điểm</span>
+                      </div>
+                    </div>
+
+                    {/* Mức 4: Không hoàn thành nhiệm vụ */}
+                    <div className="p-2.5 rounded-lg border border-rose-200 bg-white space-y-1.5 shadow-2xs">
+                      <div className="flex items-center justify-between font-bold text-rose-900">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-500" />
+                          4. Không hoàn thành nhiệm vụ
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-normal text-slate-500">Dưới</span>
+                          <span className="font-bold text-rose-700">{localConfig.passThreshold ?? 50}đ</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-600 bg-slate-50 px-2 py-1 rounded">
+                        <span>Hoặc có &gt;</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={localConfig.weakVotesThresholdPercent ?? 50}
+                            onChange={(e) =>
+                              setLocalConfig((prev) => ({ ...prev, weakVotesThresholdPercent: Number(e.target.value) }))
+                            }
+                            className="w-10 p-0.5 text-center font-bold text-rose-800 bg-white border border-slate-300 rounded text-xs"
+                          />
+                          <span>% số phiếu xếp Yếu (0-5đ)</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Quy chế bỏ phiếu */}
-                <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/50 space-y-2">
-                  <span className="text-xs font-bold text-[#0f766e] uppercase tracking-wider block">
-                    Quy Chế Bỏ Phiếu
-                  </span>
-                  <div className="space-y-2 text-xs">
-                    <label className="flex items-center justify-between cursor-pointer">
-                      <span className="text-slate-700">Bỏ phiếu kín:</span>
-                      <input
-                        type="checkbox"
-                        checked={localConfig.votingMode === 'ANONYMOUS'}
-                        onChange={(e) =>
-                          setLocalConfig((prev) => ({
-                            ...prev,
-                            votingMode: e.target.checked ? 'ANONYMOUS' : 'PUBLIC',
-                          }))
-                        }
-                        className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
-                      />
-                    </label>
+                {/* Hàng 2: Quy chế bỏ phiếu & Thống kê đợt */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Quy chế bỏ phiếu */}
+                  <div className="p-3 rounded-xl border border-teal-200 bg-teal-50/40 space-y-2">
+                    <span className="text-xs font-bold text-teal-900 uppercase tracking-wider block">
+                      Hình Thức & Quy Chế Bỏ Phiếu
+                    </span>
+                    <div className="space-y-2 text-xs">
+                      <label className="flex items-center justify-between cursor-pointer">
+                        <span className="text-slate-700">Bỏ phiếu kín (Ẩn danh 100%):</span>
+                        <input
+                          type="checkbox"
+                          checked={localConfig.votingMode === 'ANONYMOUS'}
+                          onChange={(e) =>
+                            setLocalConfig((prev) => ({
+                              ...prev,
+                              votingMode: e.target.checked ? 'ANONYMOUS' : 'PUBLIC',
+                            }))
+                          }
+                          className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        />
+                      </label>
 
-                    <label className="flex items-center justify-between cursor-pointer">
-                      <span className="text-slate-700">Tự đánh giá:</span>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(localConfig.allowSelfEvaluation)}
-                        onChange={(e) =>
-                          setLocalConfig((prev) => ({ ...prev, allowSelfEvaluation: e.target.checked }))
-                        }
-                        className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
-                      />
-                    </label>
+                      <label className="flex items-center justify-between cursor-pointer">
+                        <span className="text-slate-700">Cho phép tự đánh giá bản thân:</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(localConfig.allowSelfEvaluation)}
+                          onChange={(e) =>
+                            setLocalConfig((prev) => ({ ...prev, allowSelfEvaluation: e.target.checked }))
+                          }
+                          className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        />
+                      </label>
+                    </div>
                   </div>
-                </div>
 
-                {/* Thống kê đợt */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                    Thông Tin Đợt
-                  </span>
-                  <div className="space-y-1.5 text-xs text-slate-600">
+                  {/* Thống kê đợt */}
+                  <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5 text-xs text-slate-600">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1">
+                      Thông Tin Tổng Quát Đợt
+                    </span>
                     <div className="flex justify-between">
                       <span>Trạng thái:</span>
                       <StatusBadge type="period_status" value={currentPeriod.status} />
                     </div>
                     <div className="flex justify-between">
-                      <span>Cán bộ áp dụng:</span>
+                      <span>Cử tri tham gia bỏ phiếu:</span>
                       <strong className="text-teal-800 font-bold">
-                        {(localConfig.targetEmployeeIds || []).length} cán bộ
+                        {(localConfig.voterEmployeeIds || []).length} / {employees.length} cán bộ
                       </strong>
                     </div>
                     <div className="flex justify-between">
-                      <span>Số tiêu chí:</span>
+                      <span>Đối tượng được lấy phiếu:</span>
                       <strong className="text-teal-800 font-bold">
-                        {(localConfig.criteria || []).length} tiêu chí
+                        {(localConfig.targetEmployeeIds || []).length} / {employees.length} cán bộ
                       </strong>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 2. CÁN BỘ ĐƯỢC LẤY PHIẾU TÍN NHIỆM */}
-              <div className="border border-slate-200 rounded-xl p-3.5 mb-5 space-y-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#0f766e]" />
-                    <span className="text-xs font-bold text-slate-900">
-                      Cán bộ được lấy phiếu ({localConfig.targetEmployeeIds?.length || 0} / {employees.length})
-                    </span>
+              {/* 2. CẤU HÌNH CÁN BỘ: 2 PHÂN KHU (CỬ TRI THAM GIA BỎ PHIẾU & ĐỐI TƯỢNG ĐƯỢC LẤY PHIẾU) */}
+              <div className="space-y-4 mb-5">
+                {/* 2.1. NGƯỜI ĐƯỢC THAM GIA BỎ PHIẾU (CỬ TRI) */}
+                <div className="border border-teal-200 bg-teal-50/20 rounded-xl p-3.5 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-teal-700" />
+                      <div>
+                        <span className="text-xs font-bold text-teal-950 block">
+                          Người được tham gia bỏ phiếu (Cử tri) ({localConfig.voterEmployeeIds?.length || 0} / {employees.length})
+                        </span>
+                        <span className="text-[11px] text-teal-700">
+                          Chỉ những cán bộ được tích chọn mới có quyền chấm điểm tín nhiệm trong đợt này
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Nút chọn nhanh Cử tri */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVotersByDept('ALL')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 cursor-pointer"
+                      >
+                        Chọn tất cả ({employees.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVotersByDept('Phòng Tín dụng')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 cursor-pointer"
+                      >
+                        Khối Tín dụng
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVotersByDept('Phòng Kế toán - Ngân quỹ')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 cursor-pointer"
+                      >
+                        Khối Kế toán
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVotersByDept('NONE')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-200 cursor-pointer"
+                      >
+                        Bỏ chọn
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Nút chọn nhanh */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectEmployeesByDept('ALL')}
-                      className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 cursor-pointer"
-                    >
-                      Chọn tất cả
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectEmployeesByDept('NONE')}
-                      className="px-2 py-0.5 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-200 cursor-pointer"
-                    >
-                      Bỏ chọn
-                    </button>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-36 overflow-y-auto p-1 bg-white rounded-lg border border-teal-100">
+                    {employees.map((emp) => {
+                      const isChecked = (localConfig.voterEmployeeIds || []).includes(emp.id);
+                      return (
+                        <label
+                          key={`voter-${emp.id}`}
+                          className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                            isChecked ? 'bg-teal-50 border-teal-300 text-teal-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const cur = localConfig.voterEmployeeIds || [];
+                              setLocalConfig((prev) => ({
+                                ...prev,
+                                voterEmployeeIds: e.target.checked
+                                  ? [...cur, emp.id]
+                                  : cur.filter((id) => id !== emp.id),
+                              }));
+                            }}
+                            className="w-3.5 h-3.5 rounded text-teal-600 focus:ring-teal-500"
+                          />
+                          <span className="truncate">{emp.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-50/50 rounded-lg">
-                  {employees.map((emp) => {
-                    const isChecked = (localConfig.targetEmployeeIds || []).includes(emp.id);
-                    return (
-                      <label
-                        key={emp.id}
-                        className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
-                          isChecked ? 'bg-teal-50 border-teal-300 text-teal-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
-                        }`}
+                {/* 2.2. CÁN BỘ ĐƯỢC LẤY PHIẾU TÍN NHIỆM (ĐỐI TƯỢNG ĐƯỢC ĐÁNH GIÁ) */}
+                <div className="border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#0f766e]" />
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 block">
+                          Cán bộ được lấy phiếu tín nhiệm ({localConfig.targetEmployeeIds?.length || 0} / {employees.length})
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          Danh sách cán bộ được cử tri chấm điểm đánh giá trong đợt
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Nút chọn nhanh Đối tượng */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectEmployeesByDept('ALL')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 cursor-pointer"
                       >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            const cur = localConfig.targetEmployeeIds || [];
-                            setLocalConfig((prev) => ({
-                              ...prev,
-                              targetEmployeeIds: e.target.checked
-                                ? [...cur, emp.id]
-                                : cur.filter((id) => id !== emp.id),
-                            }));
-                          }}
-                          className="w-3.5 h-3.5 rounded text-teal-600"
-                        />
-                        <span className="truncate">{emp.name}</span>
-                      </label>
-                    );
-                  })}
+                        Chọn tất cả ({employees.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectEmployeesByDept('Phòng Tín dụng')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 cursor-pointer"
+                      >
+                        Khối Tín dụng
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectEmployeesByDept('Phòng Kế toán - Ngân quỹ')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 cursor-pointer"
+                      >
+                        Khối Kế toán
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectEmployeesByDept('NONE')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-200 cursor-pointer"
+                      >
+                        Bỏ chọn
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50/50 rounded-lg">
+                    {employees.map((emp) => {
+                      const isChecked = (localConfig.targetEmployeeIds || []).includes(emp.id);
+                      return (
+                        <label
+                          key={`target-${emp.id}`}
+                          className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                            isChecked ? 'bg-teal-50 border-teal-300 text-teal-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const cur = localConfig.targetEmployeeIds || [];
+                              setLocalConfig((prev) => ({
+                                ...prev,
+                                targetEmployeeIds: e.target.checked
+                                  ? [...cur, emp.id]
+                                  : cur.filter((id) => id !== emp.id),
+                              }));
+                            }}
+                            className="w-3.5 h-3.5 rounded text-teal-600 focus:ring-teal-500"
+                          />
+                          <span className="truncate">{emp.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+
 
               {/* 3. BỘ TIÊU CHÍ ĐÁNH GIÁ CỦA ĐỢT */}
               <div className="space-y-3">

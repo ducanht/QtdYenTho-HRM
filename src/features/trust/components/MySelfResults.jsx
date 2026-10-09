@@ -57,12 +57,18 @@ const MySelfResults = ({
 
     const avgScore100 = Number((totalSum / count).toFixed(1));
     const avgScore10 = Number((avgScore100 / (criteria.length || 10)).toFixed(1));
-    const classification = classifyTrustScore(avgScore100);
 
     const criteriaBreakdown = criteria.map((c) => ({
       ...c,
       avg10: Number((criteriaSums[c.id] / count).toFixed(1)),
     }));
+
+    const critAverages = criteriaBreakdown.map((c) => c.avg10);
+    const classification = classifyTrustScore(avgScore100, {
+      critAverages,
+      votes: myReceivedEvaluations,
+      thresholds: currentPeriod?.thresholds,
+    });
 
     const validScores = criteriaBreakdown.map((c) => c.avg10).filter((s) => !isNaN(s) && s > 0);
     const maxScore = validScores.length ? Math.max(...validScores) : null;
@@ -77,7 +83,8 @@ const MySelfResults = ({
       maxScore,
       minScore,
     };
-  }, [myReceivedEvaluations, criteria]);
+  }, [myReceivedEvaluations, criteria, currentPeriod?.thresholds]);
+
 
   // Nếu đợt chưa kết thúc
   if (!isPeriodClosed) {
@@ -147,14 +154,21 @@ const MySelfResults = ({
 
             <div className="text-center">
               <div className="text-[11px] text-teal-200 font-semibold uppercase">Xếp Loại</div>
-              <div className="text-lg sm:text-xl font-black text-amber-300">
+              <div className="text-base sm:text-lg font-black text-amber-300">
                 {summary.classification.label}
               </div>
-              <div className="text-[10px] text-teal-300">Chuẩn mực NHNN</div>
+              {summary.classification.downgradeReason ? (
+                <div className="text-[10px] text-amber-200 italic font-medium">
+                  ({summary.classification.downgradeReason})
+                </div>
+              ) : (
+                <div className="text-[10px] text-teal-300">Quy chế mới QTDND</div>
+              )}
             </div>
           </div>
         </div>
       </Card>
+
 
       {/* Chi tiết trung bình theo từng tiêu chí */}
       <Card

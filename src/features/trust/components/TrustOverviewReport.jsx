@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
-import Button from '../../../components/common/Button';
 import { classifyTrustScore } from '../../../lib/schema';
+import { getClassificationBadgeVariant } from '../../../lib/evaluationUtils';
 import EmployeeTrustDetailModal from './EmployeeTrustDetailModal';
 
 /**
@@ -77,19 +77,34 @@ const TrustOverviewReport = ({
 
     const submittedVoters = Array.from(submittedVoterMap.values());
     const submittedVoterIds = new Set(submittedVoters.map((v) => v.id));
-    const pendingVoters = employees.filter((e) => !submittedVoterIds.has(e.id) && !submittedVoterIds.has(e.uid));
 
-    const totalEligible = employees.length;
+    // Lọc danh sách cử tri hợp lệ theo cấu hình đợt (voterEmployeeIds)
+    const voterIds = currentPeriod.voterEmployeeIds;
+    const eligibleVoters = Array.isArray(voterIds) && voterIds.length > 0
+      ? employees.filter((e) => voterIds.includes(e.id))
+      : employees;
+
+    const pendingVoters = eligibleVoters.filter((e) => !submittedVoterIds.has(e.id) && !submittedVoterIds.has(e.uid));
+
+    const totalEligible = eligibleVoters.length;
     const submittedCount = submittedVoters.length;
     const turnoutPercent = totalEligible > 0 ? Math.round((submittedCount / totalEligible) * 100) : 0;
 
-    // 2. Tính điểm từng cán bộ
+    // 2. Tính điểm từng cán bộ theo danh sách đối tượng được lấy phiếu (targetEmployeeIds)
+    const targetIds = currentPeriod.targetEmployeeIds;
+    const targetEmployees = Array.isArray(targetIds) && targetIds.length > 0
+      ? employees.filter((e) => targetIds.includes(e.id))
+      : employees;
+
     const empStatsMap = {};
-    employees.forEach((emp) => {
+    targetEmployees.forEach((emp) => {
       empStatsMap[emp.id] = {
         employee: emp,
         totalScoreSum: 0,
         count: 0,
+        critSums: {},
+        critCounts: {},
+        votes: [],
       };
     });
 
@@ -100,22 +115,54 @@ const TrustOverviewReport = ({
           const score = ev.totalScore !== undefined ? Number(ev.totalScore) : 0;
           empStatsMap[ev.targetEmployeeId].totalScoreSum += score;
           empStatsMap[ev.targetEmployeeId].count += 1;
+          empStatsMap[ev.targetEmployeeId].votes.push(ev);
+
+          // Gom điểm từng tiêu chí
+          if (ev.scores && typeof ev.scores === 'object') {
+            Object.entries(ev.scores).forEach(([critId, cScore]) => {
+              const num = Number(cScore) || 0;
+              empStatsMap[ev.targetEmployeeId].critSums[critId] =
+                (empStatsMap[ev.targetEmployeeId].critSums[critId] || 0) + num;
+              empStatsMap[ev.targetEmployeeId].critCounts[critId] =
+                (empStatsMap[ev.targetEmployeeId].critCounts[critId] || 0) + 1;
+            });
+          }
         }
       });
 
-    const summaryCounts = { 'Xuất sắc': 0, 'Tốt': 0, 'Hoàn thành': 0, 'Không hoàn thành': 0 };
+    const summaryCounts = {
+      'Hoàn thành xuất sắc nhiệm vụ': 0,
+      'Hoàn thành tốt nhiệm vụ': 0,
+      'Hoàn thành nhiệm vụ': 0,
+      'Không hoàn thành nhiệm vụ': 0,
+      'Xuất sắc': 0,
+      'Tốt': 0,
+      'Hoàn thành': 0,
+      'Không hoàn thành': 0,
+    };
 
     const leaderboard = Object.values(empStatsMap).map((item) => {
       const count = item.count;
       const avgScore100 = count > 0 ? Number((item.totalScoreSum / count).toFixed(1)) : 0;
       const avgScore10 = Number((avgScore100 / (criteria.length || 10)).toFixed(1));
-      const classification = classifyTrustScore(avgScore100);
+
+      // Tính điểm trung bình từng tiêu chí của cán bộ này
+      const critAverages = criteria.map((c) => {
+        const cCnt = item.critCounts[c.id] || 0;
+        return cCnt > 0 ? Number((item.critSums[c.id] / cCnt).toFixed(1)) : 0;
+      });
+
+      // Phân loại kết quả đánh giá theo 4 mức chuẩn mực mới
+      const classification = classifyTrustScore(avgScore100, {
+        critAverages,
+        votes: item.votes,
+        thresholds: currentPeriod.thresholds,
+      });
 
       if (count > 0) {
-        if (summaryCounts[classification.label] !== undefined) {
-          summaryCounts[classification.label] += 1;
-        } else {
-          summaryCounts['Tốt'] += 1;
+        summaryCounts[classification.label] = (summaryCounts[classification.label] || 0) + 1;
+        if (classification.shortLabel) {
+          summaryCounts[classification.shortLabel] = (summaryCounts[classification.shortLabel] || 0) + 1;
         }
       }
 
@@ -142,6 +189,7 @@ const TrustOverviewReport = ({
       pendingVoters,
     };
   }, [evaluations, employees, currentPeriod, criteria]);
+
 
   // Handler: Xuất dữ liệu bảng điểm ra file CSV Excel chuẩn UTF-8
   const handleExportCsv = () => {
@@ -195,42 +243,43 @@ const TrustOverviewReport = ({
 
   return (
     <div className="space-y-6">
-      {/* 1. Thẻ tóm tắt tỷ lệ toàn Quỹ */}
+      {/* 1. Thẻ tóm tắt tỷ lệ toàn Quỹ (Quy chuẩn 4 mức mới) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-2xs space-y-1">
           <div className="text-[11px] font-bold text-emerald-800 uppercase">Xuất sắc (≥ 90đ)</div>
           <div className="text-2xl sm:text-3xl font-black text-emerald-600">
-            {reportData.summaryCounts['Xuất sắc']}
+            {reportData.summaryCounts['Hoàn thành xuất sắc nhiệm vụ'] ?? reportData.summaryCounts['Xuất sắc'] ?? 0}
           </div>
-          <div className="text-[10px] text-slate-400">Cán bộ đạt chuẩn</div>
+          <div className="text-[10px] text-slate-400">Các TC ≥ 7đ</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-teal-200 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-[#0f766e] uppercase">Tốt (70 - 89đ)</div>
+          <div className="text-[11px] font-bold text-[#0f766e] uppercase">Tốt (70 - &lt;90đ)</div>
           <div className="text-2xl sm:text-3xl font-black text-[#0f766e]">
-            {reportData.summaryCounts['Tốt']}
+            {reportData.summaryCounts['Hoàn thành tốt nhiệm vụ'] ?? reportData.summaryCounts['Tốt'] ?? 0}
           </div>
-          <div className="text-[10px] text-slate-400">Cán bộ đạt chuẩn</div>
+          <div className="text-[10px] text-slate-400">Các TC ≥ 5đ</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-amber-200 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-amber-800 uppercase">Hoàn thành (50 - 69đ)</div>
+          <div className="text-[11px] font-bold text-amber-800 uppercase">Hoàn thành (50 - &lt;70đ)</div>
           <div className="text-2xl sm:text-3xl font-black text-amber-600">
-            {reportData.summaryCounts['Hoàn thành']}
+            {reportData.summaryCounts['Hoàn thành nhiệm vụ'] ?? reportData.summaryCounts['Hoàn thành'] ?? 0}
           </div>
-          <div className="text-[10px] text-slate-400">Cán bộ đạt chuẩn</div>
+          <div className="text-[10px] text-slate-400">Đạt yêu cầu</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-slate-700 uppercase">Tỷ Lệ Tham Gia</div>
+          <div className="text-[11px] font-bold text-slate-700 uppercase">Tỷ Lệ Cử Tri</div>
           <div className="text-2xl sm:text-3xl font-black text-slate-900">
             {reportData.voterStats.turnoutPercent}%
           </div>
           <div className="text-[10px] text-slate-400">
-            {reportData.voterStats.submittedCount}/{reportData.voterStats.totalEligible} cử tri đã nộp
+            {reportData.voterStats.submittedCount}/{reportData.voterStats.totalEligible} cử tri nộp
           </div>
         </div>
       </div>
+
 
       {/* 2. Tiến trình cử tri nộp phiếu (Dành riêng cho Lãnh đạo / Admin) */}
       {isAdmin && (
@@ -360,18 +409,19 @@ const TrustOverviewReport = ({
                       {row.avgScore100} đ
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                        row.classification.label === 'Xuất sắc'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                          : row.classification.label === 'Tốt'
-                          ? 'bg-teal-50 text-teal-800 border-teal-300'
-                          : row.classification.label === 'Hoàn thành'
-                          ? 'bg-amber-50 text-amber-800 border-amber-300'
-                          : 'bg-rose-50 text-rose-800 border-rose-300'
-                      }`}>
-                        {row.classification.label}
-                      </span>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getClassificationBadgeVariant(row.classification.label)}`}>
+                          {row.classification.label}
+                        </span>
+                        {row.classification.downgradeReason && (
+                          <span className="text-[10px] text-amber-700 italic">
+                            ({row.classification.downgradeReason})
+                          </span>
+                        )}
+                      </div>
                     </td>
+
+
                     <td className="py-3 px-4 text-center">
                       {isAdmin ? (
                         <button

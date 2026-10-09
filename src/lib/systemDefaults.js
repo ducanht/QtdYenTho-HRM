@@ -183,13 +183,17 @@ export const DEFAULT_SYSTEM_SETTINGS = {
 // Phân hệ Tín Nhiệm (MODULE_TRUST)
 export const DEFAULT_MODULE_TRUST_SETTINGS = {
   excellentThreshold: 90,
+  excellentMinCrit: 7,            // Không có tiêu chí nào dưới 7đ
   goodThreshold: 70,
+  goodMinCrit: 5,                 // Không có tiêu chí nào dưới 5đ
   passThreshold: 50,
+  weakVotesThresholdPercent: 50,  // Không quá 50% số phiếu Yếu (<= 50đ)
   defaultVotingMode: 'ANONYMOUS', // 'ANONYMOUS' | 'IDENTIFIED'
   allowSelfEvaluation: false,     // Tuyệt đối không cho phép tự đánh giá
   autoSaveDraftIntervalSec: 10,  // Tự động lưu nháp mỗi 10 giây
   criteriaCount: 10,
   printReportTitle: 'BIÊN BẢN TỔNG HỢP KẾT QUẢ LẤY PHIẾU TÍN NHIỆM',
+
   signers: [
     { role: 'TRƯỞNG BAN KIỂM SOÁT', title: 'Trưởng Ban Kiểm soát' },
     { role: 'GIÁM ĐỐC ĐIỀU HÀNH', title: 'Giám đốc' },

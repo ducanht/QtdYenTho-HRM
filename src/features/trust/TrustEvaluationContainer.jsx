@@ -339,6 +339,25 @@ const TrustEvaluationContainer = () => {
     });
   }, [employees, currentPeriodConfig, currentPeriod, currentUser]);
 
+  // Kiểm tra cán bộ hiện tại có thuộc danh sách Cử tri được bỏ phiếu trong đợt này không
+  const isEligibleVoter = useMemo(() => {
+    if (!currentPeriod || !currentUser) return false;
+    const voterIds = currentPeriodConfig?.voterEmployeeIds || currentPeriod?.voterEmployeeIds;
+    // Nếu chưa cấu hình hoặc để trống -> Mặc định toàn bộ cán bộ được bỏ phiếu
+    if (!Array.isArray(voterIds) || voterIds.length === 0) return true;
+    const currentId = currentUser.id || currentUser.uid;
+    const currentCode = currentUser.code;
+    const currentEmail = currentUser.email?.toLowerCase();
+    return employees.some(
+      (emp) =>
+        voterIds.includes(emp.id) &&
+        (emp.id === currentId ||
+          emp.uid === currentId ||
+          (currentCode && emp.code === currentCode) ||
+          (currentEmail && emp.email?.toLowerCase() === currentEmail))
+    );
+  }, [currentPeriod, currentPeriodConfig, currentUser, employees]);
+
   // Đếm ngược thời gian kết thúc đợt
   const timeRemainingBadge = useMemo(() => {
     if (!currentPeriod?.endDate) return null;
@@ -508,19 +527,25 @@ const TrustEvaluationContainer = () => {
     return Math.round((scoredTotal / totalRequired) * 100);
   }, [evaluatableEmployees, activeCriteria, matrixScores]);
 
-  // Đã sẵn sàng nộp phiếu chính thức chưa? (Phải chấm đủ 100%)
+  // Đã sẵn sàng nộp phiếu chính thức chưa? (Phải chấm đủ 100% và thuộc danh sách cử tri)
   const isFullyReadyToSubmit = useMemo(() => {
-    return overallPercent === 100 && evaluatableEmployees.length > 0;
-  }, [overallPercent, evaluatableEmployees.length]);
+    return isEligibleVoter && overallPercent === 100 && evaluatableEmployees.length > 0;
+  }, [isEligibleVoter, overallPercent, evaluatableEmployees.length]);
 
-  // Nộp phiếu chính thức cho tất cả cán bộ (Chặn hoàn toàn nếu chưa hoàn thành)
+  // Nộp phiếu chính thức cho tất cả cán bộ (Chặn hoàn toàn nếu chưa hoàn thành hoặc không phải cử tri)
   const handleSubmitOfficial = async () => {
     if (!currentPeriod || !currentUser) return;
+
+    if (!isEligibleVoter) {
+      toast.error('Đồng chí không thuộc danh sách cử tri được chỉ định tham gia bỏ phiếu trong đợt này!');
+      return;
+    }
 
     if (!isFullyReadyToSubmit) {
       toast.error('Chưa hoàn thành toàn bộ đánh giá! Vui lòng chấm điểm đủ tất cả tiêu chí cho toàn bộ cán bộ trước khi nộp phiếu.');
       return;
     }
+
 
     // Kiểm tra soát lỗi kỹ càng từng cán bộ và từng tiêu chí
     for (const emp of evaluatableEmployees) {
@@ -603,6 +628,7 @@ const TrustEvaluationContainer = () => {
       startDate: new Date().toISOString().split('T')[0],
       endDate: '',
       description: '',
+      voterEmployeeIds: employees.map((e) => e.id),
       targetEmployeeIds: employees.map((e) => e.id),
       customCriteria: [...DEFAULT_CRITERIA],
     });
@@ -621,6 +647,7 @@ const TrustEvaluationContainer = () => {
       startDate: period.startDate || '',
       endDate: period.endDate || '',
       description: period.description || '',
+      voterEmployeeIds: period.voterEmployeeIds || employees.map((e) => e.id),
       targetEmployeeIds: period.targetEmployeeIds || employees.map((e) => e.id),
       customCriteria: period.customCriteria || [...DEFAULT_CRITERIA],
     });
@@ -650,6 +677,7 @@ const TrustEvaluationContainer = () => {
         startDate: periodFormData.startDate || new Date().toISOString().split('T')[0],
         endDate: periodFormData.endDate || '',
         description: periodFormData.description || '',
+        voterEmployeeIds: Array.isArray(periodFormData.voterEmployeeIds) ? periodFormData.voterEmployeeIds : employees.map((e) => e.id),
         targetEmployeeIds: Array.isArray(periodFormData.targetEmployeeIds) ? periodFormData.targetEmployeeIds : [],
         customCriteria: Array.isArray(periodFormData.customCriteria) ? periodFormData.customCriteria : [],
         updatedAt: new Date().toISOString(),
@@ -713,12 +741,16 @@ const TrustEvaluationContainer = () => {
             configId: periodId,
             votingMode: configData.votingMode,
             allowSelfEvaluation: configData.allowSelfEvaluation,
+            voterEmployeeIds: configData.voterEmployeeIds,
             targetEmployeeIds: configData.targetEmployeeIds,
             customCriteria: configData.criteria,
             thresholds: {
               excellent: configData.excellentThreshold,
+              excellentMinCrit: configData.excellentMinCrit,
               good: configData.goodThreshold,
+              goodMinCrit: configData.goodMinCrit,
               pass: configData.passThreshold,
+              weakVotesThresholdPercent: configData.weakVotesThresholdPercent,
             },
           };
         })
@@ -733,6 +765,7 @@ const TrustEvaluationContainer = () => {
 
       toast.success(`Đã lưu cấu hình riêng cho đợt "${currentPeriod?.name || periodId}" thành công!`);
     } catch (err) {
+
       console.error('Lỗi khi lưu cấu hình đợt:', err);
       toast.error(`Có lỗi khi lưu cấu hình đợt: ${err.message || 'Vui lòng thử lại'}`);
     } finally {
@@ -798,51 +831,55 @@ const TrustEvaluationContainer = () => {
             />
           </div>
 
-          {/* CỘT PHẢI (DETAIL): Banner tiến độ & Bảng chấm điểm cán bộ */}
+          {/* CỘT PHẢI (DETAIL): Banner tiến độ & Bảng chấm điểm cán bộ hoặc Thông báo không thuộc cử tri */}
           <div className="lg:col-span-8 xl:col-span-9 space-y-4">
-            {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm) */}
-            <TrustProgressBanner
-              totalEmployeesCount={evaluatableEmployees.length}
-              completedCriteriaCount={completedCriteriaCount}
-              totalCriteriaCount={activeCriteria.length}
-              overallPercent={overallPercent}
-              isFullyReadyToSubmit={isFullyReadyToSubmit}
-              onSubmitOfficial={handleSubmitOfficial}
-              isSubmitting={isSubmitting}
-            />
-
-            {/* Thanh chuyển nhanh 10 tiêu chí & Chế độ xem */}
-            <CriteriaTabsNav
-              criteria={activeCriteria}
-              activeIndex={activeCriterionIndex}
-              onSelectIndex={setActiveCriterionIndex}
-              completionByCriteria={completionByCriteria}
-              totalEmployeesCount={evaluatableEmployees.length}
-              viewMode={viewMode}
-              onToggleViewMode={() => setViewMode((prev) => (prev === 'STEPPER' ? 'ALL' : 'STEPPER'))}
-            />
-
-            {/* Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10) */}
-            {viewMode === 'STEPPER' ? (
-              <CriteriaScoringTable
-                criterion={currentCriterion}
-                criterionIndex={activeCriterionIndex}
-                employees={evaluatableEmployees}
-                scores={matrixScores}
-                notes={matrixNotes}
-                onSetScore={handleSetScore}
-                onSetNote={handleSetNote}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                showTitle={true}
-              />
+            {!isEligibleVoter ? (
+              <div className="p-8 bg-amber-50/70 border border-amber-200 rounded-2xl text-center space-y-3 shadow-2xs">
+                <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto text-xl font-bold">
+                  🛡️
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-sm sm:text-base font-bold text-amber-950">
+                    Đồng chí không thuộc danh sách cử tri tham gia bỏ phiếu trong đợt này
+                  </h3>
+                  <p className="text-xs text-amber-800 max-w-lg mx-auto">
+                    Theo quyết định ban hành đợt "{currentPeriod?.name || ''}", danh sách cử tri được chỉ định bỏ phiếu gồm{' '}
+                    <strong className="underline">
+                      {(currentPeriodConfig?.voterEmployeeIds || currentPeriod?.voterEmployeeIds || []).length} cán bộ
+                    </strong>
+                    . Nếu có thắc mắc, vui lòng liên hệ Ban Quản trị cơ quan.
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="space-y-8">
-                {activeCriteria.map((crit, idx) => (
+              <>
+                {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm) */}
+                <TrustProgressBanner
+                  totalEmployeesCount={evaluatableEmployees.length}
+                  completedCriteriaCount={completedCriteriaCount}
+                  totalCriteriaCount={activeCriteria.length}
+                  overallPercent={overallPercent}
+                  isFullyReadyToSubmit={isFullyReadyToSubmit}
+                  onSubmitOfficial={handleSubmitOfficial}
+                  isSubmitting={isSubmitting}
+                />
+
+                {/* Thanh chuyển nhanh 10 tiêu chí & Chế độ xem */}
+                <CriteriaTabsNav
+                  criteria={activeCriteria}
+                  activeIndex={activeCriterionIndex}
+                  onSelectIndex={setActiveCriterionIndex}
+                  completionByCriteria={completionByCriteria}
+                  totalEmployeesCount={evaluatableEmployees.length}
+                  viewMode={viewMode}
+                  onToggleViewMode={() => setViewMode((prev) => (prev === 'STEPPER' ? 'ALL' : 'STEPPER'))}
+                />
+
+                {/* Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10) */}
+                {viewMode === 'STEPPER' ? (
                   <CriteriaScoringTable
-                    key={crit.id || idx}
-                    criterion={crit}
-                    criterionIndex={idx}
+                    criterion={currentCriterion}
+                    criterionIndex={activeCriterionIndex}
                     employees={evaluatableEmployees}
                     scores={matrixScores}
                     notes={matrixNotes}
@@ -852,12 +889,31 @@ const TrustEvaluationContainer = () => {
                     onSearchChange={setSearchTerm}
                     showTitle={true}
                   />
-                ))}
-              </div>
+                ) : (
+                  <div className="space-y-8">
+                    {activeCriteria.map((crit, idx) => (
+                      <CriteriaScoringTable
+                        key={crit.id || idx}
+                        criterion={crit}
+                        criterionIndex={idx}
+                        employees={evaluatableEmployees}
+                        scores={matrixScores}
+                        notes={matrixNotes}
+                        onSetScore={handleSetScore}
+                        onSetNote={handleSetNote}
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        showTitle={true}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
       )}
+
 
       {/* Tab 2: LỊCH SỬ (Bên trái: Chọn đợt - Bên phải: Phiếu cá nhân đã nộp) */}
       {activeTab === 'MY_VOTES' && (

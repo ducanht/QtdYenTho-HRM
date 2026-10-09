@@ -34,7 +34,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.4_period_configs_and_subsystems';
+export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.5_voter_scope_and_4_tier_rating_rules';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ

@@ -21,6 +21,26 @@ const TrustPeriodModal = ({
   const [editingCritIndex, setEditingCritIndex] = useState(null);
   const [editingCritData, setEditingCritData] = useState({ title: '', description: '', maxScore: 10 });
 
+  const handleSelectVotersByDept = (dept) => {
+    if (dept === 'ALL') {
+      setFormData((prev) => ({
+        ...prev,
+        voterEmployeeIds: employees.map((e) => e.id),
+      }));
+    } else if (dept === 'NONE') {
+      setFormData((prev) => ({
+        ...prev,
+        voterEmployeeIds: [],
+      }));
+    } else {
+      const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
+      setFormData((prev) => ({
+        ...prev,
+        voterEmployeeIds: Array.from(new Set([...(prev?.voterEmployeeIds || []), ...matchingIds])),
+      }));
+    }
+  };
+
   const handleSelectEmployeesByDept = (dept) => {
     if (dept === 'ALL') {
       setFormData((prev) => ({
@@ -40,6 +60,7 @@ const TrustPeriodModal = ({
       }));
     }
   };
+
 
   return (
     <Modal
@@ -169,12 +190,82 @@ const TrustPeriodModal = ({
           </div>
         </div>
 
-        {/* Danh sách cán bộ được lấy phiếu tín nhiệm */}
+        {/* 1. Danh sách người được tham gia bỏ phiếu (Cử tri) */}
+        <div className="space-y-2 p-3 bg-teal-50/50 rounded-xl border border-teal-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <label className="font-bold text-teal-950 text-[11px] uppercase tracking-wider block">
+                Người được tham gia bỏ phiếu (Cử tri) ({formData.voterEmployeeIds?.length || 0}/{employees.length}):
+              </label>
+              <span className="text-[10px] text-teal-700">Chỉ cán bộ được chọn mới có quyền chấm điểm trong đợt này</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <button
+                type="button"
+                onClick={() => handleSelectVotersByDept('ALL')}
+                className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]"
+              >
+                Tất cả ({employees.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectVotersByDept('Phòng Tín dụng')}
+                className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]"
+              >
+                Khối Tín dụng
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectVotersByDept('Phòng Kế toán - Ngân quỹ')}
+                className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold text-[10px]"
+              >
+                Khối Kế toán
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectVotersByDept('NONE')}
+                className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-bold text-[10px]"
+              >
+                Bỏ chọn
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-1 bg-white rounded-lg border border-teal-200">
+            {employees.map((emp) => {
+              const isSelected = (formData.voterEmployeeIds || []).includes(emp.id);
+              return (
+                <label key={`modal-voter-${emp.id}`} className="flex items-center gap-1.5 text-[11px] p-1 rounded hover:bg-teal-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData((prev) => ({
+                        ...prev,
+                        voterEmployeeIds: checked
+                          ? [...(prev.voterEmployeeIds || []), emp.id]
+                          : (prev.voterEmployeeIds || []).filter((id) => id !== emp.id),
+                      }));
+                    }}
+                    className="text-teal-600 focus:ring-teal-500 rounded"
+                  />
+                  <span className="truncate">{emp.name} ({emp.code})</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Danh sách cán bộ được lấy phiếu tín nhiệm */}
         <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
-              Cán bộ được lấy phiếu tín nhiệm ({formData.targetEmployeeIds?.length || 0}/{employees.length}):
-            </label>
+            <div>
+              <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">
+                Cán bộ được lấy phiếu tín nhiệm ({formData.targetEmployeeIds?.length || 0}/{employees.length}):
+              </label>
+              <span className="text-[10px] text-slate-500">Đối tượng được các cử tri chấm điểm đánh giá</span>
+            </div>
             <div className="flex flex-wrap gap-1">
               <button
                 type="button"
@@ -211,7 +302,7 @@ const TrustPeriodModal = ({
             {employees.map((emp) => {
               const isSelected = (formData.targetEmployeeIds || []).includes(emp.id);
               return (
-                <label key={emp.id} className="flex items-center gap-1.5 text-[11px] p-1 rounded hover:bg-slate-50 cursor-pointer">
+                <label key={`modal-target-${emp.id}`} className="flex items-center gap-1.5 text-[11px] p-1 rounded hover:bg-slate-50 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -224,6 +315,7 @@ const TrustPeriodModal = ({
                           : (prev.targetEmployeeIds || []).filter((id) => id !== emp.id),
                       }));
                     }}
+                    className="text-teal-600 focus:ring-teal-500 rounded"
                   />
                   <span className="truncate">{emp.name} ({emp.code})</span>
                 </label>
@@ -231,6 +323,7 @@ const TrustPeriodModal = ({
             })}
           </div>
         </div>
+
 
         {/* Tùy biến Tiêu chí Đánh giá */}
         <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">

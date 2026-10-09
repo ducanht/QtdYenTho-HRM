@@ -103,17 +103,23 @@ const DashboardContainer = () => {
     };
 
     trustData.forEach((item) => {
-      const cls = item.classification || (
-        item.totalScore >= 90 ? 'Xuất sắc' :
-        item.totalScore >= 70 ? 'Tốt' :
-        item.totalScore >= 50 ? 'Hoàn thành' : 'Không hoàn thành'
-      );
-      if (counts[cls] !== undefined) {
-        counts[cls] += 1;
+      const raw = String(item.classification || '').toLowerCase();
+      let key = 'Tốt';
+      if (raw.includes('xuất sắc')) {
+        key = 'Xuất sắc';
+      } else if (raw.includes('không hoàn thành') || raw.includes('yếu')) {
+        key = 'Không hoàn thành';
+      } else if (raw.includes('hoàn thành')) {
+        key = 'Hoàn thành';
+      } else if (raw.includes('tốt')) {
+        key = 'Tốt';
       } else {
-        counts['Tốt'] += 1;
+        const score = Number(item.totalScore || 0);
+        key = score >= 90 ? 'Xuất sắc' : score >= 70 ? 'Tốt' : score >= 50 ? 'Hoàn thành' : 'Không hoàn thành';
       }
+      counts[key] += 1;
     });
+
 
     return [
       { name: 'Xuất sắc', value: counts['Xuất sắc'], color: '#10b981' },
