@@ -43,17 +43,24 @@ Người dùng **không cần phải tạo thủ công bất kỳ collection nà
 1. Dán cấu hình Firebase vào `src/lib/firebase.js` (hoặc để trống để chạy chế độ lưu trữ nội bộ).
 2. Nhấn nút **"⚡ Tự động CSDL"** trên thanh tiêu đề Navbar.
 3. Hộp thoại **"Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động"** xuất hiện.
-4. Bấm nút **"Tiến hành Khởi tạo & Cập nhật 9 Bảng CSDL Tự Động"**.
-5. Hệ thống chạy batch tự động nạp toàn bộ 9 bộ sưu tập:
-   - `system_modules`: 8 danh mục phân hệ
-   - `roles_permissions`: 4 ma trận phân quyền
-   - `trust_criteria`: 10 tiêu chí tín nhiệm chuẩn
-   - `evaluation_periods`: Danh mục các đợt đánh giá
-   - `users`: 12 hồ sơ cán bộ chính thức Quỹ TDND Yên Thọ kèm CCCD, ngày vào Đảng, ngày chính thức Đảng
-   - `work_history`: Quá trình luân chuyển điều động cán bộ
-   - `evaluations_trust`: Phiếu đánh giá tín nhiệm mẫu
-   - `evaluations_kpi`: Dữ liệu KPI 3 bước
-   - `evaluations_planning`: Dữ liệu bỏ phiếu quy hoạch cán bộ
+4. Bấm nút **"Tiến hành Khởi tạo & Cập nhật 16 Bảng CSDL Tự Động"**.
+5. Hệ thống chạy batch tự động nạp toàn bộ 16 bộ sưu tập nòng cốt:
+   - `accounts`: Danh sách tài khoản đăng nhập & phân quyền chuyên biệt
+   - `employees`: Danh bạ 100% Cán bộ Nhân viên chính thức (sạch tài khoản root)
+   - `system_metadata`: Siêu dữ liệu phiên bản CSDL và lịch sử đồng bộ
+   - `system_modules`: 8 danh mục phân hệ chức năng
+   - `system_settings`: Tham số cấu hình chung & cấu hình phân hệ
+   - `roles_permissions`: 4 ma trận phân quyền RBAC
+   - `departments`: Danh mục phòng ban Quỹ TDND Yên Thọ
+   - `positions`: Danh mục chức vụ & chức danh chuyên môn
+   - `trust_criteria`: 10 tiêu chí tín nhiệm chuẩn mực NHNN
+   - `evaluation_periods`: Danh mục các đợt đánh giá & lấy phiếu tín nhiệm
+   - `period_configs`: Bảng cấu hình độc lập cho từng đợt đánh giá
+   - `users`: Hồ sơ cán bộ nhân viên (tương thích ngược)
+   - `work_history`: Quá trình luân chuyển điều động & bổ nhiệm cán bộ
+   - `evaluations_trust`: Phiếu đánh giá tín nhiệm chi tiết
+   - `evaluations_kpi`: Dữ liệu đánh giá hiệu quả KPI các cấp
+   - `evaluations_planning`: Dữ liệu bỏ phiếu quy hoạch cán bộ nguồn
 
 👉 **Xem hướng dẫn chi tiết từng bước tại**: [docs/HUONG_DAN_KET_NOI_FIREBASE.md](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/docs/HUONG_DAN_KET_NOI_FIREBASE.md)
 

@@ -18,9 +18,28 @@ import Modal from './Modal';
 import Button from './Button';
 import Badge from './Badge';
 import { isFirebaseConfigured } from '../../lib/firebase';
-import { autoInitializeFirebaseDatabase } from '../../lib/autoInitDb';
+import { autoInitializeFirebaseDatabase, CORE_COLLECTIONS } from '../../lib/autoInitDb';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
+
+const COLLECTION_DISPLAY_NAMES = {
+  accounts: 'Tài khoản đăng nhập',
+  employees: 'Danh bạ CBNV chính thức',
+  system_metadata: 'Siêu dữ liệu CSDL',
+  system_modules: 'Danh mục 8 phân hệ',
+  system_settings: 'Tham số cấu hình hệ thống',
+  roles_permissions: 'Ma trận 4 cấp phân quyền',
+  departments: 'Danh mục phòng ban',
+  positions: 'Danh mục chức vụ',
+  trust_criteria: '10 tiêu chí tín nhiệm NHNN',
+  evaluation_periods: 'Đợt đánh giá tín nhiệm',
+  period_configs: 'Cấu hình riêng từng đợt',
+  users: 'Hồ sơ người dùng (users)',
+  work_history: 'Lịch sử luân chuyển công tác',
+  evaluations_trust: 'Phiếu đánh giá tín nhiệm',
+  evaluations_kpi: 'Đánh giá chỉ số KPI',
+  evaluations_planning: 'Hồ sơ quy hoạch cán bộ',
+};
 
 const AutoInitDbModal = ({ isOpen, onClose }) => {
   const toast = useToast();
@@ -131,13 +150,13 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
 
           <p className="text-slate-600 leading-relaxed text-[11px]">
             {isFirebaseConfigured
-              ? 'Tài khoản Firebase của đơn vị đã sẵn sàng. Khi bạn bấm nút khởi tạo dưới đây, toàn bộ 9 bộ sưu tập (Collections) và dữ liệu chuẩn mực của Quỹ TDND Yên Thọ sẽ được tạo và đồng bộ tự động lên Cloud Firestore.'
-              : 'Hiện tại thông tin firebaseConfig chưa được điền. Khi bấm khởi tạo, hệ thống sẽ thiết lập và đồng bộ toàn bộ 9 bảng vào bộ nhớ nội bộ an toàn. Khi bạn dán thông tin kết nối Firebase vào tệp src/lib/firebase.js, chỉ cần bấm nút này một lần nữa để đẩy toàn bộ dữ liệu lên Firebase!'}
+              ? 'Tài khoản Firebase của đơn vị đã sẵn sàng. Khi bạn bấm nút khởi tạo dưới đây, toàn bộ 16 bộ sưu tập (Collections) và dữ liệu chuẩn mực của Quỹ TDND Yên Thọ sẽ được tạo và đồng bộ tự động lên Cloud Firestore.'
+              : 'Hiện tại thông tin firebaseConfig chưa được điền. Khi bấm khởi tạo, hệ thống sẽ thiết lập và đồng bộ toàn bộ 16 bảng vào bộ nhớ nội bộ an toàn. Khi bạn dán thông tin kết nối Firebase vào tệp src/lib/firebase.js, chỉ cần bấm nút này một lần nữa để đẩy toàn bộ dữ liệu lên Firebase!'}
           </p>
 
           <div className="flex flex-wrap gap-2 pt-1">
             <span className="px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-semibold">
-              9 Collections CSDL
+              16 Collections CSDL
             </span>
             <span className="px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-semibold">
               8 Phân hệ Modular
@@ -164,7 +183,7 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
           >
             {running
               ? 'Đang tự động khởi tạo & cập nhật CSDL...'
-              : 'Tiến hành Khởi tạo & Cập nhật 9 Bảng CSDL Tự Động'}
+              : 'Tiến hành Khởi tạo & Cập nhật 16 Bảng CSDL Tự Động'}
           </Button>
 
           {/* Progress Bar */}
@@ -207,70 +226,23 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
           <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-3 animate-in fade-in">
             <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs uppercase tracking-wider">
               <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-              <span>Kết quả khởi tạo cấu trúc dữ liệu thành công:</span>
+              <span>Kết quả khởi tạo cấu trúc dữ liệu thành công (16 Collections):</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">system_modules:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.system_modules || 8} danh mục
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">roles_permissions:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.roles_permissions || 4} vai trò
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">trust_criteria:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.trust_criteria || 10} tiêu chí
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">evaluation_periods:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.evaluation_periods || 2} đợt
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">period_configs:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.period_configs || 2} cấu hình đợt
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">users:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.users || 12} hồ sơ
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">work_history:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.work_history || 3} quyết định
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">evaluations_trust:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.evaluations_trust || 3} phiếu
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">evaluations_kpi:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.evaluations_kpi || 3} chỉ tiêu
-                </span>
-              </div>
-              <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-600">evaluations_planning:</span>
-                <span className="font-black text-[#0f766e]">
-                  {resultSummary.details?.evaluations_planning || 2} hồ sơ
-                </span>
-              </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {CORE_COLLECTIONS.map((colName) => {
+                const count = resultSummary.details?.[colName] ?? 0;
+                const label = COLLECTION_DISPLAY_NAMES[colName] || colName;
+                return (
+                  <div key={colName} className="p-2.5 rounded-xl bg-white border border-emerald-100 flex flex-col justify-between space-y-1 shadow-2xs">
+                    <span className="text-[10px] font-mono text-slate-500 truncate" title={colName}>{colName}</span>
+                    <span className="text-[11px] font-semibold text-slate-800 truncate" title={label}>{label}</span>
+                    <span className="font-black text-[#0f766e] text-xs">
+                      {count} tài liệu
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
             <p className="text-emerald-800 text-[11px] italic">

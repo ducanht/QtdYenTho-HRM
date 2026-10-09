@@ -308,6 +308,9 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
   - **Khu Vực Quản Trị CSDL Độc Lập (`DatabaseManagementSettings.jsx`)**: Di chuyển toàn bộ tính năng và modal "Tự động CSDL" từ Navbar/Portal vào Tab 5 trong Admin Settings dành riêng cho Quản trị viên/SuperAdmin.
   - **Lọc Module & Ẩn Phân Hệ Chưa Kích Hoạt (`PortalLauncher.jsx`)**: Ẩn các phân hệ chưa hoàn thiện (`status !== 'ACTIVE'`) và phân hệ `MODULE_SETTINGS` đối với tài khoản nhân viên thường.
   - **Bảo Vệ Route Đa Tầng (`ProtectedRoute.jsx`, `App.jsx`)**: Tích hợp kiểm tra `moduleCode` và ma trận RBAC `canAccessModule`, chặn truy cập trái phép bằng URL trực tiếp.
+- **`2026.10.09_v4.0_health_checker_fix_and_16_collections_synchronization`**:
+  - **Khắc Phục Lỗi Health Checker**: Bổ sung các thuộc tính `connected: true`, `totalDocs`, `healthyCollections` và `totalCollections: 16` vào hàm `checkDatabaseHealth()`. Quét đồng thời toàn bộ 16 Collections nòng cốt (`Promise.all`) thay vì chỉ quét 5 bảng cũ. Triệt tiêu 100% lỗi sai lệch: *"Không kết nối được Firestore, đang chạy chế độ Offline"*.
+  - **Chuẩn Hóa Đồng Bộ 16 Bảng CSDL**: Nâng cấp toàn diện giao diện `AutoInitDbModal.jsx`, `DatabaseManagementSettings.jsx`, `README.md` và tài liệu hướng dẫn: xóa bỏ hoàn toàn con số "9 bảng" legacy; hiển thị đầy đủ 16 Collections nòng cốt kèm số lượng tài liệu chi tiết từng bảng từ CSDL thực tế.
 
 
 

@@ -179,17 +179,40 @@ const DatabaseManagementSettings = ({
 
         {/* Kết quả Health Check */}
         {healthResult && (
-          <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-            <div className="font-bold text-slate-800 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Kết Quả Kiểm Tra Tình Trạng:</span>
+          <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-3">
+            <div className="font-bold text-slate-800 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className={`w-4 h-4 ${healthResult.connected ? 'text-emerald-600' : 'text-rose-600'}`} />
+                <span>Kết Quả Kiểm Tra Tình Trạng CSDL:</span>
+              </span>
+              <span className="text-[10px] font-normal text-slate-500">
+                Kiểm tra lúc: {new Date(healthResult.checkedAt).toLocaleTimeString('vi-VN')}
+              </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
-              <div>Kết nối: <strong className="text-emerald-700">{healthResult.connected ? 'Thành công' : 'Thất bại'}</strong></div>
+              <div>Kết nối: <strong className={healthResult.connected ? 'text-emerald-700' : 'text-rose-600'}>{healthResult.connected ? 'Thành công (Live)' : 'Thất bại (Offline)'}</strong></div>
               <div>Tổng tài liệu: <strong className="text-slate-800">{healthResult.totalDocs}</strong></div>
               <div>Bảng hoạt động: <strong className="text-slate-800">{healthResult.healthyCollections}/{CORE_COLLECTIONS.length}</strong></div>
               <div>Trạng thái: <strong className="text-teal-700">{healthResult.status || 'OK'}</strong></div>
             </div>
+
+            {healthResult.collections && Object.keys(healthResult.collections).length > 0 && (
+              <div className="pt-2 border-t border-slate-200">
+                <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Chi tiết số lượng tài liệu từng bảng ({CORE_COLLECTIONS.length} Collections):
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
+                  {Object.entries(healthResult.collections).map(([col, cnt]) => (
+                    <div key={col} className="flex items-center justify-between px-2 py-1 bg-white rounded border border-slate-200 font-mono">
+                      <span className="text-slate-600 truncate">{col}:</span>
+                      <span className={`font-bold ${cnt > 0 ? 'text-[#0f766e]' : 'text-slate-400'}`}>
+                        {cnt}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>

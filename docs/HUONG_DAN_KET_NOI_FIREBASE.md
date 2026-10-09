@@ -202,18 +202,25 @@ Sau khi lưu cấu hình, bạn không cần phải tạo từng bảng trên Fi
 1. Mở giao diện WebApp trên trình duyệt.
 2. Nhìn lên góc phải thanh tiêu đề Navbar, nhấn vào nút **"⚡ Tự động CSDL"** (hoặc nút **"Khởi tạo CSDL tự động"** trên thanh thông báo).
 3. Hộp thoại **"Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động"** xuất hiện.
-4. Nhấn nút: **"Tiến hành Khởi tạo & Cập nhật 9 Bảng CSDL Tự Động"**.
-5. Hệ thống sẽ tự động thực hiện 9 bước:
-   - ✅ **Bước 1/9**: Khởi tạo Danh mục phân hệ mở rộng (`system_modules`)
-   - ✅ **Bước 2/9**: Thiết lập Ma trận phân quyền chi tiết (`roles_permissions`)
-   - ✅ **Bước 3/9**: Chuẩn hóa 10 Tiêu chí đánh giá tín nhiệm (`trust_criteria`)
-   - ✅ **Bước 4/9**: Cấu hình Đợt đánh giá tín nhiệm (`evaluation_periods`)
-   - ✅ **Bước 5/9**: Cập nhật Danh bạ Hồ sơ Cán bộ nhân viên (`users`)
-   - ✅ **Bước 6/9**: Ghi nhận Quá trình luân chuyển điều động (`work_history`)
-   - ✅ **Bước 7/9**: Đồng bộ Phiếu đánh giá tín nhiệm (`evaluations_trust`)
-   - ✅ **Bước 8/9**: Cập nhật Dữ liệu chấm điểm KPI 3 cấp (`evaluations_kpi`)
-   - ✅ **Bước 9/9**: Thiết lập Dữ liệu bỏ phiếu quy hoạch (`evaluations_planning`)
-6. Sau khoảng 3 - 5 giây, thanh tiến độ đạt **100%** và bảng thống kê kết quả xuất hiện. Toàn bộ cơ sở dữ liệu trên Firebase Cloud Firestore đã sẵn sàng vận hành!
+4. Nhấn nút: **"Tiến hành Khởi tạo & Cập nhật 16 Bảng CSDL Tự Động"**.
+5. Hệ thống sẽ tự động thực thi và đồng bộ toàn bộ 16 bộ sưu tập nòng cốt:
+   - ✅ `accounts`: Danh sách tài khoản đăng nhập & phân quyền chuyên biệt
+   - ✅ `employees`: Danh bạ 100% Cán bộ Nhân viên chính thức (sạch tài khoản root)
+   - ✅ `system_metadata`: Siêu dữ liệu phiên bản CSDL và lịch sử đồng bộ
+   - ✅ `system_modules`: 8 danh mục phân hệ chức năng
+   - ✅ `system_settings`: Tham số cấu hình chung & cấu hình phân hệ
+   - ✅ `roles_permissions`: 4 ma trận phân quyền RBAC
+   - ✅ `departments`: Danh mục phòng ban Quỹ TDND Yên Thọ
+   - ✅ `positions`: Danh mục chức vụ & chức danh chuyên môn
+   - ✅ `trust_criteria`: 10 tiêu chí tín nhiệm chuẩn mực NHNN
+   - ✅ `evaluation_periods`: Danh mục các đợt đánh giá & lấy phiếu tín nhiệm
+   - ✅ `period_configs`: Bảng cấu hình độc lập cho từng đợt đánh giá
+   - ✅ `users`: Hồ sơ cán bộ nhân viên (tương thích ngược)
+   - ✅ `work_history`: Quá trình luân chuyển điều động & bổ nhiệm cán bộ
+   - ✅ `evaluations_trust`: Phiếu đánh giá tín nhiệm chi tiết
+   - ✅ `evaluations_kpi`: Dữ liệu đánh giá hiệu quả KPI các cấp
+   - ✅ `evaluations_planning`: Dữ liệu bỏ phiếu quy hoạch cán bộ nguồn
+6. Sau khoảng 3 - 5 giây, thanh tiến độ đạt **100%** và bảng thống kê kết quả xuất hiện. Toàn bộ 16 bảng cơ sở dữ liệu trên Firebase Cloud Firestore đã sẵn sàng vận hành!
 
 ---
 
