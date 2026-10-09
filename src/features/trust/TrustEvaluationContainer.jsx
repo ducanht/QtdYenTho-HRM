@@ -315,6 +315,7 @@ const TrustEvaluationContainer = () => {
       ...cfg,
       id: currentPeriod.id,
       name: cfg.periodName || cfg.name || currentPeriod.name,
+      allowSelfEvaluation: cfg.allowSelfEvaluation ?? currentPeriod.allowSelfEvaluation ?? false,
       targetEmployeeIds:
         (Array.isArray(cfg.targetEmployeeIds) && cfg.targetEmployeeIds.length > 0)
           ? cfg.targetEmployeeIds
@@ -686,6 +687,7 @@ const TrustEvaluationContainer = () => {
       year: 2026,
       quarter: 4,
       votingMode: 'ANONYMOUS',
+      allowSelfEvaluation: false,
       status: 'ACTIVE',
       startDate: new Date().toISOString().split('T')[0],
       endDate: '',
@@ -705,6 +707,7 @@ const TrustEvaluationContainer = () => {
       year: period.year || 2026,
       quarter: period.quarter || 4,
       votingMode: period.votingMode || 'ANONYMOUS',
+      allowSelfEvaluation: period.allowSelfEvaluation ?? false,
       status: period.status || 'ACTIVE',
       startDate: period.startDate || '',
       endDate: period.endDate || '',
@@ -735,6 +738,7 @@ const TrustEvaluationContainer = () => {
         year: Number(periodFormData.year) || 2026,
         quarter: Number(periodFormData.quarter) || 4,
         votingMode: periodFormData.votingMode || 'ANONYMOUS',
+        allowSelfEvaluation: Boolean(periodFormData.allowSelfEvaluation),
         status: periodFormData.status || 'ACTIVE',
         startDate: periodFormData.startDate || new Date().toISOString().split('T')[0],
         endDate: periodFormData.endDate || '',
@@ -953,6 +957,7 @@ const TrustEvaluationContainer = () => {
                     searchTerm={searchTerm}
                     onSearchChange={setSearchTerm}
                     showTitle={true}
+                    currentUser={currentUser}
                   />
                 ) : (
                   <div className="space-y-8">
@@ -969,6 +974,7 @@ const TrustEvaluationContainer = () => {
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
                         showTitle={true}
+                        currentUser={currentUser}
                       />
                     ))}
                   </div>

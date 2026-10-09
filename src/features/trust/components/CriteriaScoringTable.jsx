@@ -21,6 +21,7 @@ const CriteriaScoringTable = ({
   searchTerm = '',
   onSearchChange,
   showTitle = true,
+  currentUser = null,
 }) => {
   // Sắp xếp mặc định: Phòng ban -> Tên cán bộ (theo vần ABC tiếng Việt)
   const sortedEmployees = useMemo(() => {
@@ -129,6 +130,14 @@ const CriteriaScoringTable = ({
                 const currentScore = scores[emp.id]?.[criterion.id];
                 const hasScore = currentScore !== undefined && currentScore !== null && currentScore > 0;
                 const empNote = notes[emp.id] || '';
+                const isSelf = Boolean(
+                  currentUser && (
+                    emp.id === currentUser.id ||
+                    emp.id === currentUser.uid ||
+                    (currentUser.email && emp.email?.toLowerCase() === currentUser.email?.toLowerCase()) ||
+                    (currentUser.code && emp.code === currentUser.code)
+                  )
+                );
 
                 return (
                   <tr
@@ -153,8 +162,13 @@ const CriteriaScoringTable = ({
                           )}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                            {emp.name}
+                          <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
+                            <span>{emp.name}</span>
+                            {isSelf && (
+                              <span className="text-[10px] font-bold text-teal-800 bg-teal-100/90 border border-teal-300 px-1.5 py-0.2 rounded shrink-0">
+                                Bản thân
+                              </span>
+                            )}
                             {hasScore && (
                               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Đã có điểm" />
                             )}
@@ -217,6 +231,14 @@ const CriteriaScoringTable = ({
             const currentScore = scores[emp.id]?.[criterion.id];
             const hasScore = currentScore !== undefined && currentScore !== null && currentScore > 0;
             const empNote = notes[emp.id] || '';
+            const isSelf = Boolean(
+              currentUser && (
+                emp.id === currentUser.id ||
+                emp.id === currentUser.uid ||
+                (currentUser.email && emp.email?.toLowerCase() === currentUser.email?.toLowerCase()) ||
+                (currentUser.code && emp.code === currentUser.code)
+              )
+            );
 
             return (
               <div
@@ -239,8 +261,13 @@ const CriteriaScoringTable = ({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                        {emp.name}
+                      <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
+                        <span className="truncate">{emp.name}</span>
+                        {isSelf && (
+                          <span className="text-[9px] font-bold text-teal-800 bg-teal-100/90 border border-teal-300 px-1 py-0.2 rounded shrink-0">
+                            Bản thân
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-slate-500 font-medium truncate">
                         {emp.position || 'Cán bộ'}

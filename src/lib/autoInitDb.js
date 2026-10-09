@@ -34,7 +34,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.6_exclude_admin_from_target_and_submission_status';
+export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.7_allow_self_evaluation_and_include_trinh_duc_anh';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ
@@ -187,13 +187,44 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       }, { merge: true });
     }
 
-    // 7. Kiểm tra & Tự động tạo Đợt đánh giá kèm Bảng Cấu Hình Riêng Biệt (period_configs)
+    // 7. Đồng bộ Đợt đánh giá kèm Bảng Cấu Hình Riêng Biệt (period_configs)
+    // Đảm bảo toàn bộ các đợt có trường allowSelfEvaluation và cán bộ Trịnh Đức Anh (emp-007) được tham gia đầy đủ
     const periodsSnap = await getDocs(collection(db, 'evaluation_periods')).catch(() => null);
-    if (!periodsSnap || periodsSnap.empty) {
+    const validStaffIds = OFFICIAL_EMPLOYEES.filter((e) => e.id !== 'emp-root' && e.code !== 'ROOT').map((e) => e.id);
+
+    if (periodsSnap && !periodsSnap.empty) {
+      for (const pDoc of periodsSnap.docs) {
+        const pData = pDoc.data();
+        const existingVoters = Array.isArray(pData.voterEmployeeIds) ? pData.voterEmployeeIds : [];
+        const existingTargets = Array.isArray(pData.targetEmployeeIds) ? pData.targetEmployeeIds : [];
+
+        // Đảm bảo emp-007 (Trịnh Đức Anh) có mặt trong voterEmployeeIds và targetEmployeeIds
+        const mergedVoters = Array.from(new Set([...existingVoters, 'emp-007']));
+        const mergedTargets = existingTargets.length > 0 ? Array.from(new Set([...existingTargets, 'emp-007'])) : validStaffIds;
+
+        await setDoc(doc(db, 'evaluation_periods', pDoc.id), {
+          allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
+          voterEmployeeIds: mergedVoters,
+          targetEmployeeIds: mergedTargets,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        // Cập nhật bảng cấu hình riêng biệt period_configs tương ứng
+        await setDoc(doc(db, 'period_configs', pDoc.id), {
+          allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
+          voterEmployeeIds: mergedVoters,
+          targetEmployeeIds: mergedTargets,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } else {
       for (const p of DEFAULT_EVALUATION_PERIODS) {
         await setDoc(doc(db, 'evaluation_periods', p.id), {
           ...p,
           configId: p.id,
+          allowSelfEvaluation: false,
+          voterEmployeeIds: validStaffIds,
+          targetEmployeeIds: validStaffIds,
           thresholds: { excellent: 90, good: 70, pass: 50 },
           updatedAt: serverTimestamp(),
         }, { merge: true });
@@ -209,19 +240,29 @@ export const autoSyncDatabaseSchema = async (force = false) => {
           goodThreshold: 70,
           passThreshold: 50,
           scale: 100,
-          targetEmployeeIds: OFFICIAL_EMPLOYEES.filter((e) => e.role !== 'superadmin' && e.id !== 'emp-root').map((e) => e.id),
+          voterEmployeeIds: validStaffIds,
+          targetEmployeeIds: validStaffIds,
           criteria: DEFAULT_TRUST_CRITERIA,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }
     }
 
-    // 8. Tự động đồng bộ danh bạ cán bộ chính thức (nếu chưa có hoặc thiếu)
+    // 8. Tự động đồng bộ danh bạ cán bộ chính thức (Đảm bảo tài khoản Trịnh Đức Anh emp-007 luôn cập nhật)
     const usersSnap = await getDocs(collection(db, 'users')).catch(() => null);
     if (!usersSnap || usersSnap.size < 5) {
       for (const emp of OFFICIAL_EMPLOYEES) {
         await setDoc(doc(db, 'users', emp.id), {
           ...emp,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } else {
+      // Đảm bảo cán bộ Trịnh Đức Anh (emp-007) luôn chuẩn xác trong users
+      const ducAnhEmp = OFFICIAL_EMPLOYEES.find((e) => e.id === 'emp-007');
+      if (ducAnhEmp) {
+        await setDoc(doc(db, 'users', 'emp-007'), {
+          ...ducAnhEmp,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }

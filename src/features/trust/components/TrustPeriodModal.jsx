@@ -34,6 +34,18 @@ const TrustPeriodModal = ({
         ...prev,
         voterEmployeeIds: [],
       }));
+    } else if (dept === 'LEADERSHIP') {
+      const matchingIds = employees.filter((e) => 
+        e.department?.includes('Hội đồng Quản trị') ||
+        e.department?.includes('Ban Điều hành') ||
+        e.department?.includes('Ban Kiểm soát') ||
+        e.position?.includes('Chủ tịch') ||
+        e.position?.includes('Giám đốc')
+      ).map((e) => e.id);
+      setFormData((prev) => ({
+        ...prev,
+        voterEmployeeIds: Array.from(new Set([...(prev?.voterEmployeeIds || []), ...matchingIds])),
+      }));
     } else {
       const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
       setFormData((prev) => ({
@@ -53,6 +65,18 @@ const TrustPeriodModal = ({
       setFormData((prev) => ({
         ...prev,
         targetEmployeeIds: [],
+      }));
+    } else if (dept === 'LEADERSHIP') {
+      const matchingIds = officialStaff.filter((e) => 
+        e.department?.includes('Hội đồng Quản trị') ||
+        e.department?.includes('Ban Điều hành') ||
+        e.department?.includes('Ban Kiểm soát') ||
+        e.position?.includes('Chủ tịch') ||
+        e.position?.includes('Giám đốc')
+      ).map((e) => e.id);
+      setFormData((prev) => ({
+        ...prev,
+        targetEmployeeIds: Array.from(new Set([...(prev?.targetEmployeeIds || []), ...matchingIds])),
       }));
     } else {
       const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
@@ -146,14 +170,14 @@ const TrustPeriodModal = ({
           </div>
         </div>
 
-        {/* Hình thức bỏ phiếu & Trạng thái */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Hình thức bỏ phiếu & Trạng thái & Quy chế tự đánh giá */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
             <label className="block font-bold text-slate-800 text-[11px] uppercase tracking-wider">
               Hình thức bỏ phiếu:
             </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-1.5 cursor-pointer">
+            <div className="flex flex-col gap-1.5 pt-0.5">
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs">
                 <input
                   type="radio"
                   name="modalVotingMode"
@@ -163,7 +187,7 @@ const TrustPeriodModal = ({
                 />
                 <span>Bỏ phiếu kín (Ẩn danh 100%)</span>
               </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs">
                 <input
                   type="radio"
                   name="modalVotingMode"
@@ -178,12 +202,36 @@ const TrustPeriodModal = ({
 
           <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
             <label className="block font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+              Tự đánh giá bản thân:
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer pt-0.5 text-xs">
+              <input
+                type="checkbox"
+                checked={Boolean(formData.allowSelfEvaluation)}
+                onChange={(e) => setFormData((prev) => ({ ...prev, allowSelfEvaluation: e.target.checked }))}
+                className="w-4 h-4 mt-0.5 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
+              />
+              <span className="text-slate-700 leading-tight">
+                Cho phép <strong>tự bỏ phiếu cho chính mình</strong>
+              </span>
+            </label>
+            <p className="text-[10px] text-slate-500 leading-tight">
+              {formData.allowSelfEvaluation ? (
+                <span className="text-teal-700 font-semibold">Được phép tự chấm điểm cho bản thân</span>
+              ) : (
+                <span className="text-slate-500 italic">Mặc định: Không tự bỏ phiếu cho bản thân</span>
+              )}
+            </p>
+          </div>
+
+          <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+            <label className="block font-bold text-slate-800 text-[11px] uppercase tracking-wider">
               Trạng thái đợt:
             </label>
             <select
               value={formData.status || 'ACTIVE'}
               onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-              className="w-full p-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+              className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold"
             >
               <option value="ACTIVE">Đang diễn ra (ACTIVE)</option>
               <option value="UPCOMING">Sắp diễn ra (UPCOMING)</option>
@@ -208,6 +256,13 @@ const TrustPeriodModal = ({
                 className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]"
               >
                 Tất cả ({employees.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectVotersByDept('LEADERSHIP')}
+                className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]"
+              >
+                HĐQT & BĐH
               </button>
               <button
                 type="button"
@@ -275,6 +330,13 @@ const TrustPeriodModal = ({
                 className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]"
               >
                 Tất cả ({officialStaff.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectEmployeesByDept('LEADERSHIP')}
+                className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]"
+              >
+                HĐQT & BĐH
               </button>
               <button
                 type="button"

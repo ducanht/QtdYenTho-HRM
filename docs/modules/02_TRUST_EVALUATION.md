@@ -132,3 +132,17 @@ Thư viện dùng chung tại `src/lib/exportUtils.js` cung cấp hạ tầng xu
 4. **Tải ảnh báo cáo nhanh (`.png`) Retina 2x**: Chụp lại toàn bộ biên bản A4 phục vụ chia sẻ nhanh trên Zalo/Telegram nội bộ cơ quan.
 5. **Tối ưu hóa hiệu năng (Zero Performance Regression)**:
    - Toàn bộ 4 thư viện (`xlsx`, `docx`, `jspdf`, `html2canvas`) được cấu hình **Dynamic Import Lazy-loading** và cô lập riêng trong lazy chunk `vendor-export` trong `vite.config.js`. Không làm tăng kích thước bundle tải ban đầu của ứng dụng web.
+
+---
+
+## 👥 9. QUY CHẾ TỰ ĐÁNH GIÁ BẢN THÂN & BẢO TOÀN QUYỀN CỬ TRI LÃNH ĐẠO TRỊNH ĐỨC ANH (v3.7)
+
+1. **Cấu hình "Tự đánh giá bản thân (Cho phép tự bỏ phiếu cho chính mình)" (`allowSelfEvaluation`)**:
+   - **Mặc định**: `false` — Theo thông lệ quy chế tín nhiệm, cán bộ không tự bỏ phiếu/chấm điểm cho chính bản thân mình.
+   - **Tùy biến linh hoạt**: Ban Quản trị có thể bật `allowSelfEvaluation = true` đối với các đợt thi đua hoặc đánh giá đa chiều mà cán bộ được phép tự đánh giá bản thân.
+   - **Giao diện nhận diện trực quan**: Khi được phép tự chấm, trên giao diện Bảng Desktop và Thẻ Card Mobile, dòng của chính mình được gắn badge nổi bật: `(Bản thân)` với màu sắc nhận diện riêng (`bg-primary-50 text-primary-700`).
+2. **Phân định Minh Bạch: Tài Khoản Kỹ Thuật Webapp vs Cán Bộ Lãnh Đạo Quỹ**:
+   - Chỉ loại trừ tài khoản kỹ thuật root của Webapp (`emp-root`, `code: ROOT`, `email: qtdyentho@gmail.com`).
+   - Cán bộ Lãnh đạo kiêm Quản trị viên hệ thống (Chủ tịch HĐQT Trịnh Đức Anh `emp-007` / `ducanht@gmail.com`, Giám đốc Nguyễn Văn Sơn `emp-003`...) **bắt buộc được bảo toàn 100% quyền cử tri bỏ phiếu và thuộc diện đối tượng lấy phiếu tín nhiệm**.
+   - Bổ sung nút chọn nhanh `HĐQT & BĐH` (`dept: LEADERSHIP`) trong cả 2 danh sách Cử tri và Đối tượng lấy phiếu tín nhiệm tại Modal Đợt (`TrustPeriodModal.jsx`) và Tab Cấu hình (`TrustCriteriaSettings.jsx`).
+

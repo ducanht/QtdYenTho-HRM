@@ -156,6 +156,18 @@ const TrustCriteriaSettings = ({
         ...prev,
         voterEmployeeIds: [],
       }));
+    } else if (dept === 'LEADERSHIP') {
+      const matchingIds = employees.filter((e) => 
+        e.department?.includes('Hội đồng Quản trị') ||
+        e.department?.includes('Ban Điều hành') ||
+        e.department?.includes('Ban Kiểm soát') ||
+        e.position?.includes('Chủ tịch') ||
+        e.position?.includes('Giám đốc')
+      ).map((e) => e.id);
+      setLocalConfig((prev) => ({
+        ...prev,
+        voterEmployeeIds: Array.from(new Set([...(prev.voterEmployeeIds || []), ...matchingIds])),
+      }));
     } else {
       const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
       setLocalConfig((prev) => ({
@@ -176,6 +188,18 @@ const TrustCriteriaSettings = ({
       setLocalConfig((prev) => ({
         ...prev,
         targetEmployeeIds: [],
+      }));
+    } else if (dept === 'LEADERSHIP') {
+      const matchingIds = officialStaff.filter((e) => 
+        e.department?.includes('Hội đồng Quản trị') ||
+        e.department?.includes('Ban Điều hành') ||
+        e.department?.includes('Ban Kiểm soát') ||
+        e.position?.includes('Chủ tịch') ||
+        e.position?.includes('Giám đốc')
+      ).map((e) => e.id);
+      setLocalConfig((prev) => ({
+        ...prev,
+        targetEmployeeIds: Array.from(new Set([...(prev.targetEmployeeIds || []), ...matchingIds])),
       }));
     } else {
       const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
@@ -570,6 +594,13 @@ const TrustCriteriaSettings = ({
                       </button>
                       <button
                         type="button"
+                        onClick={() => handleSelectVotersByDept('LEADERSHIP')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-200 cursor-pointer"
+                      >
+                        HĐQT & BĐH
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleSelectVotersByDept('Phòng Tín dụng')}
                         className="px-2 py-0.5 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 cursor-pointer"
                       >
@@ -646,6 +677,13 @@ const TrustCriteriaSettings = ({
                         className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 cursor-pointer"
                       >
                         Chọn tất cả ({officialStaff.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectEmployeesByDept('LEADERSHIP')}
+                        className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-200 cursor-pointer"
+                      >
+                        HĐQT & BĐH
                       </button>
                       <button
                         type="button"

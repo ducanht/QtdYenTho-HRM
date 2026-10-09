@@ -126,28 +126,19 @@ export const calculateFinalKpiScore = (scoreSelf, scoreManager, scoreChairman) =
  */
 export const isSystemAdminAccount = (emp) => {
   if (!emp) return false;
-  const role = (emp.role || '').toLowerCase();
-  const id = (emp.id || '').toLowerCase();
-  const code = (emp.code || '').toUpperCase();
-  const name = (emp.name || '').toLowerCase();
-  const dept = (emp.department || '').toLowerCase();
-  const pos = (emp.position || '').toLowerCase();
-  const email = (emp.email || '').toLowerCase();
+  const id = String(emp.id || '').toLowerCase();
+  const code = String(emp.code || '').toUpperCase();
+  const name = String(emp.name || '').toLowerCase();
+  const dept = String(emp.department || '').toLowerCase();
+  const email = String(emp.email || '').toLowerCase();
 
+  // CHỈ loại trừ tài khoản kỹ thuật ảo của Webapp (ROOT / Quản trị viên cấp cao Webapp)
+  // Tuyệt đối KHÔNG loại trừ cán bộ thực tế của Quỹ (như Trịnh Đức Anh ducanht@gmail.com, Nguyễn Văn Sơn...)
   return (
-    role === 'superadmin' ||
-    role === 'admin' ||
     id === 'emp-root' ||
-    id === 'admin' ||
-    id === 'superadmin' ||
     code === 'ROOT' ||
-    code === 'ADMIN' ||
     email === 'qtdyentho@gmail.com' ||
-    name.includes('quản trị viên') ||
-    dept.includes('quản trị viên') ||
-    dept.includes('webapp') ||
-    dept.includes('cổng quản trị') ||
-    pos.includes('quản trị viên')
+    (name.includes('quản trị viên cấp cao') && dept.includes('cổng quản trị'))
   );
 };
 

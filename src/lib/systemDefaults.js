@@ -281,6 +281,7 @@ export const DEFAULT_EVALUATION_PERIODS = [
     year: 2026,
     quarter: 3,
     votingMode: 'OPTIONAL', // 'ANONYMOUS_ONLY' | 'IDENTIFIED_ONLY' | 'OPTIONAL'
+    allowSelfEvaluation: false,
     status: 'ACTIVE',
     startDate: '2026-09-15',
     endDate: '2026-10-31',
@@ -291,6 +292,7 @@ export const DEFAULT_EVALUATION_PERIODS = [
     year: 2026,
     quarter: 4,
     votingMode: 'ANONYMOUS_ONLY', // Bỏ phiếu kín 100%
+    allowSelfEvaluation: false,
     status: 'UPCOMING',
     startDate: '2026-12-01',
     endDate: '2026-12-31',

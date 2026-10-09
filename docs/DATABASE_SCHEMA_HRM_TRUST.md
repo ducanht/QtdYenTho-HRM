@@ -73,6 +73,7 @@ erDiagram
         string id PK "Mã kỳ đánh giá (VD: PERIOD-2026-Q3)"
         string name "Tên đợt đánh giá tín nhiệm"
         string votingMode "ANONYMOUS_ONLY | IDENTIFIED_ONLY | OPTIONAL"
+        boolean allowSelfEvaluation "true: cho phép tự đánh giá bản thân | false: không cho phép"
         int year "Năm đánh giá (VD: 2026)"
         int quarter "Quý đánh giá (1, 2, 3, 4 hoặc null)"
         date startDate "Ngày mở cổng bỏ phiếu"
@@ -286,7 +287,14 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
 ### 7.2. Quy Định Cập Nhật CSDL Bắt Buộc (Mandatory In-Sync Documentation):
 - Mỗi khi có sự thay đổi về cấu trúc bảng hoặc thêm bảng mới trong Firestore:
   1. **Cập nhật mã nguồn**: Khai báo bảng mới trong `CORE_COLLECTIONS`, bổ sung logic vào cả `autoSyncDatabaseSchema` và `autoInitializeFirebaseDatabase` trong `src/lib/autoInitDb.js`.
-  2. **Nâng phiên bản**: Tăng `CURRENT_SCHEMA_VERSION` (VD: `2026.10.09_v3.4_...`).
+  2. **Nâng phiên bản**: Tăng `CURRENT_SCHEMA_VERSION` (VD: `2026.10.09_v3.7_allow_self_evaluation_and_include_trinh_duc_anh`).
   3. **Cập nhật tài liệu**: Bổ sung đặc tả schema chi tiết vào `docs/DATABASE_SCHEMA_HRM_TRUST.md` trong cùng phiên làm việc và cùng commit Git.
+
+### 7.3. Lịch Sử Phiên Bản Schema:
+- **`2026.10.09_v3.7_allow_self_evaluation_and_include_trinh_duc_anh`**:
+  - Bổ sung cấu hình `allowSelfEvaluation: boolean` (mặc định `false`) vào từng đợt đánh giá (`evaluation_periods`) và cấu hình đợt (`period_configs`). Cho phép Ban quản trị cấu hình linh hoạt: đợt lấy phiếu cán bộ có được phép tự bỏ phiếu/chấm điểm cho chính mình hay không.
+  - Sửa lỗi loại trừ nhầm tài khoản cán bộ kiêm Quản trị viên (Chủ tịch HĐQT Trịnh Đức Anh `emp-007` / `ducanht@gmail.com`). Chỉ loại trừ tài khoản kỹ thuật hệ thống (`emp-root` / `qtdyentho@gmail.com`).
+  - Tự động nạp `emp-007` vào danh sách cử tri (`voterEmployeeIds`) và danh sách đối tượng lấy phiếu (`targetEmployeeIds`) của tất cả các đợt hiện có trong Firestore.
+
 
 
