@@ -26,7 +26,9 @@ import {
   DEFAULT_MODULE_AWARDS_SETTINGS,
   DEFAULT_EVALUATION_PERIODS,
   OFFICIAL_EMPLOYEES,
-  OFFICIAL_WORK_HISTORY
+  OFFICIAL_WORK_HISTORY,
+  OFFICIAL_STAFF_EMPLOYEES,
+  DEFAULT_ACCOUNTS,
 } from './systemDefaults';
 import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
 
@@ -34,12 +36,14 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.7_allow_self_evaluation_and_include_trinh_duc_anh';
+export const CURRENT_SCHEMA_VERSION = '2026.10.09_v3.8_separate_accounts_and_employees_table';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ
  */
 export const CORE_COLLECTIONS = [
+  'accounts',
+  'employees',
   'system_metadata',
   'system_modules',
   'system_settings',
@@ -189,8 +193,9 @@ export const autoSyncDatabaseSchema = async (force = false) => {
 
     // 7. Đồng bộ Đợt đánh giá kèm Bảng Cấu Hình Riêng Biệt (period_configs)
     // Đảm bảo toàn bộ các đợt có trường allowSelfEvaluation và cán bộ Trịnh Đức Anh (emp-007) được tham gia đầy đủ
+    // ĐỒNG THỜI LOẠI BỎ HOÀN TOÀN TÀI KHOẢN KỸ THUẬT ROOT (emp-root) KHỎI CỬ TRI & ĐỐI TƯỢNG
     const periodsSnap = await getDocs(collection(db, 'evaluation_periods')).catch(() => null);
-    const validStaffIds = OFFICIAL_EMPLOYEES.filter((e) => e.id !== 'emp-root' && e.code !== 'ROOT').map((e) => e.id);
+    const validStaffIds = OFFICIAL_STAFF_EMPLOYEES.map((e) => e.id);
 
     if (periodsSnap && !periodsSnap.empty) {
       for (const pDoc of periodsSnap.docs) {
@@ -198,22 +203,24 @@ export const autoSyncDatabaseSchema = async (force = false) => {
         const existingVoters = Array.isArray(pData.voterEmployeeIds) ? pData.voterEmployeeIds : [];
         const existingTargets = Array.isArray(pData.targetEmployeeIds) ? pData.targetEmployeeIds : [];
 
-        // Đảm bảo emp-007 (Trịnh Đức Anh) có mặt trong voterEmployeeIds và targetEmployeeIds
-        const mergedVoters = Array.from(new Set([...existingVoters, 'emp-007']));
-        const mergedTargets = existingTargets.length > 0 ? Array.from(new Set([...existingTargets, 'emp-007'])) : validStaffIds;
+        // Đảm bảo emp-007 (Trịnh Đức Anh) có mặt, nhưng LOẠI BỎ emp-root
+        const mergedVoters = Array.from(new Set([...existingVoters, 'emp-007']))
+          .filter((id) => id !== 'emp-root' && id !== 'ROOT');
+        const mergedTargets = (existingTargets.length > 0 ? Array.from(new Set([...existingTargets, 'emp-007'])) : validStaffIds)
+          .filter((id) => id !== 'emp-root' && id !== 'ROOT');
 
         await setDoc(doc(db, 'evaluation_periods', pDoc.id), {
           allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
-          voterEmployeeIds: mergedVoters,
-          targetEmployeeIds: mergedTargets,
+          voterEmployeeIds: mergedVoters.length > 0 ? mergedVoters : validStaffIds,
+          targetEmployeeIds: mergedTargets.length > 0 ? mergedTargets : validStaffIds,
           updatedAt: serverTimestamp(),
         }, { merge: true });
 
         // Cập nhật bảng cấu hình riêng biệt period_configs tương ứng
         await setDoc(doc(db, 'period_configs', pDoc.id), {
           allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
-          voterEmployeeIds: mergedVoters,
-          targetEmployeeIds: mergedTargets,
+          voterEmployeeIds: mergedVoters.length > 0 ? mergedVoters : validStaffIds,
+          targetEmployeeIds: mergedTargets.length > 0 ? mergedTargets : validStaffIds,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -248,7 +255,23 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       }
     }
 
-    // 8. Tự động đồng bộ danh bạ cán bộ chính thức (Đảm bảo tài khoản Trịnh Đức Anh emp-007 luôn cập nhật)
+    // 8. TỰ ĐỘNG ĐỒNG BỘ BẢNG CÁN BỘ NHÂN VIÊN CHUYÊN BIỆT (employees) - 100% SẠCH TÀI KHOẢN ROOT
+    for (const emp of OFFICIAL_STAFF_EMPLOYEES) {
+      await setDoc(doc(db, 'employees', emp.id), {
+        ...emp,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    // 9. TỰ ĐỘNG ĐỒNG BỘ BẢNG TÀI KHOẢN ĐĂNG NHẬP RIÊNG BIỆT (accounts)
+    for (const acc of DEFAULT_ACCOUNTS) {
+      await setDoc(doc(db, 'accounts', acc.id), {
+        ...acc,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    // 10. ĐỒNG BỘ BẢNG users (GƯƠNG CHIẾU TƯƠNG THÍCH NGƯỢC - BACKWARD COMPATIBILITY MIRROR)
     const usersSnap = await getDocs(collection(db, 'users')).catch(() => null);
     if (!usersSnap || usersSnap.size < 5) {
       for (const emp of OFFICIAL_EMPLOYEES) {
@@ -472,7 +495,23 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 9/9: Cập nhật Hồ sơ 12 Cán bộ Nhân viên chính thức (users)...');
+    onProgress('Bước 9/11: Khởi tạo Danh bạ Cán bộ Nhân viên (employees) - 100% Cán bộ thực tế...');
+    for (const emp of OFFICIAL_STAFF_EMPLOYEES) {
+      await setDoc(doc(db, 'employees', emp.id), {
+        ...emp,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 10/11: Khởi tạo Danh sách Tài khoản Đăng nhập (accounts)...');
+    for (const acc of DEFAULT_ACCOUNTS) {
+      await setDoc(doc(db, 'accounts', acc.id), {
+        ...acc,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 11/11: Cập nhật Hồ sơ Cán bộ Nhân viên (users - Tương thích ngược)...');
     for (const emp of OFFICIAL_EMPLOYEES) {
       await setDoc(doc(db, 'users', emp.id), {
         ...emp,

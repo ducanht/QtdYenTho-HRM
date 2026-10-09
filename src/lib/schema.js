@@ -28,10 +28,27 @@ export const classifyTrustScore = (totalScore, options = {}) => {
   const maxWeakPercent = Number(thresholds.weakVotesThresholdPercent ?? thresholds.maxWeakVotesPercent) || 50;
   const weakVoteMaxScore = Number(thresholds.weakVoteMaxScore ?? thresholds.weakScoreThreshold) || 50;
 
+  // 0. Trường hợp chưa có phiếu đánh giá trong kỳ (Chưa bỏ phiếu xong) -> Trả về "Chưa hoàn thành"
+  const votesList = Array.isArray(options.votes) ? options.votes : [];
+  if (
+    options.evaluationsCount === 0 ||
+    options.votesCount === 0 ||
+    options.hasNoVotes === true ||
+    (options.votes !== undefined && Array.isArray(options.votes) && options.votes.length === 0)
+  ) {
+    return {
+      label: 'Chưa hoàn thành',
+      shortLabel: 'Chưa hoàn thành',
+      code: 'CHUA_HOAN_THANH',
+      variant: 'chua-hoan-thanh',
+      color: 'slate',
+      reason: 'Chưa có phiếu đánh giá trong kỳ',
+    };
+  }
+
   // 1. Kiểm tra điều kiện: Có trên 50% số phiếu đánh giá xếp ở mức Yếu (0-5 điểm / <= 50 điểm)
   let isOver50PercentWeak = false;
   let weakVotesCount = 0;
-  const votesList = Array.isArray(options.votes) ? options.votes : [];
   if (votesList.length > 0) {
     weakVotesCount = votesList.filter((v) => {
       const vScore = Number(v.totalScore ?? v.score ?? 0);

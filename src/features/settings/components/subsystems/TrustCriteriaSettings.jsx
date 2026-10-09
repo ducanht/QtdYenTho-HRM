@@ -110,10 +110,11 @@ const TrustCriteriaSettings = ({
         weakVotesThresholdPercent: periodConfig.weakVotesThresholdPercent ?? 50,
         votingMode: periodConfig.votingMode || currentPeriod?.votingMode || 'ANONYMOUS',
         allowSelfEvaluation: periodConfig.allowSelfEvaluation ?? currentPeriod?.allowSelfEvaluation ?? false,
-        voterEmployeeIds:
+        voterEmployeeIds: (
           periodConfig.voterEmployeeIds ||
           currentPeriod?.voterEmployeeIds ||
-          employees.map((e) => e.id),
+          officialStaff.map((e) => e.id)
+        ).filter((id) => !isSystemAdminAccount({ id, code: id })),
         targetEmployeeIds: cleanTargetIds,
         criteria:
           periodConfig.criteria && periodConfig.criteria.length > 0
@@ -134,7 +135,7 @@ const TrustCriteriaSettings = ({
         weakVotesThresholdPercent: currentPeriod.thresholds?.weakVotesThresholdPercent ?? 50,
         votingMode: currentPeriod.votingMode || 'ANONYMOUS',
         allowSelfEvaluation: currentPeriod.allowSelfEvaluation ?? false,
-        voterEmployeeIds: currentPeriod.voterEmployeeIds || employees.map((e) => e.id),
+        voterEmployeeIds: (currentPeriod.voterEmployeeIds || officialStaff.map((e) => e.id)).filter((id) => !isSystemAdminAccount({ id, code: id })),
         targetEmployeeIds: cleanTargetIds,
         criteria:
           currentPeriod.customCriteria && currentPeriod.customCriteria.length > 0
@@ -142,14 +143,14 @@ const TrustCriteriaSettings = ({
             : [...DEFAULT_CRITERIA],
       });
     }
-  }, [periodConfig, currentPeriod, employees]);
+  }, [periodConfig, currentPeriod, employees, officialStaff]);
 
-  // Handler: Chọn nhanh Người tham gia bỏ phiếu (Cử tri) theo phòng ban
+  // Handler: Chọn nhanh Người tham gia bỏ phiếu (Cử tri) theo phòng ban (Chỉ cán bộ thực tế officialStaff)
   const handleSelectVotersByDept = (dept) => {
     if (dept === 'ALL') {
       setLocalConfig((prev) => ({
         ...prev,
-        voterEmployeeIds: employees.map((e) => e.id),
+        voterEmployeeIds: officialStaff.map((e) => e.id),
       }));
     } else if (dept === 'NONE') {
       setLocalConfig((prev) => ({
@@ -157,7 +158,7 @@ const TrustCriteriaSettings = ({
         voterEmployeeIds: [],
       }));
     } else if (dept === 'LEADERSHIP') {
-      const matchingIds = employees.filter((e) => 
+      const matchingIds = officialStaff.filter((e) => 
         e.department?.includes('Hội đồng Quản trị') ||
         e.department?.includes('Ban Điều hành') ||
         e.department?.includes('Ban Kiểm soát') ||
@@ -169,7 +170,7 @@ const TrustCriteriaSettings = ({
         voterEmployeeIds: Array.from(new Set([...(prev.voterEmployeeIds || []), ...matchingIds])),
       }));
     } else {
-      const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
+      const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
       setLocalConfig((prev) => ({
         ...prev,
         voterEmployeeIds: Array.from(new Set([...(prev.voterEmployeeIds || []), ...matchingIds])),
@@ -303,6 +304,17 @@ const TrustCriteriaSettings = ({
     });
   };
 
+  // Tính toán số lượng cử tri và đối tượng hợp lệ được tích chọn (trên nền cán bộ thực tế officialStaff)
+  const selectedVotersCount = React.useMemo(() => {
+    const raw = localConfig.voterEmployeeIds || [];
+    return raw.filter((id) => officialStaff.some((e) => e.id === id)).length;
+  }, [localConfig.voterEmployeeIds, officialStaff]);
+
+  const selectedTargetsCount = React.useMemo(() => {
+    const raw = localConfig.targetEmployeeIds || [];
+    return raw.filter((id) => officialStaff.some((e) => e.id === id)).length;
+  }, [localConfig.targetEmployeeIds, officialStaff]);
+
   return (
     <div className="space-y-4">
       {/* ========================================================================= */}
@@ -323,11 +335,16 @@ const TrustCriteriaSettings = ({
             onOpenEditPeriod={onOpenEditPeriod}
             onDeletePeriodClick={(p) => setPeriodToDelete(p)}
             title="Đợt Đánh Giá"
-            badgeRenderer={(p) => (
-              <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-                {(p.targetEmployeeIds || employees).length} đối tượng
-              </span>
-            )}
+            badgeRenderer={(p) => {
+              const count = (p.targetEmployeeIds || []).filter((id) =>
+                officialStaff.some((e) => e.id === id)
+              ).length || officialStaff.length;
+              return (
+                <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                  {count} đối tượng
+                </span>
+              );
+            }}
           />
         </div>
 
@@ -553,13 +570,13 @@ const TrustCriteriaSettings = ({
                     <div className="flex justify-between">
                       <span>Cử tri tham gia bỏ phiếu:</span>
                       <strong className="text-teal-800 font-bold">
-                        {(localConfig.voterEmployeeIds || []).length} / {employees.length} cán bộ
+                        {selectedVotersCount} / {officialStaff.length} cán bộ
                       </strong>
                     </div>
                     <div className="flex justify-between">
                       <span>Đối tượng được lấy phiếu:</span>
                       <strong className="text-teal-800 font-bold">
-                        {(localConfig.targetEmployeeIds || []).length} / {employees.length} cán bộ
+                        {selectedTargetsCount} / {officialStaff.length} cán bộ
                       </strong>
                     </div>
                   </div>
@@ -575,7 +592,7 @@ const TrustCriteriaSettings = ({
                       <Users className="w-4 h-4 text-teal-700" />
                       <div>
                         <span className="text-xs font-bold text-teal-950 block">
-                          Người được tham gia bỏ phiếu (Cử tri) ({localConfig.voterEmployeeIds?.length || 0} / {employees.length})
+                          Người được tham gia bỏ phiếu (Cử tri) ({selectedVotersCount} / {officialStaff.length})
                         </span>
                         <span className="text-[11px] text-teal-700">
                           Chỉ những cán bộ được tích chọn mới có quyền chấm điểm tín nhiệm trong đợt này
@@ -590,7 +607,7 @@ const TrustCriteriaSettings = ({
                         onClick={() => handleSelectVotersByDept('ALL')}
                         className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 cursor-pointer"
                       >
-                        Chọn tất cả ({employees.length})
+                        Chọn tất cả ({officialStaff.length})
                       </button>
                       <button
                         type="button"
@@ -624,7 +641,7 @@ const TrustCriteriaSettings = ({
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-36 overflow-y-auto p-1 bg-white rounded-lg border border-teal-100">
-                    {employees.map((emp) => {
+                    {officialStaff.map((emp) => {
                       const isChecked = (localConfig.voterEmployeeIds || []).includes(emp.id);
                       return (
                         <label
@@ -661,7 +678,7 @@ const TrustCriteriaSettings = ({
                       <Users className="w-4 h-4 text-[#0f766e]" />
                       <div>
                         <span className="text-xs font-bold text-slate-900 block">
-                          Cán bộ được lấy phiếu tín nhiệm ({localConfig.targetEmployeeIds?.length || 0} / {officialStaff.length})
+                          Cán bộ được lấy phiếu tín nhiệm ({selectedTargetsCount} / {officialStaff.length})
                         </span>
                         <span className="text-[11px] text-slate-500">
                           Danh sách cán bộ chuyên môn được cử tri chấm điểm đánh giá trong đợt

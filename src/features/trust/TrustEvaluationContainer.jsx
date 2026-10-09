@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { 
@@ -62,11 +62,58 @@ const TrustEvaluationContainer = () => {
   const [globalCriteria, setGlobalCriteria] = useState(DEFAULT_CRITERIA);
   const [evaluations, setEvaluations] = useState([]);
 
-  // Kỳ đánh giá đang chọn
-  const [selectedPeriodId, setSelectedPeriodId] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Tab chức năng chính: 'SCORING' | 'MY_VOTES' | 'MY_RESULTS' | 'OVERVIEW'
-  const [activeTab, setActiveTab] = useState('SCORING');
+  // Tab chức năng chính & Kỳ đánh giá: Lưu trữ đồng bộ 100% với searchParams để khôi phục chuẩn khi F5 hoặc Back
+  const urlTab = searchParams.get('tab');
+  const urlPeriodId = searchParams.get('periodId');
+
+  const [selectedPeriodId, setSelectedPeriodIdState] = useState(urlPeriodId || '');
+  const [activeTab, setActiveTabState] = useState(urlTab || 'SCORING');
+
+  const setSelectedPeriodId = useCallback((idOrUpdater) => {
+    setSelectedPeriodIdState((prev) => {
+      const nextId = typeof idOrUpdater === 'function' ? idOrUpdater(prev) : idOrUpdater;
+      setSearchParams((p) => {
+        const nextParams = new URLSearchParams(p);
+        if (nextId) {
+          nextParams.set('periodId', nextId);
+        } else {
+          nextParams.delete('periodId');
+        }
+        return nextParams;
+      }, { replace: true });
+      return nextId;
+    });
+  }, [setSearchParams]);
+
+  const setActiveTab = useCallback((tabOrUpdater) => {
+    setActiveTabState((prev) => {
+      const nextTab = typeof tabOrUpdater === 'function' ? tabOrUpdater(prev) : tabOrUpdater;
+      setSearchParams((p) => {
+        const nextParams = new URLSearchParams(p);
+        if (nextTab) {
+          nextParams.set('tab', nextTab);
+        } else {
+          nextParams.delete('tab');
+        }
+        return nextParams;
+      }, { replace: true });
+      return nextTab;
+    });
+  }, [setSearchParams]);
+
+  // Đồng bộ URL -> State khi người dùng bấm nút Back/Forward của trình duyệt
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab && currentTab !== activeTab) {
+      setActiveTabState(currentTab);
+    }
+    const currentPid = searchParams.get('periodId');
+    if (currentPid && currentPid !== selectedPeriodId) {
+      setSelectedPeriodIdState(currentPid);
+    }
+  }, [searchParams, activeTab, selectedPeriodId]);
 
   // Chế độ xem tiêu chí: 'STEPPER' (từng tiêu chí một) | 'ALL' (toàn bộ 10 tiêu chí cuộn liên tục)
   const [viewMode, setViewMode] = useState('STEPPER');
@@ -173,7 +220,7 @@ const TrustEvaluationContainer = () => {
     } else if (activeTab === 'SCORING' && !canVote) {
       setActiveTab(canViewOwnResults ? 'MY_RESULTS' : 'MY_VOTES');
     }
-  }, [activeTab, canViewOverview, canManageCriteria, canManagePeriods, canVote, canViewOwnResults]);
+  }, [activeTab, canViewOverview, canManageCriteria, canManagePeriods, canVote, canViewOwnResults, setActiveTab]);
 
   // Handler: Lưu cấu hình tiêu chí & tham số phân hệ Tín nhiệm
   const handleSaveTrustConfig = async (newConfig) => {
@@ -272,7 +319,7 @@ const TrustEvaluationContainer = () => {
       }
     });
     return () => unsub();
-  }, []);
+  }, [setSelectedPeriodId]);
 
   // 4. Subscribe Phiếu đánh giá Real-time
   useEffect(() => {

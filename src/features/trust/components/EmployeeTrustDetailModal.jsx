@@ -3,8 +3,6 @@ import {
   Users, 
   Award, 
   ShieldCheck, 
-  Eye, 
-  EyeOff, 
   Printer, 
   CheckCircle2, 
   FileText,
@@ -34,9 +32,6 @@ const EmployeeTrustDetailModal = ({
   currentPeriod,
   isAdmin = false,
 }) => {
-  // Trạng thái bật/tắt hiển thị danh tính cử tri (mặc định bật cho Admin)
-  const [showVoterIdentity, setShowVoterIdentity] = useState(true);
-
   // Tiêu chí đang được chọn để xem chi tiết điểm từng cử tri
   const [selectedCriterionId, setSelectedCriterionId] = useState(null);
 
@@ -199,42 +194,7 @@ const EmployeeTrustDetailModal = ({
         </div>
 
 
-        {/* 2. Thanh công cụ Lãnh đạo: Toggle ẩn danh cử tri */}
-        {isAdmin && (
-          <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
-              <span className="text-xs font-bold text-slate-800">
-                Chế độ xem đối soát của Ban Lãnh đạo:
-              </span>
-              <span className="text-[11px] text-slate-500 hidden sm:inline">
-                (Quy trình bỏ phiếu kín với cán bộ nhân viên, mở quyền thẩm tra cho Admin)
-              </span>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setShowVoterIdentity((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                showVoterIdentity
-                  ? 'bg-[#0f766e] text-white shadow-2xs hover:bg-teal-800'
-                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              {showVoterIdentity ? (
-                <>
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Đang hiện tên cử tri chấm điểm</span>
-                </>
-              ) : (
-                <>
-                  <EyeOff className="w-3.5 h-3.5" />
-                  <span>Đang ẩn danh cử tri (Mã hoá)</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
 
         {/* 3. Bảng điểm trung bình theo 10 tiêu chí chuẩn NHNN */}
         <div className="space-y-2">
@@ -267,14 +227,15 @@ const EmployeeTrustDetailModal = ({
                   // Danh sách chi tiết điểm cử tri đã chấm cho riêng tiêu chí này
                   const votersForCrit = receivedEvaluations.map((ev, vIdx) => {
                     const score = ev.scores?.[crit.id];
-                    const isAnonymous = currentPeriod?.votingMode === 'ANONYMOUS' || currentPeriod?.votingMode === 'ANONYMOUS_ONLY';
+                    const isAnonymous = Boolean(
+                      ev.isAnonymous ||
+                      currentPeriod?.votingMode === 'ANONYMOUS' ||
+                      currentPeriod?.votingMode === 'ANONYMOUS_ONLY'
+                    );
                     let voterName = '';
                     let voterRole = '';
 
-                    if (isAdmin && showVoterIdentity) {
-                      voterName = ev.evaluatorName || `Cán bộ Quỹ #${vIdx + 1}`;
-                      voterRole = ev.evaluatorPosition || 'Cán bộ';
-                    } else if (!isAnonymous) {
+                    if (!isAnonymous) {
                       voterName = ev.evaluatorName || `Cán bộ Quỹ #${vIdx + 1}`;
                       voterRole = ev.evaluatorPosition || 'Cán bộ';
                     } else {
@@ -442,13 +403,18 @@ const EmployeeTrustDetailModal = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {receivedEvaluations.map((ev, idx) => {
-                    const voterLabel = showVoterIdentity
+                    const isAnonymous = Boolean(
+                      ev.isAnonymous ||
+                      currentPeriod?.votingMode === 'ANONYMOUS' ||
+                      currentPeriod?.votingMode === 'ANONYMOUS_ONLY'
+                    );
+                    const voterLabel = !isAnonymous
                       ? (ev.evaluatorName || 'Cán bộ Quỹ')
                       : `Cử tri #${idx + 1} (Bỏ phiếu kín)`;
 
-                    const voterSub = showVoterIdentity
+                    const voterSub = !isAnonymous
                       ? (ev.evaluatorPosition || 'Cán bộ')
-                      : 'Bảo mật';
+                      : 'Bỏ phiếu kín';
 
                     return (
                       <tr key={ev.id || idx} className="hover:bg-slate-50/70 transition-colors">

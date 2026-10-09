@@ -94,7 +94,12 @@ Toàn bộ các phân hệ con của Module Tín nhiệm tuân thủ nghiêm ng�
    - Gắn huy hiệu: `Cao nhất` (Badge xanh lá `bg-emerald-50 text-emerald-700`) và `Thấp nhất` (Badge hổ phách `bg-amber-50 text-amber-700`).
 3. **Drilldown Chi tiết Cử tri Chấm điểm**:
    - Khi bấm vào dòng tiêu chí: Hiển thị danh sách phân rã toàn bộ các lượt chấm điểm của các cử tri đối với tiêu chí đó.
-   - Tuân thủ nghiêm ngặt bảo mật: Nếu đợt đánh giá là `ANONYMOUS` (Ẩn danh), hiển thị `"Cử tri #X (Bỏ phiếu kín)"` (chỉ tài khoản Quản trị cấp cao / Admin đối soát mới có quyền xem thông tin kiểm toán); nếu là `PUBLIC` (Công khai), hiển thị họ tên đầy đủ và chức vụ cử tri.
+   - Tuân thủ nghiêm ngặt bảo mật: Nếu đợt đánh giá là `ANONYMOUS` (Ẩn danh), hiển thị `"Cử tri #X (Bỏ phiếu kín)"` cho mọi tài khoản; nếu là `IDENTIFIED` (Công khai), hiển thị họ tên đầy đủ và chức vụ cử tri theo đúng cấu hình Đợt, triệt tiêu hoàn toàn nút toggle đối soát thủ công gây lộ danh tính.
+4. **Xếp loại Cán bộ khi chưa hoàn thành bỏ phiếu**:
+   - Cán bộ chưa có phiếu đánh giá (`evaluationsCount === 0`) hiển thị Xếp loại **"Chưa hoàn thành"** (badge màu slate trung tính), điểm trung bình và quy đổi hiển thị `--`. Tuyệt đối không xếp loại *"Không hoàn thành nhiệm vụ"* khi chưa có phiếu.
+5. **Điều hướng SPA & Đồng bộ URL chuẩn mực (Zero Stale Navigation)**:
+   - Sử dụng `useSearchParams` (`?tab=...&periodId=...`) để đồng bộ trạng thái Tab và Đợt đánh giá vào URL trình duyệt. Khi người dùng F5 Refresh hoặc bấm nút Back/Forward, hệ thống tự động phục hồi chính xác 100% màn hình và tab đang làm việc.
+   - Trang Đăng nhập (`/login`) tự động chuyển hướng về `/portal` nếu người dùng đã có phiên đăng nhập hợp lệ, chống kẹt giao diện khi bấm nút Back.
 
 ---
 

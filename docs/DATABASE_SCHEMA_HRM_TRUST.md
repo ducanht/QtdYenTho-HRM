@@ -295,6 +295,13 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
   - Bổ sung cấu hình `allowSelfEvaluation: boolean` (mặc định `false`) vào từng đợt đánh giá (`evaluation_periods`) và cấu hình đợt (`period_configs`). Cho phép Ban quản trị cấu hình linh hoạt: đợt lấy phiếu cán bộ có được phép tự bỏ phiếu/chấm điểm cho chính mình hay không.
   - Sửa lỗi loại trừ nhầm tài khoản cán bộ kiêm Quản trị viên (Chủ tịch HĐQT Trịnh Đức Anh `emp-007` / `ducanht@gmail.com`). Chỉ loại trừ tài khoản kỹ thuật hệ thống (`emp-root` / `qtdyentho@gmail.com`).
   - Tự động nạp `emp-007` vào danh sách cử tri (`voterEmployeeIds`) và danh sách đối tượng lấy phiếu (`targetEmployeeIds`) của tất cả các đợt hiện có trong Firestore.
+- **`2026.10.09_v3.8_separate_accounts_and_employees_table`**:
+  - **Tách riêng bảng Tài khoản (`accounts`) và Cán bộ Nhân viên (`employees`)**: Chuẩn hóa cấu trúc CSDL dùng chung cho toàn bộ hệ sinh thái Webapp Quỹ (Qtdyentho, Luong, Quy...). Bảng `employees` quản lý 100% đúng 12 Cán bộ Nhân viên thực tế của Quỹ, triệt tiêu tài khoản root kỹ thuật. Bảng `accounts` quản lý thông tin đăng nhập, xác thực và phân quyền (bao gồm cả tài khoản SuperAdmin kỹ thuật `acc-root`).
+  - Duy trì mirror collection `users` để tương thích ngược 100% với các tính năng hiện hữu.
+  - Sửa lỗi hiển thị Thông tin Tổng quát Đợt: Mẫu số tính trên số lượng CBNV chính thức (`officialStaff.length = 12`), tử số tính chính xác số người được chọn.
+  - Loại bỏ hoàn toàn toggle thủ công "Chế độ xem đối soát của Ban Lãnh đạo", việc hiển thị danh tính cử tri tuân thủ 100% theo cấu hình đợt (`votingMode === 'ANONYMOUS'`).
+  - Cán bộ chưa có phiếu đánh giá hiển thị Xếp loại "Chưa hoàn thành" (badge slate trung tính), điểm hiển thị `--`, không gán nhầm "Không hoàn thành nhiệm vụ".
+  - Tích hợp `useSearchParams` cho `tab` và `periodId` trong Phân hệ Tín nhiệm, khắc phục triệt để lỗi Back/Refresh trình duyệt.
 
 
 

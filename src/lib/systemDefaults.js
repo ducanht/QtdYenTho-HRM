@@ -730,3 +730,46 @@ export const OFFICIAL_WORK_HISTORY = [
     notes: 'Bàn giao các hồ sơ tín dụng quản lý trước đó.',
   },
 ];
+
+// ============================================================================
+// 9. DANH SÁCH HỒ SƠ CBNV THỰC TẾ (BẢNG EMPLOYEES - LOẠI BỎ TÀI KHOẢN KỸ THUẬT ROOT)
+// ============================================================================
+export const OFFICIAL_STAFF_EMPLOYEES = OFFICIAL_EMPLOYEES.filter(
+  (emp) => emp.id !== 'emp-root' && emp.code !== 'ROOT'
+).map(({ role, mustChangePassword, ...profile }) => ({
+  ...profile,
+  status: profile.status || 'ACTIVE',
+}));
+
+// ============================================================================
+// 10. DANH SÁCH TÀI KHOẢN NGƯỜI DÙNG ĐĂNG NHẬP (BẢNG ACCOUNTS RIÊNG BIỆT)
+// ============================================================================
+export const DEFAULT_ACCOUNTS = [
+  // Tài khoản Quản trị Cấp cao Webapp (SuperAdmin - Không liên kết cán bộ)
+  {
+    id: 'acc-root',
+    email: 'qtdyentho@gmail.com',
+    role: ROLES.SUPERADMIN,
+    employeeId: null,
+    employeeCode: 'ROOT',
+    employeeName: 'Quản trị viên Cấp cao',
+    username: 'superadmin',
+    status: 'ACTIVE',
+    mustChangePassword: false,
+    createdAt: '2023-01-01T00:00:00.000Z',
+  },
+  // Các tài khoản đăng nhập gắn liền với từng Cán bộ Quỹ
+  ...OFFICIAL_EMPLOYEES.filter((emp) => emp.id !== 'emp-root').map((emp) => ({
+    id: `acc-${emp.code.toLowerCase()}`,
+    email: emp.email.toLowerCase(),
+    role: emp.role || ROLES.STAFF,
+    employeeId: emp.id,
+    employeeCode: emp.code,
+    employeeName: emp.name,
+    username: emp.code.toLowerCase(),
+    status: emp.status || 'ACTIVE',
+    mustChangePassword: emp.mustChangePassword ?? true,
+    createdAt: '2023-01-01T00:00:00.000Z',
+  })),
+];
+

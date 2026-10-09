@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Building2, 
@@ -20,7 +20,7 @@ import Card from '../components/common/Card';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loginWithGoogle, isDemoMode, role } = useAuth();
+  const { login, loginWithGoogle, isDemoMode, role, currentUser, loading: authLoading } = useAuth();
   const toast = useToast();
 
   const [email, setEmail] = useState('');
@@ -29,6 +29,13 @@ const Login = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   const from = location.state?.from?.pathname || '/portal';
+
+  // Tự động chuyển hướng nếu phiên đăng nhập đã tồn tại (Chống kẹt màn hình khi bấm Back)
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      navigate(from, { replace: true });
+    }
+  }, [currentUser, authLoading, navigate, from]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

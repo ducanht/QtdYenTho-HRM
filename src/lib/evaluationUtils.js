@@ -24,6 +24,9 @@ export const getTrustClassification = (totalScore) => {
  */
 export const getClassificationBadgeVariant = (classification) => {
   const c = String(classification || '').toLowerCase();
+  if (c.includes('chưa hoàn thành') || c.includes('chưa có phiếu')) {
+    return 'bg-slate-100 text-slate-700 border-slate-300';
+  }
   if (c.includes('xuất sắc')) {
     return 'bg-emerald-50 text-emerald-800 border-emerald-300';
   }
@@ -180,4 +183,25 @@ export const formatDateTimeVN = (isoString) => {
     return isoString;
   }
 };
+
+/**
+ * Lấy danh sách CBNV chính thức của Quỹ (loại bỏ hoàn toàn tài khoản kỹ thuật root/system)
+ */
+export const getOfficialStaff = (employees = []) => {
+  if (!Array.isArray(employees)) return [];
+  return employees.filter((e) => !isSystemAdminAccount(e));
+};
+
+/**
+ * Lấy danh sách cử tri hợp lệ tham gia bỏ phiếu theo cấu hình đợt
+ */
+export const getEligibleVoterEmployees = (employees = [], voterEmployeeIds = null) => {
+  const officialStaff = getOfficialStaff(employees);
+  if (Array.isArray(voterEmployeeIds) && voterEmployeeIds.length > 0) {
+    const voterSet = new Set(voterEmployeeIds);
+    return officialStaff.filter((e) => voterSet.has(e.id));
+  }
+  return officialStaff;
+};
+
 

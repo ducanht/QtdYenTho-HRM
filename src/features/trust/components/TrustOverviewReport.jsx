@@ -141,6 +141,7 @@ const TrustOverviewReport = ({
       'Hoàn thành tốt nhiệm vụ': 0,
       'Hoàn thành nhiệm vụ': 0,
       'Không hoàn thành nhiệm vụ': 0,
+      'Chưa hoàn thành': 0,
       'Xuất sắc': 0,
       'Tốt': 0,
       'Hoàn thành': 0,
@@ -174,6 +175,8 @@ const TrustOverviewReport = ({
         critAverages,
         votes: item.votes,
         thresholds: effectiveThresholds,
+        evaluationsCount: count,
+        votesCount: count,
       });
 
       if (count > 0) {
@@ -181,6 +184,8 @@ const TrustOverviewReport = ({
         if (classification.shortLabel) {
           summaryCounts[classification.shortLabel] = (summaryCounts[classification.shortLabel] || 0) + 1;
         }
+      } else {
+        summaryCounts['Chưa hoàn thành'] = (summaryCounts['Chưa hoàn thành'] || 0) + 1;
       }
 
       return {
@@ -196,7 +201,11 @@ const TrustOverviewReport = ({
       };
     });
 
-    leaderboard.sort((a, b) => b.avgScore100 - a.avgScore100);
+    leaderboard.sort((a, b) => {
+      if (a.evaluationsCount === 0 && b.evaluationsCount > 0) return 1;
+      if (a.evaluationsCount > 0 && b.evaluationsCount === 0) return -1;
+      return b.avgScore100 - a.avgScore100;
+    });
 
     return {
       leaderboard,
@@ -480,12 +489,16 @@ const TrustOverviewReport = ({
                       {row.evaluationsCount} phiếu
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className="text-xs font-black text-[#0f766e] bg-teal-50 px-2.5 py-1 rounded-xl border border-teal-200">
-                        {row.avgScore10} / 10
+                      <span className={`text-xs font-black px-2.5 py-1 rounded-xl border ${
+                        row.evaluationsCount > 0
+                          ? 'text-[#0f766e] bg-teal-50 border-teal-200'
+                          : 'text-slate-400 bg-slate-50 border-slate-200'
+                      }`}>
+                        {row.evaluationsCount > 0 ? `${row.avgScore10} / 10` : '—'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center font-bold text-slate-700">
-                      {row.avgScore100} đ
+                      {row.evaluationsCount > 0 ? `${row.avgScore100} đ` : '—'}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex flex-col items-center gap-1">

@@ -27,7 +27,7 @@ const TrustPeriodModal = ({
     if (dept === 'ALL') {
       setFormData((prev) => ({
         ...prev,
-        voterEmployeeIds: employees.map((e) => e.id),
+        voterEmployeeIds: officialStaff.map((e) => e.id),
       }));
     } else if (dept === 'NONE') {
       setFormData((prev) => ({
@@ -35,7 +35,7 @@ const TrustPeriodModal = ({
         voterEmployeeIds: [],
       }));
     } else if (dept === 'LEADERSHIP') {
-      const matchingIds = employees.filter((e) => 
+      const matchingIds = officialStaff.filter((e) => 
         e.department?.includes('Hội đồng Quản trị') ||
         e.department?.includes('Ban Điều hành') ||
         e.department?.includes('Ban Kiểm soát') ||
@@ -47,7 +47,7 @@ const TrustPeriodModal = ({
         voterEmployeeIds: Array.from(new Set([...(prev?.voterEmployeeIds || []), ...matchingIds])),
       }));
     } else {
-      const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
+      const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
       setFormData((prev) => ({
         ...prev,
         voterEmployeeIds: Array.from(new Set([...(prev?.voterEmployeeIds || []), ...matchingIds])),
@@ -245,7 +245,7 @@ const TrustPeriodModal = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <label className="font-bold text-teal-950 text-[11px] uppercase tracking-wider block">
-                Người được tham gia bỏ phiếu (Cử tri) ({formData.voterEmployeeIds?.length || 0}/{employees.length}):
+                Người được tham gia bỏ phiếu (Cử tri) ({(formData.voterEmployeeIds || []).filter((id) => officialStaff.some((e) => e.id === id)).length}/{officialStaff.length}):
               </label>
               <span className="text-[10px] text-teal-700">Chỉ cán bộ được chọn mới có quyền chấm điểm trong đợt này</span>
             </div>
@@ -255,7 +255,7 @@ const TrustPeriodModal = ({
                 onClick={() => handleSelectVotersByDept('ALL')}
                 className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]"
               >
-                Tất cả ({employees.length})
+                Tất cả ({officialStaff.length})
               </button>
               <button
                 type="button"
@@ -289,7 +289,7 @@ const TrustPeriodModal = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-1 bg-white rounded-lg border border-teal-200">
-            {employees.map((emp) => {
+            {officialStaff.map((emp) => {
               const isSelected = (formData.voterEmployeeIds || []).includes(emp.id);
               return (
                 <label key={`modal-voter-${emp.id}`} className="flex items-center gap-1.5 text-[11px] p-1 rounded hover:bg-teal-50 cursor-pointer">
