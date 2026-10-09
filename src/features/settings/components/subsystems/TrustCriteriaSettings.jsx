@@ -19,6 +19,24 @@ import PeriodMasterSidebar from '../../../trust/components/PeriodMasterSidebar';
 import DeletePeriodConfirmModal from '../../../trust/components/DeletePeriodConfirmModal';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../../../lib/constants';
 
+// Helper phân loại màu sắc badge cho từng nhóm tiêu chí chuẩn mực
+const getGroupBadgeStyle = (group) => {
+  const g = (group || '').toLowerCase();
+  if (g.includes('đạo đức') || g.includes('phẩm chất')) {
+    return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+  }
+  if (g.includes('kỷ luật') || g.includes('tuân thủ') || g.includes('chấp hành')) {
+    return 'bg-blue-50 text-blue-800 border-blue-200';
+  }
+  if (g.includes('trách nhiệm')) {
+    return 'bg-purple-50 text-purple-800 border-purple-200';
+  }
+  if (g.includes('lãnh đạo') || g.includes('điều hành')) {
+    return 'bg-amber-50 text-amber-800 border-amber-200';
+  }
+  return 'bg-teal-50 text-teal-800 border-teal-200';
+};
+
 /**
  * TrustCriteriaSettings: Cấu hình Đợt Đánh Giá 2 cột kiểu iPad (Master - Detail)
  * - Cột trái (Master): Dùng PeriodMasterSidebar kèm nút Tạo đợt, Sửa, Xóa đợt (bảo mật mật khẩu)
@@ -458,33 +476,102 @@ const TrustCriteriaSettings = ({
                   </Button>
                 </div>
 
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                {/* 1. GIAO DIỆN MOBILE: DANH SÁCH DẠNG THẺ CARD (CHẠM VÀO THẺ ĐỂ SỬA, NHÓM DÙNG BADGE) */}
+                <div className="block md:hidden space-y-2.5">
+                  {(localConfig.criteria || []).map((crit, idx) => (
+                    <div
+                      key={crit.id || idx}
+                      onClick={() => handleOpenCritModal(crit, idx)}
+                      className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs hover:border-teal-400 hover:shadow-xs active:bg-slate-50 transition-all cursor-pointer space-y-2 group"
+                    >
+                      {/* Hàng 1: Mã tiêu chí & Badge Nhóm & Nút Xóa */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-teal-50 text-teal-900 border border-teal-200">
+                            {crit.code}
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getGroupBadgeStyle(crit.group)}`}>
+                            {crit.group}
+                          </span>
+                        </div>
+
+                        {/* Nút Xóa tiêu chí khỏi đợt */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCritFromPeriod(idx, crit.title);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Xóa tiêu chí này khỏi đợt"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Hàng 2: Tên tiêu chí & Mô tả hướng dẫn (Rộng rãi, không bị cột dọc) */}
+                      <div className="space-y-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-teal-900 transition-colors leading-snug">
+                          {crit.title}
+                        </h4>
+                        {crit.description && (
+                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                            {crit.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Hàng 3: Điểm tối đa, Trọng số & Nút chạm để sửa */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                        <div className="flex items-center gap-3 text-slate-600">
+                          <span>Tối đa: <strong className="text-slate-900 font-bold">{crit.maxScore || 10}đ</strong></span>
+                          <span>•</span>
+                          <span>Trọng số: <strong className="text-teal-800 font-bold">{crit.weight || 10}%</strong></span>
+                        </div>
+
+                        <span className="text-[11px] font-bold text-[#0f766e] flex items-center gap-1 group-hover:underline">
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Sửa
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 2. GIAO DIỆN DESKTOP / TABLET: BẢNG TABLE TIÊU CHUẨN */}
+                <div className="hidden md:block border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
-                          <th className="py-2 px-3 w-16 text-center">Mã</th>
-                          <th className="py-2 px-3">Tên tiêu chí</th>
-                          <th className="py-2 px-3 min-w-[130px]">Nhóm</th>
-                          <th className="py-2 px-3 text-center w-20">Điểm tối đa</th>
-                          <th className="py-2 px-3 text-center w-20">Trọng số</th>
-                          <th className="py-2 px-3 text-right w-20">Thao tác</th>
+                          <th className="py-2.5 px-3 w-16 text-center">Mã</th>
+                          <th className="py-2.5 px-3">Tên tiêu chí</th>
+                          <th className="py-2.5 px-3 min-w-[140px]">Nhóm</th>
+                          <th className="py-2.5 px-3 text-center w-20">Điểm tối đa</th>
+                          <th className="py-2.5 px-3 text-center w-20">Trọng số</th>
+                          <th className="py-2.5 px-3 text-right w-20">Thao tác</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {(localConfig.criteria || []).map((crit, idx) => (
-                          <tr key={crit.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                          <tr key={crit.id || idx} className="hover:bg-slate-50/80 transition-colors group">
                             <td className="py-2.5 px-3 text-center font-mono font-bold text-teal-800">
                               {crit.code}
                             </td>
-                            <td className="py-2.5 px-3">
-                              <div className="font-bold text-slate-900">{crit.title}</div>
+                            <td 
+                              className="py-2.5 px-3 cursor-pointer"
+                              onClick={() => handleOpenCritModal(crit, idx)}
+                              title="Bấm để chỉnh sửa tiêu chí"
+                            >
+                              <div className="font-bold text-slate-900 group-hover:text-teal-900 transition-colors">
+                                {crit.title}
+                              </div>
                               {crit.description && (
                                 <div className="text-[11px] text-slate-500 line-clamp-1">{crit.description}</div>
                               )}
                             </td>
                             <td className="py-2.5 px-3">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getGroupBadgeStyle(crit.group)}`}>
                                 {crit.group}
                               </span>
                             </td>
@@ -499,7 +586,7 @@ const TrustCriteriaSettings = ({
                                 <button
                                   type="button"
                                   onClick={() => handleOpenCritModal(crit, idx)}
-                                  className="p-1 rounded text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
                                   title="Sửa tiêu chí"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
@@ -507,7 +594,7 @@ const TrustCriteriaSettings = ({
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteCritFromPeriod(idx, crit.title)}
-                                  className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                                   title="Xóa tiêu chí"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
