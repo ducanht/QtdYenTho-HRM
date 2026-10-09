@@ -88,13 +88,13 @@ const AdminSettingsContainer = () => {
   const handleSaveGeneralSettings = async (e) => {
     e?.preventDefault?.();
     if (!canConfigureWebapp) {
-      toast.error('Chỉ Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền lưu cấu hình tham số hệ thống!');
+      toast.error('Chỉ Quản trị viên và Ban Lãnh đạo mới có quyền lưu cấu hình!');
       return;
     }
     setSavingSection('GENERAL_LEGAL');
     try {
       await saveSystemSettings(systemSettings);
-      toast.success('Đã lưu thông tin pháp nhân Quỹ lên Firestore thành công!');
+      toast.success('Đã lưu thông tin đơn vị thành công!');
     } catch (err) {
       toast.error('Lỗi lưu cấu hình: ' + err.message);
     } finally {
@@ -124,7 +124,7 @@ const AdminSettingsContainer = () => {
   };
 
   const handleDeleteDept = async (id, name) => {
-    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa phòng ban [${name}]?`)) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa phòng ban [${name}]?`)) return;
     try {
       await deleteDepartment(id);
       toast.success(`Đã xóa phòng ban [${name}].`);
@@ -156,10 +156,10 @@ const AdminSettingsContainer = () => {
   };
 
   const handleDeletePos = async (id, name) => {
-    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa chức vụ [${name}]?`)) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa chức vụ [${name}]?`)) return;
     try {
       await deletePosition(id);
-      toast.success(`Đã xóa chức danh [${name}].`);
+      toast.success(`Đã xóa chức vụ [${name}].`);
     } catch (err) {
       toast.error('Lỗi khi xóa: ' + err.message);
     }
@@ -168,17 +168,17 @@ const AdminSettingsContainer = () => {
   // Handler: Bật/Tắt module webapp
   const handleToggleModuleStatus = async (moduleCode, currentStatus) => {
     if (moduleCode === 'MODULE_SETTINGS') {
-      toast.warning('Cấu hình & Quản trị Hệ thống là Module Cốt lõi đặc biệt, luôn luôn vận hành và không thể tắt!');
+      toast.warning('Cấu hình & Quản trị Hệ thống là phân hệ cốt lõi, không thể tắt!');
       return;
     }
     if (!canToggleModules) {
-      toast.error('Chỉ Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền bật/tắt các phân hệ webapp!');
+      toast.error('Chỉ Quản trị viên và Ban Lãnh đạo mới có quyền bật/tắt phân hệ!');
       return;
     }
     const newStatus = currentStatus === 'ACTIVE' ? 'PLANNED' : 'ACTIVE';
     try {
       await updateSystemModule(moduleCode, { status: newStatus });
-      toast.success(`Đã chuyển trạng thái phân hệ [${moduleCode}] thành: ${newStatus === 'ACTIVE' ? 'Đang vận hành' : 'Kế hoạch triển khai'}!`);
+      toast.success(`Đã cập nhật trạng thái phân hệ: ${newStatus === 'ACTIVE' ? 'Hoạt động' : 'Tạm dừng'}!`);
     } catch (err) {
       toast.error('Lỗi cập nhật phân hệ: ' + err.message);
     }
@@ -189,9 +189,9 @@ const AdminSettingsContainer = () => {
     setSavingSection('ROLE_PERMS');
     try {
       await saveRolePermissions(rolePermissions);
-      toast.success('Đã lưu cấu hình phân quyền vai trò toàn hệ thống thành công!');
+      toast.success('Đã lưu phân quyền vai trò thành công!');
     } catch (err) {
-      toast.error('Lỗi khi lưu phân quyền hệ thống: ' + err.message);
+      toast.error('Lỗi khi lưu phân quyền: ' + err.message);
     } finally {
       setSavingSection(null);
     }
@@ -199,22 +199,22 @@ const AdminSettingsContainer = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. Header giải thích chức năng Quản trị chung */}
+      {/* 1. Header Quản trị hệ thống */}
       <div className="bg-gradient-to-r from-teal-900 to-emerald-800 p-5 rounded-3xl text-white shadow-md border border-teal-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-1">
-            Hệ Thống Cốt Lõi • Ban Quản Trị Quỹ
+            Quản Trị Hệ Thống
           </span>
           <h2 className="text-xl sm:text-2xl font-black">
-            Cấu Hình & Quản Trị Hệ Thống Chung
+            Cấu Hình & Quản Trị Hệ Thống
           </h2>
           <p className="text-xs text-teal-100 mt-1 max-w-2xl leading-relaxed">
-            Thiết lập pháp nhân, cơ cấu tổ chức, quản lý kích hoạt phân hệ nghiệp vụ và phân quyền vai trò toàn Quỹ.
+            Thiết lập thông tin đơn vị, cơ cấu tổ chức, phân hệ nghiệp vụ và phân quyền người dùng.
           </p>
         </div>
         <div className="text-xs bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 self-start sm:self-auto">
-          <span className="text-emerald-200">Phân quyền: </span>
-          <strong className="text-white">Admin & Lãnh đạo</strong>
+          <span className="text-emerald-200">Quyền hạn: </span>
+          <strong className="text-white">Quản trị & Lãnh đạo</strong>
         </div>
       </div>
 

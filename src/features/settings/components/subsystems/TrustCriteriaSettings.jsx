@@ -386,10 +386,10 @@ const TrustCriteriaSettings = ({
                 <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider block">
-                      Cấu Hình 4 Mức Xếp Loại Tín Nhiệm (Thang 100 điểm)
+                      Tiêu Chuẩn Xếp Loại Tín Nhiệm (Thang 100 điểm)
                     </span>
                     <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-300">
-                      Quy chế mới QTDND
+                      Quy chế xếp loại
                     </span>
                   </div>
 

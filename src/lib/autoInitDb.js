@@ -13,22 +13,62 @@ import {
 } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
 
+import { SUPERADMIN_EMAIL, ROLES } from './constants';
+
 /**
- * Kiểm tra quyền Quản trị viên trước khi thực thi bất kỳ thao tác ghi CSDL cấu trúc nào
+ * Kiểm tra quyền Quản trị viên trước khi thực thi bất kỳ thao tác ghi CSDL cấu trúc nào.
+ * Áp dụng phân quyền RBAC chuẩn mực, không hardcode tên cá nhân trong mã nguồn.
+ * 
+ * @param {Object|null} user - Đối tượng người dùng (tùy chọn)
+ * @returns {boolean}
  */
-export const checkCanProvisionDatabase = () => {
-  const user = auth?.currentUser;
-  if (!user || !user.email) return false;
-  const emailLower = user.email.trim().toLowerCase();
-  if (emailLower === 'qtdyentho@gmail.com') return true;
+export const checkCanProvisionDatabase = (user = null) => {
+  const activeUser = user || auth?.currentUser;
+  if (!activeUser || !activeUser.email) return false;
+  const emailLower = activeUser.email.trim().toLowerCase();
+
+  // 1. Quản trị viên cấp cao nhất (SuperAdmin)
+  if (emailLower === SUPERADMIN_EMAIL) return true;
+
+  // 2. Kiểm tra vai trò từ đối tượng người dùng (nếu có role)
+  const role = activeUser.role;
+  if (
+    role === ROLES.SUPERADMIN ||
+    role === ROLES.ADMIN ||
+    role === 'superadmin' ||
+    role === 'admin' ||
+    role === 'chairman' ||
+    role === 'manager'
+  ) {
+    return true;
+  }
+
+  // 3. Tra cứu hồ sơ người dùng lưu trong phiên làm việc cục bộ
+  if (typeof window !== 'undefined') {
+    try {
+      const storedUser = localStorage.getItem('qtd_hrm_current_user');
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (
+          parsed.email?.toLowerCase() === emailLower &&
+          (parsed.role === 'superadmin' || parsed.role === 'admin' || parsed.role === 'chairman' || parsed.role === 'manager')
+        ) {
+          return true;
+        }
+      }
+    } catch {
+      // bỏ qua lỗi đọc bộ nhớ đệm
+    }
+  }
+
+  // 4. Tài khoản quản trị chuẩn theo cấu hình tiền tố hệ thống
+  const prefix = emailLower.split('@')[0];
   return (
-    emailLower.includes('ducanh') ||
-    emailLower.includes('nguyenducthao') ||
-    emailLower.includes('son') ||
-    emailLower.includes('admin') ||
-    emailLower.includes('chutich') ||
-    emailLower.includes('giamdoc') ||
-    emailLower.includes('hdqt')
+    prefix === 'admin' ||
+    prefix.startsWith('admin.') ||
+    prefix.includes('chutich') ||
+    prefix.includes('giamdoc') ||
+    prefix.includes('hdqt')
   );
 };
 import { 

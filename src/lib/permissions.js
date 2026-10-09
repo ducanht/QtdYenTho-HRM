@@ -467,20 +467,18 @@ export const normalizeUserRole = (user, explicitRole = null) => {
     return 'superadmin';
   }
   if (
-    emailLower.includes('ducanh') ||
-    emailLower.includes('nguyenducthao') ||
-    user.position?.includes('Chủ tịch') ||
     user.role === 'chairman' ||
-    explicitRole === 'chairman'
+    explicitRole === 'chairman' ||
+    user.position?.includes('Chủ tịch') ||
+    emailLower.includes('chutich')
   ) {
     return 'chairman';
   }
   if (
-    emailLower.includes('son') ||
-    emailLower.includes('giamdoc') ||
-    user.position?.includes('Giám đốc') ||
     user.role === 'manager' ||
-    explicitRole === 'manager'
+    explicitRole === 'manager' ||
+    user.position?.includes('Giám đốc') ||
+    emailLower.includes('giamdoc')
   ) {
     return 'manager';
   }

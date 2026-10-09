@@ -15,12 +15,12 @@ const GeneralLegalSettings = ({
   canConfigureWebapp
 }) => {
   return (
-    <Card title="Thông Tin Pháp Nhân & Địa Bàn Hoạt Động (QTDND Yên Thọ)">
+    <Card title="Thông Tin Đơn Vị (QTDND Yên Thọ)">
       {!canConfigureWebapp && (
         <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
           <Lock className="w-4 h-4 text-amber-600 shrink-0" />
           <span>
-            <strong>Chế độ Xem (Read-only):</strong> Thông tin pháp nhân và Cấu hình hệ thống Webapp được bảo vệ. Chỉ Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền chỉnh sửa và lưu thay đổi.
+            <strong>Chỉ xem:</strong> Thông tin đơn vị được bảo vệ. Chỉ Quản trị viên và Ban Lãnh đạo mới có quyền chỉnh sửa.
           </span>
         </div>
       )}
@@ -28,7 +28,7 @@ const GeneralLegalSettings = ({
       <form onSubmit={onSave} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Tên đầy đủ Quỹ tín dụng"
+            label="Tên đơn vị"
             value={systemSettings.unitName || ''}
             onChange={(e) => setSystemSettings((prev) => ({ ...prev, unitName: e.target.value }))}
             disabled={!canConfigureWebapp}
@@ -43,7 +43,7 @@ const GeneralLegalSettings = ({
         </div>
 
         <Input
-          label="Địa chỉ trụ sở chính"
+          label="Địa chỉ trụ sở"
           value={systemSettings.address || ''}
           onChange={(e) => setSystemSettings((prev) => ({ ...prev, address: e.target.value }))}
           disabled={!canConfigureWebapp}
@@ -52,7 +52,7 @@ const GeneralLegalSettings = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Giấy phép thành lập & hoạt động NHNN"
+            label="Số giấy phép thành lập & hoạt động"
             value={systemSettings.licenseNo || ''}
             onChange={(e) => setSystemSettings((prev) => ({ ...prev, licenseNo: e.target.value }))}
             disabled={!canConfigureWebapp}
@@ -73,7 +73,7 @@ const GeneralLegalSettings = ({
             disabled={!canConfigureWebapp}
           />
           <Input
-            label="Giám đốc điều hành"
+            label="Giám đốc"
             value={systemSettings.directorName || ''}
             onChange={(e) => setSystemSettings((prev) => ({ ...prev, directorName: e.target.value }))}
             disabled={!canConfigureWebapp}
@@ -89,7 +89,7 @@ const GeneralLegalSettings = ({
               isLoading={isSaving}
               className="font-bold"
             >
-              Lưu thông tin pháp nhân
+              Lưu thông tin đơn vị
             </Button>
           </div>
         )}

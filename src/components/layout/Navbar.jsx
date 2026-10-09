@@ -199,10 +199,10 @@ const Navbar = () => {
               type="button"
               onClick={() => setIsDbModalOpen(true)}
               className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-teal-200 bg-teal-50/70 hover:bg-teal-100 text-[#0f766e] text-xs font-bold transition-all cursor-pointer shadow-2xs"
-              title="Khởi tạo & Đồng bộ CSDL tự động 100% Firestore"
+              title="Khởi tạo & Đồng bộ Cơ sở Dữ liệu"
             >
               <Database className="w-3.5 h-3.5 text-[#0f766e]" />
-              <span>Tự động CSDL</span>
+              <span>Đồng bộ CSDL</span>
             </button>
           )}
 

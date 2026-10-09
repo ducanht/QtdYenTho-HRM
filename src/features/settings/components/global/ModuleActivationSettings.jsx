@@ -11,26 +11,26 @@ const ModuleActivationSettings = ({
   canToggleModules
 }) => {
   return (
-    <Card title="Quản Lý Kích Hoạt Các Phân Hệ Trên Cổng Portal (Registry & Feature Flags)">
+    <Card title="Quản Lý Phân Hệ Nghiệp Vụ">
       {/* Thông báo phân quyền */}
       {canToggleModules ? (
         <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>
-            <strong>Quyền Quản trị viên & Ban Lãnh đạo Quỹ:</strong> Đồng chí có quyền kích hoạt hoặc tạm chuyển trạng thái các phân hệ webapp theo tiến độ vận hành.
+            <strong>Quyền Quản trị viên & Ban Lãnh đạo:</strong> Được phép bật hoặc tạm tắt các phân hệ nghiệp vụ theo nhu cầu sử dụng.
           </span>
         </div>
       ) : (
         <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
           <Lock className="w-4 h-4 text-amber-600 shrink-0" />
           <span>
-            <strong>Phân định quyền hạn:</strong> Chỉ tài khoản Quản trị viên và Ban Lãnh đạo Quỹ mới có quyền bật/tắt các phân hệ webapp.
+            <strong>Quyền hạn:</strong> Chỉ Quản trị viên và Ban Lãnh đạo mới có quyền thay đổi trạng thái phân hệ.
           </span>
         </div>
       )}
 
       <p className="text-xs text-slate-500 mb-4">
-        Kích hoạt đưa vào sử dụng ngay lập tức hoặc tạm ẩn các phân hệ webapp khi đang bảo trì hoặc đang trong giai đoạn triển khai.
+        Bật hoặc tạm dừng các phân hệ nghiệp vụ theo kế hoạch vận hành của Quỹ.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -65,14 +65,14 @@ const ModuleActivationSettings = ({
                       {mod.name}
                       {isCoreModule && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 border border-teal-200">
-                          Core
+                          Cốt lõi
                         </span>
                       )}
                     </h4>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
                     {isCoreModule
-                      ? 'Module Cốt lõi Quản trị Hệ thống & Tham số toàn Quỹ. Nền tảng vận hành bắt buộc 24/7 và không thể bật/tắt.'
+                      ? 'Phân hệ quản trị cốt lõi của hệ thống, luôn hoạt động.'
                       : mod.description}
                   </p>
                 </div>
@@ -81,7 +81,7 @@ const ModuleActivationSettings = ({
                 <div className="shrink-0 flex items-center">
                   {isCoreModule ? (
                     <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-teal-700 text-white uppercase tracking-wider shadow-2xs">
-                      Cốt lõi 24/7
+                      Cố định
                     </span>
                   ) : canToggleModules ? (
                     <button
@@ -92,7 +92,7 @@ const ModuleActivationSettings = ({
                           ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
                           : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                       }`}
-                      title={isActive ? 'Bấm để chuyển sang Kế hoạch triển khai' : 'Bấm để kích hoạt Vận hành'}
+                      title={isActive ? 'Bấm để tạm dừng phân hệ' : 'Bấm để kích hoạt phân hệ'}
                     >
                       <Power className="w-3.5 h-3.5" />
                       <span>{isActive ? 'Đang bật' : 'Đang tắt'}</span>
@@ -105,7 +105,7 @@ const ModuleActivationSettings = ({
                           : 'bg-slate-200 text-slate-600'
                       }`}
                     >
-                      {isActive ? 'Vận hành' : 'Kế hoạch'}
+                      {isActive ? 'Hoạt động' : 'Tạm dừng'}
                     </span>
                   )}
                 </div>

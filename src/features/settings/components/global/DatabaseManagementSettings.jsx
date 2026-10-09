@@ -54,15 +54,15 @@ const DatabaseManagementSettings = ({
 
   return (
     <div className="space-y-6">
-      <Card title="Quản Trị Cơ Sở Dữ Liệu Firestore & Khởi Tạo Bảng Tự Động">
+      <Card title="Quản Trị Cơ Sở Dữ Liệu">
         {/* Banner phân quyền */}
         <div className="mb-5 p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-950 text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="w-5 h-5 text-[#047857] shrink-0" />
             <div>
-              <strong className="text-slate-900 block font-bold">Khu Vực Quản Trị CSDL Cấp Cao (Database Engine):</strong>
+              <strong className="text-slate-900 block font-bold">Quản trị cơ sở dữ liệu:</strong>
               <span className="text-slate-600 text-[11px]">
-                Toàn bộ thao tác ghi/cập nhật cấu trúc bảng được kiểm soát bởi Cloud Firestore Security Rules và quyền hạn tài khoản.
+                Chỉ Quản trị viên và Ban Lãnh đạo mới có quyền cập nhật cấu trúc dữ liệu.
               </span>
             </div>
           </div>
@@ -75,22 +75,22 @@ const DatabaseManagementSettings = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-              Trạng thái kết nối
+              Kết nối
             </span>
             <div className="flex items-center gap-2 mt-2">
               <Server className="w-4 h-4 text-emerald-600" />
               <span className="font-black text-slate-900 text-sm">
-                {isFirebaseConfigured ? 'Cloud Firestore' : 'Local Engine'}
+                {isFirebaseConfigured ? 'Cloud Firestore' : 'Bộ nhớ cục bộ'}
               </span>
             </div>
             <span className="text-[10px] text-emerald-700 font-semibold mt-1 block">
-              {isFirebaseConfigured ? '🟢 Live Production' : '🟡 Offline Storage'}
+              {isFirebaseConfigured ? '🟢 Trực tuyến' : '🟡 Cục bộ'}
             </span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-              Phiên bản Schema
+              Phiên bản CSDL
             </span>
             <div className="flex items-center gap-2 mt-2">
               <Database className="w-4 h-4 text-[#0f766e]" />
@@ -105,32 +105,32 @@ const DatabaseManagementSettings = ({
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-              Bảng CSDL nòng cốt
+              Bảng dữ liệu
             </span>
             <div className="flex items-center gap-2 mt-2">
               <Layers className="w-4 h-4 text-amber-600" />
               <span className="font-black text-slate-900 text-base">
                 {CORE_COLLECTIONS.length}
               </span>
-              <span className="text-xs text-slate-500 font-semibold">Collections</span>
+              <span className="text-xs text-slate-500 font-semibold">Bảng</span>
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              100% Chuẩn hóa v3.8
+              16 Bảng dữ liệu chuẩn
             </span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-              Bảo mật Firestore
+              Bảo mật dữ liệu
             </span>
             <div className="flex items-center gap-2 mt-2">
               <Lock className="w-4 h-4 text-teal-700" />
               <span className="font-bold text-teal-900 text-xs">
-                Firestore Rules v3.8
+                Quy tắc Firestore
               </span>
             </div>
             <span className="text-[10px] text-emerald-700 font-semibold mt-1 block">
-              Khóa chặt Write/Delete
+              Kiểm soát quyền ghi
             </span>
           </div>
         </div>
@@ -139,7 +139,7 @@ const DatabaseManagementSettings = ({
         <div className="space-y-3 mb-6">
           <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#0f766e]" />
-            <span>Danh mục 16 Bộ Sưu Tập (Collections) Hoạt Động</span>
+            <span>Danh mục 16 Bảng dữ liệu hệ thống</span>
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {CORE_COLLECTIONS.map((colName) => (
@@ -162,7 +162,7 @@ const DatabaseManagementSettings = ({
             onClick={handleCheckHealth}
             disabled={isCheckingHealth}
           >
-            {isCheckingHealth ? 'Đang kiểm tra CSDL...' : 'Kiểm Tra Tình Trạng CSDL (Health Check)'}
+            {isCheckingHealth ? 'Đang kiểm tra kết nối...' : 'Kiểm tra kết nối CSDL'}
           </Button>
 
           {canManageDatabase && (
@@ -172,7 +172,7 @@ const DatabaseManagementSettings = ({
               onClick={() => setIsModalOpen(true)}
               className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
             >
-              Mở Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động
+              Khởi Tạo & Đồng Bộ CSDL
             </Button>
           )}
         </div>
@@ -183,23 +183,23 @@ const DatabaseManagementSettings = ({
             <div className="font-bold text-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <CheckCircle2 className={`w-4 h-4 ${healthResult.connected ? 'text-emerald-600' : 'text-rose-600'}`} />
-                <span>Kết Quả Kiểm Tra Tình Trạng CSDL:</span>
+                <span>Kết quả kiểm tra kết nối:</span>
               </span>
               <span className="text-[10px] font-normal text-slate-500">
                 Kiểm tra lúc: {new Date(healthResult.checkedAt).toLocaleTimeString('vi-VN')}
               </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
-              <div>Kết nối: <strong className={healthResult.connected ? 'text-emerald-700' : 'text-rose-600'}>{healthResult.connected ? 'Thành công (Live)' : 'Thất bại (Offline)'}</strong></div>
-              <div>Tổng tài liệu: <strong className="text-slate-800">{healthResult.totalDocs}</strong></div>
-              <div>Bảng hoạt động: <strong className="text-slate-800">{healthResult.healthyCollections}/{CORE_COLLECTIONS.length}</strong></div>
-              <div>Trạng thái: <strong className="text-teal-700">{healthResult.status || 'OK'}</strong></div>
+              <div>Kết nối: <strong className={healthResult.connected ? 'text-emerald-700' : 'text-rose-600'}>{healthResult.connected ? 'Thành công (Trực tuyến)' : 'Thất bại (Cục bộ)'}</strong></div>
+              <div>Tổng bản ghi: <strong className="text-slate-800">{healthResult.totalDocs}</strong></div>
+              <div>Số bảng sẵn sàng: <strong className="text-slate-800">{healthResult.healthyCollections}/{CORE_COLLECTIONS.length}</strong></div>
+              <div>Trạng thái: <strong className="text-teal-700">{healthResult.status || 'Hoạt động tốt'}</strong></div>
             </div>
 
             {healthResult.collections && Object.keys(healthResult.collections).length > 0 && (
               <div className="pt-2 border-t border-slate-200">
                 <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                  Chi tiết số lượng tài liệu từng bảng ({CORE_COLLECTIONS.length} Collections):
+                  Số lượng bản ghi theo từng bảng:
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
                   {Object.entries(healthResult.collections).map(([col, cnt]) => (

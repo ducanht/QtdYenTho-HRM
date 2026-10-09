@@ -38,8 +38,8 @@ const GlobalRolePermissionsSettings = ({
 
   return (
     <Card
-      title="4. Quản Trị Phân Quyền Vai Trò Toàn Hệ Thống (Global Permissions Matrix)"
-      subtitle="Thiết lập các quyền hạn nền tảng cho từng vai trò trong Quỹ tín dụng nhân dân Yên Thọ"
+      title="Phân Quyền Vai Trò Người Dùng"
+      subtitle="Thiết lập quyền truy cập cho từng nhóm vai trò trong hệ thống"
       headerRight={
         <div className="flex items-center gap-2">
           <Button
@@ -50,7 +50,7 @@ const GlobalRolePermissionsSettings = ({
             onClick={onResetDefault}
             className="text-xs font-semibold text-slate-600 hover:text-teal-800 border-slate-300"
           >
-            Khôi phục chuẩn
+            Khôi phục mặc định
           </Button>
 
           <Button
@@ -62,7 +62,7 @@ const GlobalRolePermissionsSettings = ({
             onClick={onSavePermissions}
             className="text-xs font-bold"
           >
-            Lưu phân quyền chung
+            Lưu phân quyền
           </Button>
         </div>
       }
@@ -72,8 +72,8 @@ const GlobalRolePermissionsSettings = ({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                <th className="py-2.5 px-3 min-w-[220px]">Quyền hạn chung</th>
-                <th className="py-2.5 px-3 min-w-[120px]">Phân loại</th>
+                <th className="py-2.5 px-3 min-w-[220px]">Chức năng / Quyền hạn</th>
+                <th className="py-2.5 px-3 min-w-[120px]">Nhóm</th>
                 {SYSTEM_ROLES_LIST.map((role) => (
                   <th
                     key={role.code}
@@ -133,7 +133,7 @@ const GlobalRolePermissionsSettings = ({
         <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[#0f766e] shrink-0" />
           <span>
-            Phân quyền được lưu trữ trực tiếp trên Firestore và áp dụng tức thì cho tất cả các phiên làm việc của cán bộ khi đăng nhập.
+            Phân quyền áp dụng ngay sau khi lưu cho tất cả tài khoản trong hệ thống.
           </span>
         </div>
       </div>

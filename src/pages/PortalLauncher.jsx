@@ -180,7 +180,7 @@ const PortalLauncher = () => {
                 className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold px-4 py-3 rounded-2xl text-xs transition-colors shadow-lg cursor-pointer flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-center"
               >
                 <Database className="w-4 h-4" />
-                <span>Tự động CSDL</span>
+                <span>Đồng bộ CSDL</span>
               </button>
             )}
           </div>
@@ -192,7 +192,7 @@ const PortalLauncher = () => {
         <div>
           <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
             <Layers className="w-5 h-5 text-[#059669]" />
-            <span>Danh Mục Phân Hệ Nghiệp Vụ (Application Hub)</span>
+            <span>Danh Mục Phân Hệ Nghiệp Vụ</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
             Lựa chọn phân hệ cần tác nghiệp • Hệ thống tự động cập nhật khi có module mới
@@ -331,7 +331,7 @@ const PortalLauncher = () => {
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-[#047857] shrink-0" />
             <span>
-              Hệ thống thiết kế theo kiến trúc <strong>Data-Driven Modular</strong>. Khi Ban Quản trị phê duyệt bổ sung phân hệ mới, ô lưới truy cập sẽ tự động hiển thị và kết nối CSDL ngay lập tức.
+              Hệ thống phân hệ mở rộng. Các phân hệ mới được phê duyệt sẽ hiển thị trực tiếp trên cổng làm việc.
             </span>
           </div>
           <button
@@ -339,7 +339,7 @@ const PortalLauncher = () => {
             onClick={() => setIsDbModalOpen(true)}
             className="text-xs font-bold text-[#047857] hover:underline shrink-0 cursor-pointer"
           >
-            Quản trị & Đồng bộ CSDL →
+            Đồng bộ CSDL →
           </button>
         </div>
       ) : (
@@ -350,7 +350,7 @@ const PortalLauncher = () => {
               Hệ thống Quản Trị Nhân Sự & Đánh Giá Tín Nhiệm • <strong>Quỹ Tín Dụng Nhân Dân Yên Thọ</strong>.
             </span>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Phiên bản 2026 Pro V3.8</span>
+          <span className="text-[11px] text-slate-400 font-medium">Phiên bản 2026</span>
         </div>
       )}
 

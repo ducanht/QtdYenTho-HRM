@@ -113,13 +113,13 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={running ? () => {} : onClose}
-      title="Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động"
-      subtitle="Triển khai cấu trúc bảng, phân quyền và dữ liệu chuẩn mực hoàn toàn tự động"
+      title="Khởi Tạo & Đồng Bộ CSDL"
+      subtitle="Khởi tạo bảng dữ liệu và danh mục chuẩn của hệ thống"
       maxWidth="max-w-3xl"
       footer={
         <div className="flex items-center justify-between w-full">
           <div className="text-[11px] text-slate-500">
-            Hệ thống tự động thực thi • Không cần tạo bảng thủ công trên Firebase Console
+            Tự động thiết lập cấu trúc trên Cloud Firestore
           </div>
           <Button variant="outline" onClick={onClose} disabled={running}>
             Đóng cửa sổ
@@ -134,38 +134,38 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
             <div className="flex items-center gap-2">
               <Server className="w-4 h-4 text-[#0f766e]" />
               <span className="font-bold text-slate-800 text-xs uppercase tracking-wider">
-                Trạng thái kết nối Cơ sở Dữ liệu
+                Trạng thái kết nối CSDL
               </span>
             </div>
             {isFirebaseConfigured ? (
               <Badge variant="success" dot size="sm">
-                Đã kết nối Firebase Cloud Firestore
+                Đã kết nối Cloud Firestore
               </Badge>
             ) : (
               <Badge variant="warning" dot size="sm">
-                Đang chạy Chế độ Dữ liệu Nội bộ (Local Engine)
+                Đang lưu trữ dữ liệu cục bộ
               </Badge>
             )}
           </div>
 
           <p className="text-slate-600 leading-relaxed text-[11px]">
             {isFirebaseConfigured
-              ? 'Tài khoản Firebase của đơn vị đã sẵn sàng. Khi bạn bấm nút khởi tạo dưới đây, toàn bộ 16 bộ sưu tập (Collections) và dữ liệu chuẩn mực của Quỹ TDND Yên Thọ sẽ được tạo và đồng bộ tự động lên Cloud Firestore.'
-              : 'Hiện tại thông tin firebaseConfig chưa được điền. Khi bấm khởi tạo, hệ thống sẽ thiết lập và đồng bộ toàn bộ 16 bảng vào bộ nhớ nội bộ an toàn. Khi bạn dán thông tin kết nối Firebase vào tệp src/lib/firebase.js, chỉ cần bấm nút này một lần nữa để đẩy toàn bộ dữ liệu lên Firebase!'}
+              ? 'Kết nối CSDL đã sẵn sàng. Khi bấm khởi tạo, toàn bộ 16 bảng dữ liệu chuẩn của Quỹ sẽ được tạo và đồng bộ lên Cloud Firestore.'
+              : 'Chưa có cấu hình Firebase. Dữ liệu sẽ được lưu trữ trong bộ nhớ cục bộ.'}
           </p>
 
           <div className="flex flex-wrap gap-2 pt-1">
             <span className="px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-semibold">
-              16 Collections CSDL
+              16 Bảng dữ liệu
             </span>
             <span className="px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-semibold">
-              8 Phân hệ Modular
+              8 Phân hệ nghiệp vụ
             </span>
             <span className="px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-semibold">
-              4 Cấp phân quyền
+              4 Nhóm vai trò
             </span>
             <span className="px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-semibold">
-              Quy chuẩn NHNN Việt Nam
+              Quy định QTDND
             </span>
           </div>
         </div>
@@ -182,8 +182,8 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
             className="w-full font-bold shadow-md shadow-[#0f766e]/30 py-3"
           >
             {running
-              ? 'Đang tự động khởi tạo & cập nhật CSDL...'
-              : 'Tiến hành Khởi tạo & Cập nhật 16 Bảng CSDL Tự Động'}
+              ? 'Đang khởi tạo & đồng bộ CSDL...'
+              : 'Khởi Tạo & Đồng Bộ 16 Bảng CSDL'}
           </Button>
 
           {/* Progress Bar */}
@@ -207,8 +207,8 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
         {logs.length > 0 && (
           <div className="space-y-1.5">
             <div className="font-bold text-slate-700 text-[11px] uppercase tracking-wider flex items-center justify-between">
-              <span>Nhật ký tiến trình thực thi tự động:</span>
-              <span className="text-slate-400 font-normal">({logs.length} bước đã chạy)</span>
+              <span>Nhật ký tiến trình thực hiện:</span>
+              <span className="text-slate-400 font-normal">({logs.length} bước)</span>
             </div>
             <div className="p-3 bg-slate-900 text-slate-200 rounded-xl font-mono text-[11px] max-h-40 overflow-y-auto space-y-1 border border-slate-800">
               {logs.map((log, idx) => (
@@ -226,7 +226,7 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
           <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-3 animate-in fade-in">
             <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs uppercase tracking-wider">
               <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-              <span>Kết quả khởi tạo cấu trúc dữ liệu thành công (16 Collections):</span>
+              <span>Khởi tạo dữ liệu thành công (16 bảng):</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -238,7 +238,7 @@ const AutoInitDbModal = ({ isOpen, onClose }) => {
                     <span className="text-[10px] font-mono text-slate-500 truncate" title={colName}>{colName}</span>
                     <span className="text-[11px] font-semibold text-slate-800 truncate" title={label}>{label}</span>
                     <span className="font-black text-[#0f766e] text-xs">
-                      {count} tài liệu
+                      {count} bản ghi
                     </span>
                   </div>
                 );

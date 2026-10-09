@@ -74,7 +74,7 @@ const OrganizationSettings = ({
     <div className="space-y-6">
       {/* 1. Danh Mục Phòng Ban */}
       <Card
-        title={`Danh Mục Phòng Ban Toàn Quỹ (${departments.length})`}
+        title={`Danh Mục Phòng Ban (${departments.length})`}
         headerRight={
           <Button
             variant="primary"
@@ -125,7 +125,7 @@ const OrganizationSettings = ({
 
       {/* 2. Danh Mục Chức Vụ & Vị Trí Công Tác */}
       <Card
-        title={`Danh Mục Chức Vụ & Vị Trí Công Tác (${positions.length})`}
+        title={`Danh Mục Chức Vụ (${positions.length})`}
         headerRight={
           <Button
             variant="primary"

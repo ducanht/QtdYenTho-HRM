@@ -33,7 +33,7 @@ const SettingsTabsNav = ({
         }`}
       >
         <Building2 className="w-4 h-4 text-teal-600" />
-        <span>1. Thông Tin Pháp Nhân & Địa Bàn</span>
+        <span>1. Thông Tin Đơn Vị</span>
       </button>
 
       <button
@@ -46,7 +46,7 @@ const SettingsTabsNav = ({
         }`}
       >
         <Users className="w-4 h-4 text-teal-600" />
-        <span>2. Phòng Ban & Chức Danh</span>
+        <span>2. Phòng Ban & Chức Vụ</span>
         <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
           {departmentsCount} PB / {positionsCount} CV
         </span>
@@ -64,7 +64,7 @@ const SettingsTabsNav = ({
           }`}
         >
           <Layers className="w-4 h-4 text-amber-600" />
-          <span>3. Kích Hoạt Phân Hệ Nghiệp Vụ</span>
+          <span>3. Quản Lý Phân Hệ</span>
           <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
             Bật/Tắt
           </span>
@@ -83,9 +83,9 @@ const SettingsTabsNav = ({
           }`}
         >
           <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
-          <span>4. Phân Quyền Vai Trò Toàn Hệ Thống</span>
+          <span>4. Phân Quyền Vai Trò</span>
           <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold">
-            RBAC Chung
+            Phân quyền
           </span>
         </button>
       )}
@@ -102,7 +102,7 @@ const SettingsTabsNav = ({
           }`}
         >
           <Database className="w-4 h-4 text-[#047857]" />
-          <span>5. Cơ Sở Dữ Liệu & Khởi Tạo Bảng</span>
+          <span>5. Quản Trị CSDL</span>
           <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
             CSDL
           </span>
