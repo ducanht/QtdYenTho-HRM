@@ -102,3 +102,15 @@ Toàn bộ các phân hệ con của Module Tín nhiệm tuân thủ nghiêm ng�
 - Khi Lãnh đạo/Admin thực hiện xóa đợt đánh giá, hệ thống kích hoạt modal bảo mật `DeletePeriodConfirmModal.jsx`.
 - Bắt buộc nhập **Mật khẩu quản trị** và xác thực qua hàm `verifyAdminPassword(email, password)`.
 - Chỉ khi mật khẩu chính xác mới được phép xóa đợt khỏi Firestore, bảo đảm tuyệt đối an toàn dữ liệu và phòng ngừa thao tác nhầm lẫn.
+
+---
+
+## 🗳️ 7. QUY CHUẨN TÌNH TRẠNG NỘP PHIẾU & CÔ LẬP ĐỐI TƯỢNG LẤY PHIẾU (v3.6)
+1. **Minh bạch tình trạng Nộp phiếu trên Banner Tiến độ (`TrustProgressBanner.jsx`)**:
+   - Tự động phát hiện trạng thái nộp phiếu của người dùng trong đợt:
+     + **ĐÃ NỘP PHIẾU CHÍNH THỨC**: Huy hiệu xanh ngọc kèm thời gian nộp GMT+7. Khối Gửi phiếu chuyển sang trạng thái tĩnh `"Đã nộp phiếu"`, **tuyệt đối không sáng** (không hiệu ứng pulse/ring), có lối tắt `"Xem phiếu đã nộp"`.
+     + **CHƯA NỘP PHIẾU**: Huy hiệu hổ phách. Nút `"Nộp phiếu chính thức"` chỉ sáng xanh rực rỡ và cho phép thao tác khi tiến độ đạt đủ 100% tiêu chí cho toàn bộ cán bộ.
+2. **Cô lập Đối tượng Lấy phiếu Tín nhiệm (`targetEmployeeIds`)**:
+   - Toàn bộ danh sách đối tượng lấy phiếu tín nhiệm và bảng kết quả tín nhiệm toàn Quỹ (`TrustOverviewReport.jsx`) tuân thủ 100% cấu hình đợt.
+   - Loại trừ hoàn toàn tài khoản Quản trị hệ thống webapp (`ROOT`, `ADMIN`) thông qua helper chuẩn mực `getEligibleTargetEmployees` và `isSystemAdminAccount`.
+   - Ngăn chặn triệt để tình trạng tài khoản kỹ thuật bị đưa vào bảng kết quả với 0 phiếu và xếp loại không đạt.

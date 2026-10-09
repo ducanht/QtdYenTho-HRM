@@ -118,3 +118,75 @@ export const calculateFinalKpiScore = (scoreSelf, scoreManager, scoreChairman) =
   const total = (s1 * 0.4) + (s2 * 0.3) + (s3 * 0.3);
   return Number(total.toFixed(1));
 };
+
+/**
+ * Nhận diện tài khoản quản trị hệ thống / kỹ thuật Webapp
+ * Các tài khoản này chỉ phục vụ cấu hình & quản trị hệ thống,
+ * tuyệt đối không tham gia diện lấy phiếu tín nhiệm chuyên môn tại Quỹ.
+ */
+export const isSystemAdminAccount = (emp) => {
+  if (!emp) return false;
+  const role = (emp.role || '').toLowerCase();
+  const id = (emp.id || '').toLowerCase();
+  const code = (emp.code || '').toUpperCase();
+  const name = (emp.name || '').toLowerCase();
+  const dept = (emp.department || '').toLowerCase();
+  const pos = (emp.position || '').toLowerCase();
+  const email = (emp.email || '').toLowerCase();
+
+  return (
+    role === 'superadmin' ||
+    role === 'admin' ||
+    id === 'emp-root' ||
+    id === 'admin' ||
+    id === 'superadmin' ||
+    code === 'ROOT' ||
+    code === 'ADMIN' ||
+    email === 'qtdyentho@gmail.com' ||
+    name.includes('quản trị viên') ||
+    dept.includes('quản trị viên') ||
+    dept.includes('webapp') ||
+    dept.includes('cổng quản trị') ||
+    pos.includes('quản trị viên')
+  );
+};
+
+/**
+ * Lấy danh sách cán bộ thuộc diện lấy phiếu tín nhiệm theo đúng cấu hình đợt (Zero Mock, Zero Leakage)
+ */
+export const getEligibleTargetEmployees = (employees = [], targetEmployeeIds = null) => {
+  if (!Array.isArray(employees) || employees.length === 0) return [];
+
+  // Lọc danh sách ứng viên chuyên môn (luôn loại trừ tài khoản quản trị hệ thống webapp)
+  const officialStaff = employees.filter((e) => !isSystemAdminAccount(e));
+
+  if (Array.isArray(targetEmployeeIds) && targetEmployeeIds.length > 0) {
+    const targetSet = new Set(targetEmployeeIds);
+    return officialStaff.filter((e) => targetSet.has(e.id));
+  }
+
+  // Mặc định: Toàn bộ cán bộ nhân viên công tác chính thức của đơn vị
+  return officialStaff;
+};
+
+/**
+ * Định dạng ngày giờ GMT+7 chuẩn mực hiển thị
+ */
+export const formatDateTimeVN = (isoString) => {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return isoString;
+  }
+};
+

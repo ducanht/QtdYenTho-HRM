@@ -14,18 +14,20 @@ import {
 import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
 import { classifyTrustScore } from '../../../lib/schema';
-import { getClassificationBadgeVariant } from '../../../lib/evaluationUtils';
+import { getClassificationBadgeVariant, getEligibleTargetEmployees, isSystemAdminAccount } from '../../../lib/evaluationUtils';
 import EmployeeTrustDetailModal from './EmployeeTrustDetailModal';
 
 /**
  * TrustOverviewReport: Báo cáo tổng quan kết quả đánh giá toàn Quỹ
  * - Cán bộ thông thường: Xem tỷ lệ xếp loại chung và phân bổ toàn Quỹ sau khi kết thúc đợt
  * - Lãnh đạo (Admin): Xem chi tiết bảng tổng hợp, tiến độ cử tri và xuất in biên bản A4
+ * - TUÂN THỦ 100% CẤU HÌNH ĐỢT: Loại bỏ hoàn toàn tài khoản Quản trị hệ thống khỏi diện lấy phiếu
  */
 const TrustOverviewReport = ({
   evaluations = [],
   employees = [],
   currentPeriod,
+  periodConfig = null,
   criteria = [],
   isAdmin = false,
   onOpenPrintModal,
@@ -79,10 +81,10 @@ const TrustOverviewReport = ({
     const submittedVoterIds = new Set(submittedVoters.map((v) => v.id));
 
     // Lọc danh sách cử tri hợp lệ theo cấu hình đợt (voterEmployeeIds)
-    const voterIds = currentPeriod.voterEmployeeIds;
+    const voterIds = periodConfig?.voterEmployeeIds || currentPeriod.voterEmployeeIds;
     const eligibleVoters = Array.isArray(voterIds) && voterIds.length > 0
       ? employees.filter((e) => voterIds.includes(e.id))
-      : employees;
+      : employees.filter((e) => !isSystemAdminAccount(e));
 
     const pendingVoters = eligibleVoters.filter((e) => !submittedVoterIds.has(e.id) && !submittedVoterIds.has(e.uid));
 
@@ -91,10 +93,9 @@ const TrustOverviewReport = ({
     const turnoutPercent = totalEligible > 0 ? Math.round((submittedCount / totalEligible) * 100) : 0;
 
     // 2. Tính điểm từng cán bộ theo danh sách đối tượng được lấy phiếu (targetEmployeeIds)
-    const targetIds = currentPeriod.targetEmployeeIds;
-    const targetEmployees = Array.isArray(targetIds) && targetIds.length > 0
-      ? employees.filter((e) => targetIds.includes(e.id))
-      : employees;
+    // TUÂN THỦ 100% CẤU HÌNH ĐỢT: Dùng helper chuẩn mực loại trừ hoàn toàn tài khoản Quản trị hệ thống
+    const targetIds = periodConfig?.targetEmployeeIds || currentPeriod.targetEmployeeIds;
+    const targetEmployees = getEligibleTargetEmployees(employees, targetIds);
 
     const empStatsMap = {};
     targetEmployees.forEach((emp) => {
@@ -153,10 +154,21 @@ const TrustOverviewReport = ({
       });
 
       // Phân loại kết quả đánh giá theo 4 mức chuẩn mực mới
+      const effectiveThresholds = periodConfig?.excellentThreshold !== undefined
+        ? {
+            excellent: periodConfig.excellentThreshold,
+            excellentMinCrit: periodConfig.excellentMinCrit ?? 7,
+            good: periodConfig.goodThreshold ?? 70,
+            goodMinCrit: periodConfig.goodMinCrit ?? 5,
+            pass: periodConfig.passThreshold ?? 50,
+            weakVotesThresholdPercent: periodConfig.weakVotesThresholdPercent ?? 50,
+          }
+        : currentPeriod?.thresholds;
+
       const classification = classifyTrustScore(avgScore100, {
         critAverages,
         votes: item.votes,
-        thresholds: currentPeriod.thresholds,
+        thresholds: effectiveThresholds,
       });
 
       if (count > 0) {
@@ -188,7 +200,7 @@ const TrustOverviewReport = ({
       submittedVoters,
       pendingVoters,
     };
-  }, [evaluations, employees, currentPeriod, criteria]);
+  }, [evaluations, employees, currentPeriod, periodConfig, criteria]);
 
 
   // Handler: Xuất dữ liệu bảng điểm ra file CSV Excel chuẩn UTF-8

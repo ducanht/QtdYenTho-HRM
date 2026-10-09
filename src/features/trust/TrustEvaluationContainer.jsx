@@ -18,6 +18,7 @@ import {
   savePeriodConfig
 } from '../../lib/services';
 import { classifyTrustScore } from '../../lib/schema';
+import { getEligibleTargetEmployees, isSystemAdminAccount } from '../../lib/evaluationUtils';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../lib/constants';
 import { DEFAULT_MODULE_TRUST_SETTINGS } from '../../lib/systemDefaults';
 import { 
@@ -305,23 +306,59 @@ const TrustEvaluationContainer = () => {
     return globalCriteria;
   }, [currentPeriodConfig, currentPeriod, globalCriteria]);
 
+  // Thông tin Đợt hiện hành kết hợp đầy đủ cấu hình riêng biệt (Zero Config Loss)
+  const effectivePeriod = useMemo(() => {
+    if (!currentPeriod) return null;
+    const cfg = currentPeriodConfig || {};
+    return {
+      ...currentPeriod,
+      ...cfg,
+      id: currentPeriod.id,
+      name: cfg.periodName || cfg.name || currentPeriod.name,
+      targetEmployeeIds:
+        (Array.isArray(cfg.targetEmployeeIds) && cfg.targetEmployeeIds.length > 0)
+          ? cfg.targetEmployeeIds
+          : (Array.isArray(currentPeriod.targetEmployeeIds) && currentPeriod.targetEmployeeIds.length > 0)
+            ? currentPeriod.targetEmployeeIds
+            : [],
+      voterEmployeeIds:
+        (Array.isArray(cfg.voterEmployeeIds) && cfg.voterEmployeeIds.length > 0)
+          ? cfg.voterEmployeeIds
+          : (Array.isArray(currentPeriod.voterEmployeeIds) && currentPeriod.voterEmployeeIds.length > 0)
+            ? currentPeriod.voterEmployeeIds
+            : [],
+      customCriteria: activeCriteria,
+      thresholds: cfg.excellentThreshold !== undefined
+        ? {
+            excellent: cfg.excellentThreshold,
+            excellentMinCrit: cfg.excellentMinCrit ?? 7,
+            good: cfg.goodThreshold ?? 70,
+            goodMinCrit: cfg.goodMinCrit ?? 5,
+            pass: cfg.passThreshold ?? 50,
+            weakVotesThresholdPercent: cfg.weakVotesThresholdPercent ?? 50,
+          }
+        : currentPeriod.thresholds,
+    };
+  }, [currentPeriod, currentPeriodConfig, activeCriteria]);
+
   // Tiêu chí hiện đang chọn ở chế độ Stepper
   const currentCriterion = useMemo(() => {
     return activeCriteria[activeCriterionIndex] || activeCriteria[0] || null;
   }, [activeCriteria, activeCriterionIndex]);
 
-  // Danh sách cán bộ được lấy phiếu tín nhiệm (Lọc theo đợt & loại trừ bản thân nếu quy chế khóa)
+  // Danh sách cán bộ được lấy phiếu tín nhiệm (TUÂN THỦ 100% CẤU HÌNH ĐỢT & loại trừ bản thân nếu quy chế khóa)
   const evaluatableEmployees = useMemo(() => {
     if (!employees.length) return [];
 
-    let pool = employees;
     const targetIds =
-      currentPeriodConfig?.targetEmployeeIds ||
-      currentPeriod?.targetEmployeeIds;
+      (Array.isArray(currentPeriodConfig?.targetEmployeeIds) && currentPeriodConfig.targetEmployeeIds.length > 0)
+        ? currentPeriodConfig.targetEmployeeIds
+        : (Array.isArray(currentPeriod?.targetEmployeeIds) && currentPeriod.targetEmployeeIds.length > 0)
+          ? currentPeriod.targetEmployeeIds
+          : null;
 
-    if (Array.isArray(targetIds) && targetIds.length > 0) {
-      pool = employees.filter((e) => targetIds.includes(e.id));
-    }
+    // Luôn loại trừ tài khoản Quản trị hệ thống, tuân thủ đúng danh sách chuyên môn
+    const pool = getEligibleTargetEmployees(employees, targetIds);
 
     const allowSelf =
       currentPeriodConfig?.allowSelfEvaluation ??
@@ -357,6 +394,31 @@ const TrustEvaluationContainer = () => {
           (currentEmail && emp.email?.toLowerCase() === currentEmail))
     );
   }, [currentPeriod, currentPeriodConfig, currentUser, employees]);
+
+  // Kiểm tra tình trạng nộp phiếu của người dùng hiện tại trong đợt này
+  const userSubmissionInfo = useMemo(() => {
+    if (!currentPeriod?.id || !currentUser) return null;
+    const currentId = currentUser.uid || currentUser.id;
+    const currentEmail = currentUser.email?.toLowerCase();
+    const mySubmitted = evaluations.filter(
+      (ev) =>
+        ev.periodId === currentPeriod.id &&
+        !ev.isDraft &&
+        (ev.evaluatorId === currentId ||
+          ev.evaluatorId === currentUser.id ||
+          (currentEmail && ev.evaluatorEmail?.toLowerCase() === currentEmail))
+    );
+    if (!mySubmitted.length) return null;
+    const sorted = [...mySubmitted].sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
+    return {
+      hasSubmitted: true,
+      count: sorted.length,
+      lastSubmittedAt: sorted[0]?.submittedAt || null,
+    };
+  }, [currentPeriod?.id, currentUser, evaluations]);
+
+  const hasSubmitted = Boolean(userSubmissionInfo?.hasSubmitted);
+  const submittedAt = userSubmissionInfo?.lastSubmittedAt;
 
   // Đếm ngược thời gian kết thúc đợt
   const timeRemainingBadge = useMemo(() => {
@@ -629,7 +691,7 @@ const TrustEvaluationContainer = () => {
       endDate: '',
       description: '',
       voterEmployeeIds: employees.map((e) => e.id),
-      targetEmployeeIds: employees.map((e) => e.id),
+      targetEmployeeIds: getEligibleTargetEmployees(employees).map((e) => e.id),
       customCriteria: [...DEFAULT_CRITERIA],
     });
     setIsPeriodModalOpen(true);
@@ -648,7 +710,7 @@ const TrustEvaluationContainer = () => {
       endDate: period.endDate || '',
       description: period.description || '',
       voterEmployeeIds: period.voterEmployeeIds || employees.map((e) => e.id),
-      targetEmployeeIds: period.targetEmployeeIds || employees.map((e) => e.id),
+      targetEmployeeIds: getEligibleTargetEmployees(employees, period.targetEmployeeIds).map((e) => e.id),
       customCriteria: period.customCriteria || [...DEFAULT_CRITERIA],
     });
     setIsPeriodModalOpen(true);
@@ -862,6 +924,9 @@ const TrustEvaluationContainer = () => {
                   isFullyReadyToSubmit={isFullyReadyToSubmit}
                   onSubmitOfficial={handleSubmitOfficial}
                   isSubmitting={isSubmitting}
+                  hasSubmitted={hasSubmitted}
+                  submittedAt={submittedAt}
+                  onViewSubmittedVotes={() => setActiveTab('MY_VOTES')}
                 />
 
                 {/* Thanh chuyển nhanh 10 tiêu chí & Chế độ xem */}
@@ -953,7 +1018,7 @@ const TrustEvaluationContainer = () => {
             <MySubmittedSummary
               evaluations={evaluations}
               currentUser={currentUser}
-              currentPeriod={currentPeriod}
+              currentPeriod={effectivePeriod}
               selectedPeriodId={selectedPeriodId}
               periods={periods}
               criteria={activeCriteria}
@@ -989,7 +1054,7 @@ const TrustEvaluationContainer = () => {
             <MySelfResults
               evaluations={evaluations}
               currentUser={currentUser}
-              currentPeriod={currentPeriod}
+              currentPeriod={effectivePeriod}
               criteria={activeCriteria}
             />
           </div>
@@ -1031,7 +1096,8 @@ const TrustEvaluationContainer = () => {
             <TrustOverviewReport
               evaluations={evaluations}
               employees={employees}
-              currentPeriod={currentPeriod}
+              currentPeriod={effectivePeriod}
+              periodConfig={currentPeriodConfig}
               criteria={activeCriteria}
               isAdmin={canManagePeriods}
               onOpenPrintModal={() => setIsPrintModalOpen(true)}

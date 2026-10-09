@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PlusCircle, Edit3, Trash2 } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
+import { isSystemAdminAccount } from '../../../lib/evaluationUtils';
 
 /**
  * TrustPeriodModal: Quản trị tạo mới / chỉnh sửa đợt đánh giá (Dành cho Lãnh đạo)
@@ -16,6 +17,7 @@ const TrustPeriodModal = ({
   submitting,
   employees = [],
 }) => {
+  const officialStaff = React.useMemo(() => employees.filter((e) => !isSystemAdminAccount(e)), [employees]);
   const [newCustomCrit, setNewCustomCrit] = useState({ title: '', description: '', maxScore: 10 });
   const [isAddingCrit, setIsAddingCrit] = useState(false);
   const [editingCritIndex, setEditingCritIndex] = useState(null);
@@ -45,7 +47,7 @@ const TrustPeriodModal = ({
     if (dept === 'ALL') {
       setFormData((prev) => ({
         ...prev,
-        targetEmployeeIds: employees.map((e) => e.id),
+        targetEmployeeIds: officialStaff.map((e) => e.id),
       }));
     } else if (dept === 'NONE') {
       setFormData((prev) => ({
@@ -53,7 +55,7 @@ const TrustPeriodModal = ({
         targetEmployeeIds: [],
       }));
     } else {
-      const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
+      const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
       setFormData((prev) => ({
         ...prev,
         targetEmployeeIds: Array.from(new Set([...(prev?.targetEmployeeIds || []), ...matchingIds])),
@@ -262,7 +264,7 @@ const TrustPeriodModal = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">
-                Cán bộ được lấy phiếu tín nhiệm ({formData.targetEmployeeIds?.length || 0}/{employees.length}):
+                Cán bộ được lấy phiếu tín nhiệm ({formData.targetEmployeeIds?.length || 0}/{officialStaff.length}):
               </label>
               <span className="text-[10px] text-slate-500">Đối tượng được các cử tri chấm điểm đánh giá</span>
             </div>
@@ -272,7 +274,7 @@ const TrustPeriodModal = ({
                 onClick={() => handleSelectEmployeesByDept('ALL')}
                 className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]"
               >
-                Tất cả ({employees.length})
+                Tất cả ({officialStaff.length})
               </button>
               <button
                 type="button"
@@ -299,7 +301,7 @@ const TrustPeriodModal = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-1 bg-white rounded-lg border border-slate-200">
-            {employees.map((emp) => {
+            {officialStaff.map((emp) => {
               const isSelected = (formData.targetEmployeeIds || []).includes(emp.id);
               return (
                 <label key={`modal-target-${emp.id}`} className="flex items-center gap-1.5 text-[11px] p-1 rounded hover:bg-slate-50 cursor-pointer">

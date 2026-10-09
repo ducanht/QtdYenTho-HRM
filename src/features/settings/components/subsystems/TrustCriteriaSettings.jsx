@@ -16,6 +16,7 @@ import StatusBadge from '../../../../components/common/StatusBadge';
 import PeriodMasterSidebar from '../../../trust/components/PeriodMasterSidebar';
 import DeletePeriodConfirmModal from '../../../trust/components/DeletePeriodConfirmModal';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../../../lib/constants';
+import { getEligibleTargetEmployees, isSystemAdminAccount } from '../../../../lib/evaluationUtils';
 
 // Helper phân loại màu sắc badge cho từng nhóm tiêu chí chuẩn mực
 const getGroupBadgeStyle = (group) => {
@@ -75,6 +76,11 @@ const TrustCriteriaSettings = ({
     criteria: [...DEFAULT_CRITERIA],
   });
 
+  // Danh sách cán bộ nhân viên nghiệp vụ chính thức (Loại trừ tài khoản kỹ thuật / Quản trị hệ thống)
+  const officialStaff = React.useMemo(() => {
+    return employees.filter((e) => !isSystemAdminAccount(e));
+  }, [employees]);
+
   // Modal Thêm/Sửa Tiêu chí của riêng đợt này
   const [critModalOpen, setCritModalOpen] = useState(false);
   const [editingCritIndex, setEditingCritIndex] = useState(null);
@@ -91,6 +97,10 @@ const TrustCriteriaSettings = ({
   // Đồng bộ state cấu hình mỗi khi đợt đánh giá thay đổi
   useEffect(() => {
     if (periodConfig) {
+      // Làm sạch targetEmployeeIds: đảm bảo 100% không chứa tài khoản quản trị hệ thống
+      const rawTargetIds = periodConfig.targetEmployeeIds || currentPeriod?.targetEmployeeIds;
+      const cleanTargetIds = getEligibleTargetEmployees(employees, rawTargetIds).map((e) => e.id);
+
       setLocalConfig({
         excellentThreshold: periodConfig.excellentThreshold ?? 90,
         excellentMinCrit: periodConfig.excellentMinCrit ?? 7,
@@ -104,10 +114,7 @@ const TrustCriteriaSettings = ({
           periodConfig.voterEmployeeIds ||
           currentPeriod?.voterEmployeeIds ||
           employees.map((e) => e.id),
-        targetEmployeeIds:
-          periodConfig.targetEmployeeIds ||
-          currentPeriod?.targetEmployeeIds ||
-          employees.map((e) => e.id),
+        targetEmployeeIds: cleanTargetIds,
         criteria:
           periodConfig.criteria && periodConfig.criteria.length > 0
             ? periodConfig.criteria
@@ -116,6 +123,8 @@ const TrustCriteriaSettings = ({
             : [...DEFAULT_CRITERIA],
       });
     } else if (currentPeriod) {
+      const cleanTargetIds = getEligibleTargetEmployees(employees, currentPeriod.targetEmployeeIds).map((e) => e.id);
+
       setLocalConfig({
         excellentThreshold: currentPeriod.thresholds?.excellent ?? currentPeriod.excellentThreshold ?? 90,
         excellentMinCrit: currentPeriod.thresholds?.excellentMinCrit ?? 7,
@@ -126,7 +135,7 @@ const TrustCriteriaSettings = ({
         votingMode: currentPeriod.votingMode || 'ANONYMOUS',
         allowSelfEvaluation: currentPeriod.allowSelfEvaluation ?? false,
         voterEmployeeIds: currentPeriod.voterEmployeeIds || employees.map((e) => e.id),
-        targetEmployeeIds: currentPeriod.targetEmployeeIds || employees.map((e) => e.id),
+        targetEmployeeIds: cleanTargetIds,
         criteria:
           currentPeriod.customCriteria && currentPeriod.customCriteria.length > 0
             ? currentPeriod.customCriteria
@@ -156,12 +165,12 @@ const TrustCriteriaSettings = ({
     }
   };
 
-  // Handler: Chọn nhanh Cán bộ được lấy phiếu theo phòng ban
+  // Handler: Chọn nhanh Cán bộ được lấy phiếu theo phòng ban (Chỉ trong danh sách chuyên môn officialStaff)
   const handleSelectEmployeesByDept = (dept) => {
     if (dept === 'ALL') {
       setLocalConfig((prev) => ({
         ...prev,
-        targetEmployeeIds: employees.map((e) => e.id),
+        targetEmployeeIds: officialStaff.map((e) => e.id),
       }));
     } else if (dept === 'NONE') {
       setLocalConfig((prev) => ({
@@ -169,7 +178,7 @@ const TrustCriteriaSettings = ({
         targetEmployeeIds: [],
       }));
     } else {
-      const matchingIds = employees.filter((e) => e.department === dept).map((e) => e.id);
+      const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
       setLocalConfig((prev) => ({
         ...prev,
         targetEmployeeIds: Array.from(new Set([...(prev.targetEmployeeIds || []), ...matchingIds])),
@@ -621,10 +630,10 @@ const TrustCriteriaSettings = ({
                       <Users className="w-4 h-4 text-[#0f766e]" />
                       <div>
                         <span className="text-xs font-bold text-slate-900 block">
-                          Cán bộ được lấy phiếu tín nhiệm ({localConfig.targetEmployeeIds?.length || 0} / {employees.length})
+                          Cán bộ được lấy phiếu tín nhiệm ({localConfig.targetEmployeeIds?.length || 0} / {officialStaff.length})
                         </span>
                         <span className="text-[11px] text-slate-500">
-                          Danh sách cán bộ được cử tri chấm điểm đánh giá trong đợt
+                          Danh sách cán bộ chuyên môn được cử tri chấm điểm đánh giá trong đợt
                         </span>
                       </div>
                     </div>
@@ -636,7 +645,7 @@ const TrustCriteriaSettings = ({
                         onClick={() => handleSelectEmployeesByDept('ALL')}
                         className="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 cursor-pointer"
                       >
-                        Chọn tất cả ({employees.length})
+                        Chọn tất cả ({officialStaff.length})
                       </button>
                       <button
                         type="button"
@@ -663,7 +672,7 @@ const TrustCriteriaSettings = ({
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50/50 rounded-lg">
-                    {employees.map((emp) => {
+                    {officialStaff.map((emp) => {
                       const isChecked = (localConfig.targetEmployeeIds || []).includes(emp.id);
                       return (
                         <label

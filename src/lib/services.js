@@ -458,16 +458,23 @@ export const savePeriodConfig = async (periodId, configData) => {
     if (cleanData.votingMode !== undefined) periodSyncData.votingMode = cleanData.votingMode;
     if (cleanData.allowSelfEvaluation !== undefined) periodSyncData.allowSelfEvaluation = cleanData.allowSelfEvaluation;
     if (cleanData.targetEmployeeIds !== undefined) periodSyncData.targetEmployeeIds = cleanData.targetEmployeeIds;
+    if (cleanData.voterEmployeeIds !== undefined) periodSyncData.voterEmployeeIds = cleanData.voterEmployeeIds;
     if (cleanData.criteria !== undefined) periodSyncData.customCriteria = cleanData.criteria;
     if (
       cleanData.excellentThreshold !== undefined ||
       cleanData.goodThreshold !== undefined ||
-      cleanData.passThreshold !== undefined
+      cleanData.passThreshold !== undefined ||
+      cleanData.excellentMinCrit !== undefined ||
+      cleanData.goodMinCrit !== undefined ||
+      cleanData.weakVotesThresholdPercent !== undefined
     ) {
       periodSyncData.thresholds = {
         excellent: cleanData.excellentThreshold ?? 90,
+        excellentMinCrit: cleanData.excellentMinCrit ?? 7,
         good: cleanData.goodThreshold ?? 70,
+        goodMinCrit: cleanData.goodMinCrit ?? 5,
         pass: cleanData.passThreshold ?? 50,
+        weakVotesThresholdPercent: cleanData.weakVotesThresholdPercent ?? 50,
       };
     }
 

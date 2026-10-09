@@ -3,6 +3,7 @@ import { Award, ShieldCheck, Lock, Clock, CheckCircle2, TrendingUp, TrendingDown
 import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
 import { classifyTrustScore } from '../../../lib/schema';
+import { isSystemAdminAccount } from '../../../lib/evaluationUtils';
 
 /**
  * MySelfResults: Xem điểm đánh giá của CHÍNH MÌNH do tập thể chấm
@@ -85,6 +86,37 @@ const MySelfResults = ({
     };
   }, [myReceivedEvaluations, criteria, currentPeriod?.thresholds]);
 
+
+  // Kiểm tra người dùng hiện tại có thuộc diện được lấy phiếu tín nhiệm trong đợt này không
+  const isTargetEmployee = useMemo(() => {
+    if (!currentUser || !currentPeriod) return true;
+    if (isSystemAdminAccount(currentUser)) return false;
+    const targetIds = currentPeriod.targetEmployeeIds;
+    if (Array.isArray(targetIds) && targetIds.length > 0) {
+      const curId = currentUser.id || currentUser.uid;
+      return targetIds.includes(curId);
+    }
+    return true;
+  }, [currentUser, currentPeriod]);
+
+  // Nếu người dùng không thuộc diện lấy phiếu tín nhiệm
+  if (!isTargetEmployee) {
+    return (
+      <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 text-center space-y-4 max-w-2xl mx-auto shadow-2xs">
+        <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 flex items-center justify-center mx-auto shadow-xs text-2xl">
+          🛡️
+        </div>
+        <div className="space-y-1.5">
+          <h3 className="text-base sm:text-lg font-black text-slate-900">
+            Không thuộc diện lấy phiếu tín nhiệm
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+            Theo quyết định ban hành đợt "{currentPeriod?.name || ''}", tài khoản của đồng chí không thuộc danh sách đối tượng được lấy phiếu tín nhiệm tại Quỹ.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Nếu đợt chưa kết thúc
   if (!isPeriodClosed) {
