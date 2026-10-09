@@ -114,3 +114,21 @@ Toàn bộ các phân hệ con của Module Tín nhiệm tuân thủ nghiêm ng�
    - Toàn bộ danh sách đối tượng lấy phiếu tín nhiệm và bảng kết quả tín nhiệm toàn Quỹ (`TrustOverviewReport.jsx`) tuân thủ 100% cấu hình đợt.
    - Loại trừ hoàn toàn tài khoản Quản trị hệ thống webapp (`ROOT`, `ADMIN`) thông qua helper chuẩn mực `getEligibleTargetEmployees` và `isSystemAdminAccount`.
    - Ngăn chặn triệt để tình trạng tài khoản kỹ thuật bị đưa vào bảng kết quả với 0 phiếu và xếp loại không đạt.
+
+---
+
+## 🖨️ 8. BỘ THƯ VIỆN XUẤT DOANH NGHIỆP DÙNG CHUNG (ENTERPRISE EXPORT SUITE - XLSX, DOCX, PDF, PNG)
+Thư viện dùng chung tại `src/lib/exportUtils.js` cung cấp hạ tầng xuất dữ liệu tiêu chuẩn cho toàn bộ hệ thống HRM:
+1. **Xuất Excel Microsoft thực thụ (`.xlsx`) via SheetJS**:
+   - Thay thế hoàn toàn file `.csv` thô sơ trước đây.
+   - Hỗ trợ tiêu đề đơn vị (QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ), tên đợt đánh giá, phụ đề, căn lề và tự động tính độ rộng cột `!cols` (wch) theo độ dài nội dung tiếng Việt.
+2. **Xuất Microsoft Word (`.docx`) chuẩn thể thức hành chính**:
+   - Xây dựng văn bản Word chuẩn thể thức Nghị định 30/2020/NĐ-CP: Quốc hiệu - Tiêu ngữ, Tên cơ quan ban hành, Trích yếu, Số hiệu văn bản.
+   - Bảng biểu kẻ viền, lề trang tiêu chuẩn A4 (Trái 3cm, Phải 2cm, Trên 2cm, Dưới 2cm).
+   - Khối 3 chữ ký Lãnh đạo: Trưởng Ban Kiểm Soát, Giám Đốc Điều Hành, Chủ Tịch HĐQT.
+3. **Xuất PDF chuẩn A4 100% không vỡ font tiếng Việt**:
+   - Khắc phục triệt để nhược điểm font WinAnsi mặc định của jsPDF bằng công nghệ **Rasterized Vector Engine**: Render trực tiếp DOM container (`#trust-a4-document-container`) qua `html2canvas` (scale 2x) rồi đưa vào trang `jsPDF`.
+   - Giữ nguyên 100% typography tiếng Việt (`Be Vietnam Pro` / `Inter`), viền nét, căn chỉnh lề và tự động phân trang đa trang.
+4. **Tải ảnh báo cáo nhanh (`.png`) Retina 2x**: Chụp lại toàn bộ biên bản A4 phục vụ chia sẻ nhanh trên Zalo/Telegram nội bộ cơ quan.
+5. **Tối ưu hóa hiệu năng (Zero Performance Regression)**:
+   - Toàn bộ 4 thư viện (`xlsx`, `docx`, `jspdf`, `html2canvas`) được cấu hình **Dynamic Import Lazy-loading** và cô lập riêng trong lazy chunk `vendor-export` trong `vite.config.js`. Không làm tăng kích thước bundle tải ban đầu của ứng dụng web.

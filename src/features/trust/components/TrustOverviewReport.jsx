@@ -9,12 +9,17 @@ import {
   ShieldCheck,
   TrendingUp,
   AlertTriangle,
-  Eye
+  Eye,
+  FileSpreadsheet,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
+import Button from '../../../components/common/Button';
 import { classifyTrustScore } from '../../../lib/schema';
 import { getClassificationBadgeVariant, getEligibleTargetEmployees, isSystemAdminAccount } from '../../../lib/evaluationUtils';
+import { exportToExcel, exportToWord } from '../../../lib/exportUtils';
 import EmployeeTrustDetailModal from './EmployeeTrustDetailModal';
 
 /**
@@ -203,39 +208,87 @@ const TrustOverviewReport = ({
   }, [evaluations, employees, currentPeriod, periodConfig, criteria]);
 
 
-  // Handler: Xuất dữ liệu bảng điểm ra file CSV Excel chuẩn UTF-8
-  const handleExportCsv = () => {
-    if (!reportData.leaderboard.length) return;
-    const headers = [
-      'Hạng',
-      'Họ và tên cán bộ',
-      'Chức vụ',
-      'Phòng ban',
-      'Số phiếu nhận',
-      'Điểm TB (Thang 10)',
-      'Điểm quy đổi (Thang 100)',
-      'Xếp loại',
-    ];
-    const rows = reportData.leaderboard.map((row, idx) => [
-      idx + 1,
-      `"${row.name}"`,
-      `"${row.position || 'Cán bộ'}"`,
-      `"${row.department || ''}"`,
-      row.evaluationsCount,
-      row.avgScore10,
-      row.avgScore100,
-      `"${row.classification.label}"`,
-    ]);
+  const [exportingType, setExportingType] = useState(null);
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Ket_Qua_Tin_Nhiem_${currentPeriod?.name?.replace(/\s+/g, '_') || 'Ky'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Handler: Xuất dữ liệu bảng điểm ra file Microsoft Excel (.xlsx) thực thụ
+  const handleExportExcel = async () => {
+    if (!reportData.leaderboard.length) return;
+    try {
+      setExportingType('excel');
+      const headers = [
+        'Hạng',
+        'Họ và tên cán bộ',
+        'Chức vụ',
+        'Phòng ban',
+        'Số phiếu nhận',
+        'Điểm TB (Thang 10)',
+        'Điểm quy đổi (Thang 100)',
+        'Xếp loại',
+      ];
+      const rows = reportData.leaderboard.map((row, idx) => [
+        idx + 1,
+        row.name,
+        row.position || 'Cán bộ',
+        row.department || '',
+        row.evaluationsCount,
+        row.avgScore10,
+        row.avgScore100,
+        row.classification.label + (row.classification.downgradeReason ? ` (${row.classification.downgradeReason})` : ''),
+      ]);
+
+      await exportToExcel({
+        filename: `Ket_Qua_Tin_Nhiem_${currentPeriod?.name?.replace(/\s+/g, '_') || 'Ky'}.xlsx`,
+        sheetName: 'Kết quả tín nhiệm',
+        title: 'BÁO CÁO TỔNG HỢP KẾT QUẢ ĐÁNH GIÁ TÍN NHIỆM CÁN BỘ',
+        subtitle: `Kỳ đánh giá: ${currentPeriod?.name || 'Hiện hành'} - Tỷ lệ cử tri tham gia: ${reportData.voterStats.turnoutPercent}%`,
+        headers,
+        rows,
+      });
+    } catch (error) {
+      console.error('Lỗi khi xuất file Excel (.xlsx):', error);
+      alert('Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại.');
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  // Handler: Xuất dữ liệu bảng điểm ra file Microsoft Word (.docx) chuẩn thể thức hành chính
+  const handleExportWord = async () => {
+    if (!reportData.leaderboard.length) return;
+    try {
+      setExportingType('word');
+      const headers = [
+        'Hạng',
+        'Họ và tên cán bộ',
+        'Chức vụ',
+        'Số phiếu',
+        'Điểm TB (10)',
+        'Điểm quy đổi (100)',
+        'Xếp loại',
+      ];
+      const rows = reportData.leaderboard.map((row, idx) => [
+        idx + 1,
+        row.name,
+        row.position || 'Cán bộ',
+        row.evaluationsCount,
+        row.avgScore10,
+        row.avgScore100,
+        row.classification.label + (row.classification.downgradeReason ? ` (${row.classification.downgradeReason})` : ''),
+      ]);
+
+      await exportToWord({
+        filename: `Bien_ban_ket_qua_tin_nhiem_${currentPeriod?.name?.replace(/\s+/g, '_') || 'Ky'}.docx`,
+        title: 'BIÊN BẢN TỔNG HỢP KẾT QUẢ ĐÁNH GIÁ TÍN NHIỆM',
+        subtitle: `Đợt đánh giá: ${currentPeriod?.name || 'Hiện hành'} (Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')})`,
+        headers,
+        rows,
+      });
+    } catch (error) {
+      console.error('Lỗi khi xuất file Word (.docx):', error);
+      alert('Có lỗi xảy ra khi xuất file Word. Vui lòng thử lại.');
+    } finally {
+      setExportingType(null);
+    }
   };
 
   // Nếu là cán bộ thường và đợt chưa kết thúc
@@ -364,21 +417,35 @@ const TrustOverviewReport = ({
           title="Kết quả tín nhiệm toàn Quỹ"
           subtitle={`Kỳ: ${currentPeriod?.name || 'Hiện hành'}`}
           headerRight={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                icon={TrendingUp}
-                onClick={handleExportCsv}
+                icon={FileSpreadsheet}
+                onClick={handleExportExcel}
+                isLoading={exportingType === 'excel'}
+                disabled={Boolean(exportingType)}
                 className="text-xs font-bold border-emerald-300 text-emerald-800 hover:bg-emerald-50"
               >
-                Xuất Excel
+                Xuất Excel (.xlsx)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileText}
+                onClick={handleExportWord}
+                isLoading={exportingType === 'word'}
+                disabled={Boolean(exportingType)}
+                className="text-xs font-bold border-blue-300 text-blue-800 hover:bg-blue-50"
+              >
+                Xuất Word (.docx)
               </Button>
               <Button
                 variant="primary"
                 size="sm"
                 icon={Printer}
                 onClick={onOpenPrintModal}
+                disabled={Boolean(exportingType)}
                 className="text-xs font-bold"
               >
                 In biên bản A4

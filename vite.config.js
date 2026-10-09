@@ -22,6 +22,14 @@ export default defineConfig({
             return 'vendor-icons';
           }
           if (
+            id.includes('node_modules/xlsx') ||
+            id.includes('node_modules/docx') ||
+            id.includes('node_modules/jspdf') ||
+            id.includes('node_modules/html2canvas')
+          ) {
+            return 'vendor-export';
+          }
+          if (
             id.includes('node_modules/react') ||
             id.includes('node_modules/react-dom') ||
             id.includes('node_modules/react-router-dom')
