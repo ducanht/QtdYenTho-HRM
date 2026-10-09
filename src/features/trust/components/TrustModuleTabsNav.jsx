@@ -32,7 +32,7 @@ const TrustModuleTabsNav = ({
   ].filter((t) => t.show);
 
   return (
-    <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-1">
+    <div className="hidden md:flex flex-wrap items-center gap-2 pb-1">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;

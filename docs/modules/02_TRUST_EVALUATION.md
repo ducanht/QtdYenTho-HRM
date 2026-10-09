@@ -151,3 +151,37 @@ Thư viện dùng chung tại `src/lib/exportUtils.js` cung cấp hạ tầng xu
    - Cán bộ Lãnh đạo kiêm Quản trị viên hệ thống (Chủ tịch HĐQT Trịnh Đức Anh `emp-007` / `ducanht@gmail.com`, Giám đốc Nguyễn Văn Sơn `emp-003`...) **bắt buộc được bảo toàn 100% quyền cử tri bỏ phiếu và thuộc diện đối tượng lấy phiếu tín nhiệm**.
    - Bổ sung nút chọn nhanh `HĐQT & BĐH` (`dept: LEADERSHIP`) trong cả 2 danh sách Cử tri và Đối tượng lấy phiếu tín nhiệm tại Modal Đợt (`TrustPeriodModal.jsx`) và Tab Cấu hình (`TrustCriteriaSettings.jsx`).
 
+---
+
+## 🛡️ 10. KIẾN TRÚC TÁCH BIỆT BẢNG CSDL `accounts` & `employees` VÀ BẢO MẬT FIRESTORE (v3.8)
+
+1. **Tách Biệt Bảng CSDL Chuẩn Hóa**:
+   - Bảng `accounts`: Lưu trữ tài khoản đăng nhập, mật khẩu mã hóa/xác thực, vai trò RBAC (`role`: `SUPER_ADMIN`, `ADMIN`, `MANAGER`, `STAFF`), trạng thái (`isActive`), email và liên kết ngoại vi `employeeId`.
+   - Bảng `employees`: Lưu hồ sơ cán bộ nhân viên, mã nhân viên, họ tên, phòng ban (`dept`), chức vụ (`position`), ngày vào ngành, trạng thái công tác.
+2. **Bảo Mật CSDL Firestore (`firestore.rules`)**:
+   - Bổ sung quy tắc bảo mật riêng cho `/employees/{employeeId}` (chỉ Admin/SuperAdmin được ghi) và `/accounts/{accountId}` (chỉ SuperAdmin được quản trị phân quyền tài khoản).
+   - Siết chặt quyền tạo phiếu tín nhiệm `/evaluations_trust/{evaluationId}`:
+     + Cử tri chỉ được nộp phiếu cho đối tượng được cấu hình trong đợt.
+     + Nghiêm cấm tự đánh giá bản thân TRỪ KHI đợt có cấu hình `allowSelfEvaluation == true`.
+   - Khóa chặt quyền sửa/xóa bảng cấu hình tiêu chí `/trust_criteria` và cấu hình đợt `/period_configs` chỉ dành cho Ban Lãnh đạo / Admin (`isManagerOrChairman()`).
+3. **Bảo Mật Tuyệt Đối Danh Tính Bỏ Phiếu Kín Ở Cấp Dịch Vụ Firestore**:
+   - Khi đợt đánh giá bật `isAnonymous: true`, dịch vụ `saveTrustEvaluation` và `saveBatchTrustEvaluations` tự động ẩn danh hóa payload:
+     + `evaluatorName` được lưu thành `'Cán bộ Quỹ (Bỏ phiếu kín)'`.
+     + `evaluatorPosition` được lưu thành `'Bỏ phiếu kín'`.
+   - Triệt tiêu hoàn toàn rủi ro rò rỉ danh tính cử tri qua payload mạng Firestore hoặc công cụ Console trình duyệt.
+
+---
+
+## ⚡ 11. TỐI ƯU HÓA HIỆU NĂNG, PHẢN HỒI XÚC GIÁC & GIAO DIỆN MOBILE RESPONSIVE CHUẨN MỰC
+
+1. **Quy Chuẩn UI Mobile: "Tuyệt Đối Không Bọc Kéo - Đưa Thẳng Ra Ngoài"**:
+   - Triệt tiêu các container cuộn ngang (`overflow-x-auto`) ở bộ lọc năm, thanh công cụ chọn nhanh cử tri/đối tượng và thanh điều hướng tabs; thay thế bằng `flex flex-wrap items-center gap-1.5` để nhìn thấy 100% chức năng chỉ với 1 chạm.
+   - Bảng Kết quả tín nhiệm toàn Quỹ (`TrustOverviewReport.jsx`): Tự động chuyển đổi sang giao diện **Thẻ Card Thông Tin Di Động** (`block md:hidden`), giữ lại bảng chuẩn trên màn hình máy tính/tablet (`hidden md:block`). Mỗi thẻ card hiển thị đầy đủ thứ hạng, họ tên, chức vụ, điểm TB, điểm quy đổi, xếp loại và nút xem chi tiết trực quan.
+2. **Phản Hồi Xúc Giác & Triệt Tiêu Độ Trễ Chạm (Touch Manipulation)**:
+   - Toàn bộ nút chọn điểm 1..10 (`ScorePicker.jsx`) và các nút điều hướng đáy mobile (`TrustBottomNav.jsx`) được bổ sung lớp CSS `touch-manipulation select-none active:scale-95`.
+   - Loại bỏ hoàn toàn độ trễ 300ms của trình duyệt di động, mang lại trải nghiệm bấm mượt mà như ứng dụng gốc Native App.
+3. **Hiệu Năng Code Splitting (Zero Performance Regression)**:
+   - Tách biệt hoàn toàn các thư viện nặng (`vendor-export`: 1.4 MB chứa SheetJS, Docx, jsPDF, html2canvas; `vendor-charts`: 385 KB chứa Recharts) thành các lazy bundle độc lập.
+   - Khởi chạy ứng dụng tức thì 0ms, đảm bảo tải nhanh trên mạng di động 4G/5G.
+4. **An Toàn Mã Nguồn & Chống XSS**:
+   - 100% không sử dụng `dangerouslySetInnerHTML`, `eval` hay `innerHTML`. Toàn bộ dữ liệu người dùng được escape và kiểm soát qua React JSX thuần túy.

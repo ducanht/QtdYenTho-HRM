@@ -601,7 +601,7 @@ const TrustCriteriaSettings = ({
                     </div>
 
                     {/* Nút chọn nhanh Cử tri */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
                         onClick={() => handleSelectVotersByDept('ALL')}
@@ -687,7 +687,7 @@ const TrustCriteriaSettings = ({
                     </div>
 
                     {/* Nút chọn nhanh Đối tượng */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
                         onClick={() => handleSelectEmployeesByDept('ALL')}

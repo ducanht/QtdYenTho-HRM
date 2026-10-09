@@ -37,11 +37,11 @@ const ScorePicker = ({
             className={`
               ${sizeClasses}
               rounded-xl font-bold transition-all duration-150 flex items-center justify-center shrink-0
-              cursor-pointer disabled:cursor-not-allowed disabled:opacity-50
+              cursor-pointer select-none touch-manipulation active:scale-95 disabled:cursor-not-allowed disabled:opacity-50
               ${
                 isSelected
                   ? 'bg-[#0f766e] text-white shadow-md shadow-[#0f766e]/25 ring-2 ring-[#0f766e] scale-105 z-10'
-                  : 'bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200/80'
+                  : 'bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200/80 active:bg-teal-100'
               }
             `}
             title={`Chọn mức điểm ${num}`}

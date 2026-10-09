@@ -462,7 +462,69 @@ const TrustOverviewReport = ({
             </div>
           }
         >
-          <div className="overflow-x-auto">
+          {/* GIAO DIỆN MOBILE (< md): DANH SÁCH THẺ CARD TRỰC QUAN (KHÔNG CUỘN NGANG) */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {reportData.leaderboard.map((row, idx) => (
+              <div key={`mobile-row-${row.id}`} className="p-3.5 space-y-2.5 bg-white hover:bg-slate-50 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
+                      #{idx + 1}
+                    </span>
+                    <div>
+                      <div className="font-bold text-slate-900 text-xs sm:text-sm">{row.name}</div>
+                      <div className="text-[11px] text-slate-500">{row.position || 'Cán bộ'}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getClassificationBadgeVariant(row.classification.label)}`}>
+                      {row.classification.label}
+                    </span>
+                    {row.classification.downgradeReason && (
+                      <span className="text-[9px] text-amber-700 italic">
+                        ({row.classification.downgradeReason})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200/70 text-center">
+                  <div>
+                    <div className="text-[10px] text-slate-500">Số phiếu</div>
+                    <div className="text-xs font-bold text-slate-800">{row.evaluationsCount} phiếu</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500">Điểm TB</div>
+                    <div className="text-xs font-black text-teal-800">
+                      {row.evaluationsCount > 0 ? `${row.avgScore10}/10` : '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500">Quy đổi</div>
+                    <div className="text-xs font-bold text-slate-800">
+                      {row.evaluationsCount > 0 ? `${row.avgScore100}đ` : '—'}
+                    </div>
+                  </div>
+                </div>
+
+                {isAdmin && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmpForDetail(row)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-300 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-teal-600" />
+                      Xem chi tiết điểm
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* GIAO DIỆN DESKTOP / TABLET (>= md): BẢNG THỐNG KÊ TOÀN DIỆN */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">

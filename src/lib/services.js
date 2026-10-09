@@ -526,7 +526,12 @@ export const subscribeTrustCriteria = (callback) => {
 export const saveTrustEvaluation = async (evaluationData) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
 
-  if (evaluationData.evaluatorId && evaluationData.targetEmployeeId && evaluationData.evaluatorId === evaluationData.targetEmployeeId) {
+  if (
+    evaluationData.evaluatorId &&
+    evaluationData.targetEmployeeId &&
+    evaluationData.evaluatorId === evaluationData.targetEmployeeId &&
+    !evaluationData.allowSelfEvaluation
+  ) {
     throw new Error('Quy chế Quỹ TDND Yên Thọ: Cán bộ không được phép tự đánh giá tín nhiệm cho chính mình!');
   }
 
@@ -545,6 +550,9 @@ export const saveTrustEvaluation = async (evaluationData) => {
 
   const payload = {
     ...evaluationData,
+    // Bảo mật danh tính: Khi bỏ phiếu kín, ẩn danh hóa hoàn toàn họ tên & chức vụ trong CSDL
+    evaluatorName: isAnonymous ? 'Cán bộ Quỹ (Bỏ phiếu kín)' : evaluationData.evaluatorName,
+    evaluatorPosition: isAnonymous ? 'Bỏ phiếu kín' : evaluationData.evaluatorPosition,
     isAnonymous,
     totalScore,
     classification,
@@ -568,7 +576,12 @@ export const saveBatchTrustEvaluations = async (evaluationsList) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
   const results = [];
   for (const item of evaluationsList) {
-    if (item.evaluatorId && item.targetEmployeeId && item.evaluatorId === item.targetEmployeeId) {
+    if (
+      item.evaluatorId &&
+      item.targetEmployeeId &&
+      item.evaluatorId === item.targetEmployeeId &&
+      !item.allowSelfEvaluation
+    ) {
       continue;
     }
     const res = await saveTrustEvaluation(item);

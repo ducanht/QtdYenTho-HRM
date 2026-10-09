@@ -65,7 +65,7 @@ service cloud.firestore {
     }
 
     // ===============================================================
-    // 1. Hồ sơ Cán bộ (users)
+    // 1. Hồ sơ Cán bộ (users) & Danh bạ CBNV (employees)
     // ===============================================================
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -74,6 +74,30 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         isManagerOrChairman() ||
         isOwner(userId)
+      );
+      allow delete: if isManagerOrChairman();
+    }
+
+    match /employees/{employeeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isManagerOrChairman() ||
+        isOwner(employeeId)
+      );
+      allow delete: if isManagerOrChairman();
+    }
+
+    // ===============================================================
+    // 1B. Bảng Tài Khoản & Phân Quyền (accounts)
+    // ===============================================================
+    match /accounts/{accountId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isManagerOrChairman() ||
+        request.auth.uid == accountId ||
+        (resource != null && resource.data.uid == request.auth.uid)
       );
       allow delete: if isManagerOrChairman();
     }
@@ -110,11 +134,12 @@ service cloud.firestore {
     // ===============================================================
     match /evaluations_trust/{evalId} {
       allow read: if isAuthenticated();
-      // Cho phép cán bộ nộp phiếu đánh giá (không tự chấm cho mình, trừ admin khi test)
+      // Cho phép cán bộ nộp phiếu đánh giá (không tự chấm cho mình trừ khi đợt bật allowSelfEvaluation hoặc Admin)
       allow create: if isAuthenticated() && (
         isSuperAdmin() ||
         !('targetEmployeeId' in request.resource.data) ||
-        request.resource.data.evaluatorId != request.resource.data.targetEmployeeId
+        request.resource.data.evaluatorId != request.resource.data.targetEmployeeId ||
+        request.resource.data.allowSelfEvaluation == true
       );
       allow update: if isAuthenticated() && (
         isManagerOrChairman() ||
@@ -199,7 +224,7 @@ service cloud.firestore {
     // ===============================================================
     match /period_configs/{periodId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow create, update, delete: if isManagerOrChairman();
     }
   }
 }

@@ -75,7 +75,7 @@ const TrustBottomNav = ({
               type="button"
               onClick={() => onChangeTab(item.id)}
               className={`
-                flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition-all cursor-pointer select-none
+                flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition-all cursor-pointer select-none touch-manipulation active:scale-95
                 ${
                   isActive
                     ? 'text-[#0f766e] font-black'

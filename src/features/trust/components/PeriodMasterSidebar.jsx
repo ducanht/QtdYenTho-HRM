@@ -63,8 +63,8 @@ const PeriodMasterSidebar = ({
         )}
       </div>
 
-      {/* 2. Bộ lọc theo năm (Chips Filter) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      {/* 2. Bộ lọc theo năm (Chips Filter - Đưa thẳng ra ngoài) */}
+      <div className="flex flex-wrap items-center gap-1.5 pb-1">
         <button
           type="button"
           onClick={() => setFilterYear('ALL')}
