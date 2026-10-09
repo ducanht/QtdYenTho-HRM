@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Award, ShieldCheck, Lock, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Award, ShieldCheck, Lock, Clock, CheckCircle2, TrendingUp, TrendingDown, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
 import { classifyTrustScore } from '../../../lib/schema';
@@ -31,6 +31,9 @@ const MySelfResults = ({
   // Kiểm tra xem đợt đánh giá đã khép lại chưa
   const isPeriodClosed = currentPeriod?.status === 'CLOSED';
 
+  // Tiêu chí đang chọn để xem chi tiết điểm cử tri
+  const [selectedCriterionId, setSelectedCriterionId] = useState(null);
+
   // Tính toán điểm tổng kết của bản thân
   const summary = useMemo(() => {
     const count = myReceivedEvaluations.length;
@@ -61,12 +64,18 @@ const MySelfResults = ({
       avg10: Number((criteriaSums[c.id] / count).toFixed(1)),
     }));
 
+    const validScores = criteriaBreakdown.map((c) => c.avg10).filter((s) => !isNaN(s) && s > 0);
+    const maxScore = validScores.length ? Math.max(...validScores) : null;
+    const minScore = validScores.length ? Math.min(...validScores) : null;
+
     return {
       voterCount: count,
       avgScore100,
       avgScore10,
       classification,
       criteriaBreakdown,
+      maxScore,
+      minScore,
     };
   }, [myReceivedEvaluations, criteria]);
 
@@ -150,35 +159,119 @@ const MySelfResults = ({
       {/* Chi tiết trung bình theo từng tiêu chí */}
       <Card
         title="Chi Tiết Điểm Tín Nhiệm Theo 10 Tiêu Chí Chuẩn Mực"
-        subtitle="Mức điểm trung bình tập thể ghi nhận theo từng mặt công tác (Thang điểm 10)"
+        subtitle="Mức điểm trung bình tập thể ghi nhận theo từng mặt công tác (Thang điểm 10 • Bấm vào để xem chi tiết)"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {summary.criteriaBreakdown.map((crit, idx) => (
-            <div
-              key={crit.id || idx}
-              className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-teal-300 transition-colors space-y-1.5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="text-xs font-bold text-slate-900 leading-snug">
-                    {crit.title}
-                  </div>
-                  <div className="text-[10px] text-slate-400">{crit.group}</div>
-                </div>
-                <span className="text-xs font-black text-[#0f766e] bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200 shrink-0">
-                  {crit.avg10} / 10
-                </span>
-              </div>
+        <div className="space-y-3">
+          {summary.criteriaBreakdown.map((crit, idx) => {
+            const isExpanded = selectedCriterionId === crit.id;
+            const isMax = crit.avg10 === summary.maxScore && crit.avg10 > 0;
+            const isMin = crit.avg10 === summary.minScore && crit.avg10 > 0 && summary.minScore !== summary.maxScore;
 
-              {/* Thanh tiến độ điểm */}
-              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div
-                  style={{ width: `${(crit.avg10 / 10) * 100}%` }}
-                  className="h-full bg-[#0f766e] rounded-full"
-                />
+            // Danh sách điểm cử tri chấm cho tiêu chí này của mình
+            const votersForCrit = myReceivedEvaluations.map((ev, vIdx) => {
+              const score = ev.scores?.[crit.id];
+              const isAnonymous = currentPeriod?.votingMode === 'ANONYMOUS' || currentPeriod?.votingMode === 'ANONYMOUS_ONLY';
+              const voterName = !isAnonymous && ev.evaluatorName 
+                ? `${ev.evaluatorName} (${ev.evaluatorPosition || 'Cán bộ'})`
+                : `Cử tri #${vIdx + 1} (Bỏ phiếu kín)`;
+
+              return {
+                voterName,
+                score: score !== undefined ? Number(score) : null,
+                notes: ev.notes || '',
+              };
+            });
+
+            return (
+              <div
+                key={crit.id || idx}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                  isExpanded ? 'bg-teal-50/50 border-teal-400 shadow-2xs' : 'bg-white border-slate-200 hover:border-teal-300'
+                }`}
+                onClick={() => setSelectedCriterionId(isExpanded ? null : crit.id)}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                      {crit.code || `TC0${idx + 1}`}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                      {crit.title}
+                    </span>
+                    {isMax && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                        <TrendingUp className="w-3 h-3 text-emerald-700" />
+                        Cao nhất
+                      </span>
+                    )}
+                    {isMin && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+                        <TrendingDown className="w-3 h-3 text-amber-700" />
+                        Thấp nhất
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                    <span className={`text-xs font-black px-2.5 py-1 rounded-xl border ${
+                      isMax
+                        ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
+                        : isMin
+                        ? 'text-amber-800 bg-amber-50 border-amber-300'
+                        : 'text-teal-800 bg-teal-50 border-teal-200'
+                    }`}>
+                      {crit.avg10} / 10
+                    </span>
+                    <button
+                      type="button"
+                      className="p-1 rounded text-slate-400 hover:text-teal-700 cursor-pointer"
+                    >
+                      {isExpanded ? <ChevronUp className="w-4 h-4 text-teal-700" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Thanh tiến độ điểm */}
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mt-2">
+                  <div
+                    style={{ width: `${(crit.avg10 / 10) * 100}%` }}
+                    className={`h-full rounded-full ${isMax ? 'bg-emerald-600' : isMin ? 'bg-amber-600' : 'bg-[#0f766e]'}`}
+                  />
+                </div>
+
+                {/* Khối mở rộng chi tiết cử tri đánh giá */}
+                {isExpanded && (
+                  <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-2 animate-in fade-in duration-150">
+                    <div className="text-[11px] font-bold text-teal-900 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5 text-[#0f766e]" />
+                        Chi tiết điểm nhận được ({votersForCrit.length} phiếu):
+                      </span>
+                      <span className="text-slate-400 font-normal">
+                        {currentPeriod?.votingMode === 'ANONYMOUS' ? 'Bảo mật danh tính cử tri' : 'Công khai danh tính'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {votersForCrit.map((v, vIdx) => (
+                        <div
+                          key={vIdx}
+                          className="p-2 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs"
+                        >
+                          <span className="text-[11px] text-slate-700 truncate pr-1">
+                            {v.voterName}
+                          </span>
+                          <span className="font-bold text-teal-800 bg-white border border-teal-200 px-1.5 py-0.5 rounded shrink-0">
+                            {v.score !== null ? `${v.score}/10` : '—'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
     </div>

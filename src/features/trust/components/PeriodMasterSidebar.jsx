@@ -19,6 +19,7 @@ const PeriodMasterSidebar = ({
   onOpenEditPeriod = null,
   onDeletePeriodClick = null,
   title = 'Đợt Đánh Giá',
+  allowSelectAll = false,
 }) => {
   // Bộ lọc năm nội bộ của sidebar
   const [filterYear, setFilterYear] = useState('ALL');
@@ -93,6 +94,31 @@ const PeriodMasterSidebar = ({
 
       {/* 3. Danh sách thẻ các đợt đánh giá */}
       <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
+        {allowSelectAll && (
+          <div
+            onClick={() => onSelectPeriod && onSelectPeriod('ALL')}
+            className={`p-3 rounded-xl border transition-all cursor-pointer text-left relative group ${
+              selectedPeriodId === 'ALL'
+                ? 'bg-teal-50/80 border-teal-600 ring-2 ring-teal-500/20 shadow-2xs'
+                : 'bg-slate-50/60 border-slate-200 hover:bg-white hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h4 className={`text-xs font-bold ${selectedPeriodId === 'ALL' ? 'text-teal-950' : 'text-slate-800'}`}>
+                  Tất cả các đợt đánh giá
+                </h4>
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  Lịch sử đánh giá toàn bộ các đợt
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-teal-800 bg-teal-100/60 px-2 py-0.5 rounded-full border border-teal-200">
+                Tất cả
+              </span>
+            </div>
+          </div>
+        )}
+
         {filteredPeriods.length === 0 ? (
           <div className="p-6 text-center text-slate-400 text-xs italic">
             Chưa có đợt đánh giá nào trong năm {filterYear === 'ALL' ? 'này' : filterYear}

@@ -144,17 +144,8 @@ async function seedAllCollections() {
   }
   console.log(`  ✓ Hoàn tất ${historyCount} quyết định luân chuyển.`);
 
-  // 7. evaluations_trust (Phiếu đánh giá tín nhiệm mẫu)
-  console.log('\n7. Đang nạp phiếu đánh giá tín nhiệm (evaluations_trust)...');
-  let trustCount = 0;
-  for (const trust of INITIAL_TRUST_EVALUATIONS) {
-    await setDoc(doc(db, 'evaluations_trust', trust.id), {
-      ...trust,
-      updatedAt: new Date().toISOString()
-    }, { merge: true });
-    trustCount++;
-  }
-  console.log(`  ✓ Hoàn tất ${trustCount} phiếu đánh giá tín nhiệm.`);
+  // 7. Không nạp dữ liệu mock cho evaluations_trust (Zero Mock Data Policy)
+  console.log('\n7. Bỏ qua nạp mẫu [evaluations_trust] (Zero Mock Data Policy)...');
 
   // 8. evaluations_kpi (Chấm điểm KPI 3 cấp)
   console.log('\n8. Đang nạp dữ liệu chấm điểm KPI (evaluations_kpi)...');

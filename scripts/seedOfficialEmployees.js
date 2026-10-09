@@ -467,72 +467,8 @@ async function seedOfficialData() {
     console.log(`  ✓ [work_history] QĐ ${trans.decisionNumber} - ${trans.employeeName}`);
   }
 
-  // 3. Cập nhật phiếu đánh giá tín nhiệm mẫu tương ứng
-  console.log('\n3. Đang cập nhật phiếu đánh giá tín nhiệm tương ứng vào [evaluations_trust]...');
-  const trustSamples = [
-    {
-      id: 'trust-001',
-      periodId: 'PERIOD-2026-Q3',
-      periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-      isAnonymous: false,
-      evaluatorId: 'emp-007',
-      evaluatorName: 'Trịnh Đức Anh',
-      evaluatorRole: 'chairman',
-      targetEmployeeId: 'emp-005',
-      targetEmployeeCode: 'CB05',
-      targetEmployeeName: 'Nguyễn Hữu Nhân',
-      targetDepartment: 'Phòng Tín dụng',
-      scores: { 1: 9, 2: 9, 3: 9, 4: 10, 5: 9, 6: 9, 7: 8, 8: 10, 9: 9, 10: 9 },
-      totalScore: 91,
-      classification: 'Xuất sắc',
-      notes: 'Cán bộ mẫu mực, hoàn thành tốt chỉ tiêu tín dụng, tuân thủ nghiêm ngặt quy trình quản trị rủi ro.',
-      createdAt: '2026-09-15T09:30:00Z',
-    },
-    {
-      id: 'trust-002',
-      periodId: 'PERIOD-2026-Q3',
-      periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-      isAnonymous: true,
-      evaluatorId: 'emp-003',
-      evaluatorName: 'Cán bộ Quỹ (Ẩn danh)',
-      evaluatorRole: 'Ẩn danh',
-      targetEmployeeId: 'emp-002',
-      targetEmployeeCode: 'CB02',
-      targetEmployeeName: 'Nguyễn Thị Mến',
-      targetDepartment: 'Phòng Kế toán - Ngân quỹ',
-      scores: { 1: 9, 2: 9, 3: 10, 4: 9, 5: 9, 6: 10, 7: 8, 8: 10, 9: 9, 10: 9 },
-      totalScore: 92,
-      classification: 'Xuất sắc',
-      notes: 'Kế toán trưởng vững vàng chuyên môn, sổ sách kế toán chuẩn mực, thanh khoản vững vàng.',
-      createdAt: '2026-09-18T14:15:00Z',
-    },
-    {
-      id: 'trust-003',
-      periodId: 'PERIOD-2026-Q3',
-      periodName: 'Đánh giá tín nhiệm Quý III / 2026',
-      isAnonymous: false,
-      evaluatorId: 'emp-003',
-      evaluatorName: 'Nguyễn Văn Sơn',
-      evaluatorRole: 'manager',
-      targetEmployeeId: 'emp-001',
-      targetEmployeeCode: 'CB01',
-      targetEmployeeName: 'Nguyễn Thị Sinh',
-      targetDepartment: 'Phòng Tín dụng',
-      scores: { 1: 9, 2: 9, 3: 9, 4: 9, 5: 9, 6: 9, 7: 9, 8: 9, 9: 9, 10: 9 },
-      totalScore: 90,
-      classification: 'Xuất sắc',
-      notes: 'Thẩm định hồ sơ chặt chẽ, chính xác, không để phát sinh rủi ro tài sản bảo đảm.',
-      createdAt: '2026-09-20T10:00:00Z',
-    },
-  ];
-
-  for (const t of trustSamples) {
-    await setDoc(doc(db, 'evaluations_trust', t.id), {
-      ...t,
-      updatedAt: new Date().toISOString()
-    }, { merge: true });
-    console.log(`  ✓ [evaluations_trust] ${t.id} - ${t.targetEmployeeName}`);
-  }
+  // 3. Không gieo dữ liệu mock cho evaluations_trust (100% dữ liệu thực từ người dùng)
+  console.log('\n3. Bỏ qua gieo mẫu [evaluations_trust] (Áp dụng Zero Mock Data Policy)...');
 
   // 4. Cập nhật phiếu đánh giá KPI tương ứng
   console.log('\n4. Đang cập nhật phiếu KPI tương ứng vào [evaluations_kpi]...');

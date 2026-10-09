@@ -63,14 +63,27 @@ Toàn bộ các phân hệ con của Module Tín nhiệm tuân thủ nghiêm ng�
   - Tích hợp công cụ quản trị đợt: Nút **Tạo đợt**, **Sửa đợt**, **Xóa đợt** (bảo mật mật khẩu quản trị).
 - **Cột Phải (Detail Content - 8 đến 9/12 cột trên Desktop/Tablet)**:
   - **Tab 1: Đánh giá (`SCORING`)**: Banner tiến độ + Bộ chuyển tiêu chí + Bảng chấm điểm cán bộ xếp hàng liên tiếp theo tiêu chí (pick chọn 1..10, tự động lưu ngầm).
-  - **Tab 2: Lịch sử (`MY_VOTES`)**: Danh sách chi tiết các phiếu cá nhân người dùng đã nộp cho đồng nghiệp theo từng đợt (kèm xem chi tiết điểm từng tiêu chí).
-  - **Tab 3: Cá nhân (`MY_RESULTS`)**: Bảng điểm tổng kết cá nhân của chính mình (chỉ hiển thị khi đợt đã đóng/công bố theo quy chế).
-  - **Tab 4: Tổng quan (`OVERVIEW`)**: Báo cáo tổng thể phân bổ xếp loại toàn Quỹ, danh sách cử tri đã nộp / chưa nộp, tích hợp trọn vẹn nút **In biên bản A4** và **Xuất Excel**.
+  - **Tab 2: Lịch sử (`MY_VOTES`)**: Lịch sử các đợt đánh giá của Cá nhân, hỗ trợ xem theo từng đợt được chọn hoặc tùy chọn "Tất cả các đợt đánh giá" (`allowSelectAll`), hiển thị chi tiết điểm và đánh giá đã nộp. Cột chức vụ được gộp tinh gọn dưới tên cán bộ để chống tràn ngang.
+  - **Tab 3: Cá nhân (`MY_RESULTS`)**: Bảng điểm tổng kết cá nhân của chính mình (chỉ hiển thị khi đợt đã đóng/công bố theo quy chế). Tự động phân tích điểm trung bình từng tiêu chí, gắn huy hiệu nổi bật **Cao nhất** (xanh lá) và **Thấp nhất** (hổ phách). Khi bấm vào bất kỳ dòng tiêu chí nào, hệ thống mở rộng chi tiết danh sách cử tri đã chấm điểm theo đúng cấu hình Đợt (**Ẩn danh** hiển thị `Cử tri #X (Bỏ phiếu kín)` hoặc **Công khai** hiển thị họ tên cử tri).
+  - **Tab 4: Tổng quan (`OVERVIEW`)**: Báo cáo tổng thể phân bổ xếp loại toàn Quỹ, danh sách cử tri đã nộp / chưa nộp phản ánh 100% dữ liệu thực tế từ CSDL Firestore (triệt tiêu toàn bộ mock data). Cột chức vụ được gộp tinh gọn dưới họ tên cán bộ. Khi bấm xem chi tiết cán bộ trong bảng kết quả, modal `EmployeeTrustDetailModal` hiển thị bảng điểm tiêu chí trực quan với đầy đủ cột điểm trung bình, huy hiệu Cao nhất/Thấp nhất và cơ chế click xem danh sách cử tri chấm điểm.
   - **Tab 5: Cấu hình (`CRITERIA_SETTINGS`)**: Cấu hình độc lập cho từng đợt đánh giá (`period_configs`), nút Lưu cấu hình nổi bật ở Header Card và **Sticky Bottom Action Toolbar** cố định đáy màn hình.
   - **Tab 6: Phân quyền (`PERMISSIONS_SETTINGS`)**: Ma trận phân quyền RBAC chuyên biệt của Phân hệ Tín nhiệm.
 - **Thanh Menu Tinh Gọn**:
   - Desktop/iPad: Thanh tab ngang tinh gọn `TrustModuleTabsNav.jsx`, triệt tiêu 100% header rườm rà.
   - Mobile: Thanh Bottom Navigation `TrustBottomNav.jsx` cho phép chuyển tab 1 chạm, tự động xếp chồng (stack) dọc mượt mà.
+
+---
+
+## 🔍 5.1. CHI TIẾT ĐIỂM TIÊU CHÍ & CƠ CHẾ ĐỐI SOÁT DRILLDOWN
+1. **Tinh giản cột hiển thị**:
+   - Loại bỏ các cột không cần thiết: `Nhóm năng lực`, `Điểm Min`, `Điểm Max`.
+   - Giữ lại các cột cốt lõi: Mã tiêu chí, Tên tiêu chí, Điểm trung bình, Đánh giá phân loại.
+2. **Nhận diện Tiêu chí Cao nhất / Thấp nhất**:
+   - Tự động tìm `maxScore` và `minScore` trong các tiêu chí có điểm hợp lệ ($> 0$).
+   - Gắn huy hiệu: `Cao nhất` (Badge xanh lá `bg-emerald-50 text-emerald-700`) và `Thấp nhất` (Badge hổ phách `bg-amber-50 text-amber-700`).
+3. **Drilldown Chi tiết Cử tri Chấm điểm**:
+   - Khi bấm vào dòng tiêu chí: Hiển thị danh sách phân rã toàn bộ các lượt chấm điểm của các cử tri đối với tiêu chí đó.
+   - Tuân thủ nghiêm ngặt bảo mật: Nếu đợt đánh giá là `ANONYMOUS` (Ẩn danh), hiển thị `"Cử tri #X (Bỏ phiếu kín)"` (chỉ tài khoản Quản trị cấp cao / Admin đối soát mới có quyền xem thông tin kiểm toán); nếu là `PUBLIC` (Công khai), hiển thị họ tên đầy đủ và chức vụ cử tri.
 
 ---
 

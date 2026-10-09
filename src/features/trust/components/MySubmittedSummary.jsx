@@ -27,6 +27,7 @@ const MySubmittedSummary = ({
   evaluations = [],
   currentUser,
   currentPeriod,
+  selectedPeriodId = '',
   periods = [],
   criteria = [],
 }) => {
@@ -66,7 +67,9 @@ const MySubmittedSummary = ({
   const filteredSubmissions = useMemo(() => {
     let list = myAllSubmissions;
 
-    if (currentPeriod?.id) {
+    if (selectedPeriodId && selectedPeriodId !== 'ALL') {
+      list = list.filter((ev) => ev.periodId === selectedPeriodId);
+    } else if (selectedPeriodId !== 'ALL' && currentPeriod?.id) {
       list = list.filter((ev) => ev.periodId === currentPeriod.id);
     }
 
@@ -85,7 +88,7 @@ const MySubmittedSummary = ({
       const dateB = new Date(b.submittedAt || b.createdAt || 0);
       return dateB - dateA;
     });
-  }, [myAllSubmissions, currentPeriod?.id, searchTerm]);
+  }, [myAllSubmissions, selectedPeriodId, currentPeriod?.id, searchTerm]);
 
   // Tính điểm trung bình chung mà người dùng đã đánh giá
   const overallAverageGiven = useMemo(() => {
@@ -111,7 +114,7 @@ const MySubmittedSummary = ({
         {/* Thống kê nhanh */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <span className="text-xs font-semibold text-slate-600">
-            Tổng số: <strong className="text-teal-900 font-bold">{filteredSubmissions.length}</strong> phiếu đã nộp
+            {selectedPeriodId === 'ALL' ? 'Toàn bộ đợt:' : 'Đợt này:'} <strong className="text-teal-900 font-bold">{filteredSubmissions.length}</strong> phiếu đã nộp
           </span>
           {filteredSubmissions.length > 0 && (
             <>
@@ -155,8 +158,7 @@ const MySubmittedSummary = ({
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-3 text-center w-12">TT</th>
-                  <th className="py-3 px-4 min-w-[180px]">Cán bộ được đánh giá</th>
-                  <th className="py-3 px-4 min-w-[140px]">Chức vụ</th>
+                  <th className="py-3 px-4 min-w-[200px]">Cán bộ được đánh giá</th>
                   <th className="py-3 px-4 text-center min-w-[110px]">Điểm TB đã cho</th>
                   <th className="py-3 px-4 min-w-[140px]">Thời gian nộp</th>
                   <th className="py-3 px-4 min-w-[160px]">Ghi chú</th>
@@ -175,10 +177,13 @@ const MySubmittedSummary = ({
                         <div className="font-bold text-slate-900 text-xs sm:text-sm">
                           {sub.targetEmployeeName}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-slate-700">
-                          {sub.targetPosition || 'Cán bộ'}
+                        <div className="text-[11px] text-slate-500 font-medium flex items-center gap-2 mt-0.5">
+                          <span>{sub.targetPosition || 'Cán bộ'}</span>
+                          {selectedPeriodId === 'ALL' && (
+                            <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                              {periodMap.get(sub.periodId)?.name || sub.periodName || 'Đợt đánh giá'}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-center">

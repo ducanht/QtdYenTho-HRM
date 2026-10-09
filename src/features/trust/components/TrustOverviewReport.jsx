@@ -45,17 +45,33 @@ const TrustOverviewReport = ({
       };
     }
 
-    // 1. Danh sách cử tri đã nộp phiếu (không trùng lặp)
+    // 1. Danh sách cử tri đã nộp phiếu (không trùng lặp, chỉ lấy cán bộ thực tế)
     const submittedVoterMap = new Map();
     evaluations
       .filter((ev) => ev.periodId === currentPeriod.id && !ev.isDraft)
       .forEach((ev) => {
-        if (!submittedVoterMap.has(ev.evaluatorId)) {
-          submittedVoterMap.set(ev.evaluatorId, {
-            id: ev.evaluatorId,
-            name: ev.evaluatorName,
-            submittedAt: ev.submittedAt || ev.createdAt,
-          });
+        // Tìm cán bộ nhân viên thực tế trong danh sách
+        const matchedEmp = employees.find(
+          (e) => e.id === ev.evaluatorId || e.uid === ev.evaluatorId || (ev.evaluatorEmail && e.email?.toLowerCase() === ev.evaluatorEmail?.toLowerCase())
+        );
+        if (matchedEmp) {
+          if (!submittedVoterMap.has(matchedEmp.id)) {
+            submittedVoterMap.set(matchedEmp.id, {
+              id: matchedEmp.id,
+              name: matchedEmp.name,
+              position: matchedEmp.position,
+              submittedAt: ev.submittedAt || ev.createdAt,
+            });
+          }
+        } else if (ev.evaluatorName && ev.evaluatorId !== 'anonymous' && !ev.evaluatorName.includes('Ẩn danh')) {
+          if (!submittedVoterMap.has(ev.evaluatorId)) {
+            submittedVoterMap.set(ev.evaluatorId, {
+              id: ev.evaluatorId,
+              name: ev.evaluatorName,
+              position: ev.evaluatorPosition || 'Cán bộ',
+              submittedAt: ev.submittedAt || ev.createdAt,
+            });
+          }
         }
       });
 
@@ -314,8 +330,7 @@ const TrustOverviewReport = ({
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4 w-12 text-center">Hạng</th>
-                  <th className="py-3 px-4 min-w-[180px]">Họ và tên cán bộ</th>
-                  <th className="py-3 px-4 min-w-[150px]">Chức vụ</th>
+                  <th className="py-3 px-4 min-w-[200px]">Họ và tên cán bộ</th>
                   <th className="py-3 px-4 text-center min-w-[100px]">Số phiếu nhận</th>
                   <th className="py-3 px-4 text-center min-w-[120px]">Điểm trung bình (Thang 10)</th>
                   <th className="py-3 px-4 text-center min-w-[120px]">Điểm quy đổi (Thang 100)</th>
@@ -331,9 +346,7 @@ const TrustOverviewReport = ({
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-bold text-slate-900 text-xs sm:text-sm">{row.name}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{row.position || 'Cán bộ'}</div>
+                      <div className="text-[11px] text-slate-500 font-medium">{row.position || 'Cán bộ'}</div>
                     </td>
                     <td className="py-3 px-4 text-center font-semibold text-slate-700">
                       {row.evaluationsCount} phiếu

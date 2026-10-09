@@ -869,6 +869,7 @@ const TrustEvaluationContainer = () => {
               selectedPeriodId={selectedPeriodId}
               onSelectPeriod={setSelectedPeriodId}
               title="Đợt Đánh Giá"
+              allowSelectAll={true}
               badgeRenderer={(p) => {
                 const count = evaluations.filter(
                   (ev) =>
@@ -879,8 +880,12 @@ const TrustEvaluationContainer = () => {
                     !ev.isDraft
                 ).length;
                 return (
-                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {count} phiếu
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    count > 0
+                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                      : 'text-slate-400 bg-slate-100'
+                  }`}>
+                    {count > 0 ? `Đã nộp (${count})` : 'Chưa nộp'}
                   </span>
                 );
               }}
@@ -893,6 +898,7 @@ const TrustEvaluationContainer = () => {
               evaluations={evaluations}
               currentUser={currentUser}
               currentPeriod={currentPeriod}
+              selectedPeriodId={selectedPeriodId}
               periods={periods}
               criteria={activeCriteria}
             />

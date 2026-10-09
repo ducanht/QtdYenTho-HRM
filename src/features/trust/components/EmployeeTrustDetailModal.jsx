@@ -9,7 +9,11 @@ import {
   CheckCircle2, 
   FileText,
   Clock,
-  MessageSquare
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
@@ -32,6 +36,9 @@ const EmployeeTrustDetailModal = ({
 }) => {
   // Trạng thái bật/tắt hiển thị danh tính cử tri (mặc định bật cho Admin)
   const [showVoterIdentity, setShowVoterIdentity] = useState(true);
+
+  // Tiêu chí đang được chọn để xem chi tiết điểm từng cử tri
+  const [selectedCriterionId, setSelectedCriterionId] = useState(null);
 
   // Lọc tất cả các phiếu đánh giá chấm cho cán bộ này trong kỳ hiện tại
   const receivedEvaluations = useMemo(() => {
@@ -73,6 +80,17 @@ const EmployeeTrustDetailModal = ({
       };
     });
   }, [criteria, receivedEvaluations]);
+
+  // Tìm điểm trung bình cao nhất và thấp nhất trong các tiêu chí
+  const { maxAvgScore, minAvgScore } = useMemo(() => {
+    if (!criteriaAnalysis.length) return { maxAvgScore: null, minAvgScore: null };
+    const validScores = criteriaAnalysis.map((c) => c.avg).filter((s) => !isNaN(s) && s > 0);
+    if (!validScores.length) return { maxAvgScore: null, minAvgScore: null };
+    return {
+      maxAvgScore: Math.max(...validScores),
+      minAvgScore: Math.min(...validScores),
+    };
+  }, [criteriaAnalysis]);
 
   // Điểm trung bình toàn diện
   const overallStats = useMemo(() => {
@@ -208,39 +226,166 @@ const EmployeeTrustDetailModal = ({
 
         {/* 3. Bảng điểm trung bình theo 10 tiêu chí chuẩn NHNN */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-[#0f766e]" />
-            <span>1. Thống Kê Điểm Trung Bình Theo 10 Tiêu Chí Chuẩn NHNN</span>
-          </h4>
+          <div className="flex items-center justify-between pb-1">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Award className="w-4 h-4 text-[#0f766e]" />
+              <span>1. Thống Kê Điểm Trung Bình Theo 10 Tiêu Chí Chuẩn NHNN</span>
+            </h4>
+            <span className="text-[11px] text-slate-500 italic hidden sm:inline">
+              (Bấm vào từng tiêu chí để xem chi tiết điểm cử tri đã chấm)
+            </span>
+          </div>
+
           <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-2xs">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
-                  <th className="py-2.5 px-3 w-12 text-center">Mã</th>
-                  <th className="py-2.5 px-3">Tiêu chí đánh giá</th>
-                  <th className="py-2.5 px-3">Nhóm năng lực</th>
-                  <th className="py-2.5 px-3 text-center w-20">Điểm Min</th>
-                  <th className="py-2.5 px-3 text-center w-20">Điểm Max</th>
-                  <th className="py-2.5 px-3 text-center w-28">Điểm Trung Bình</th>
+                  <th className="py-2.5 px-3 w-14 text-center">Mã</th>
+                  <th className="py-2.5 px-3 min-w-[240px]">Tiêu chí đánh giá</th>
+                  <th className="py-2.5 px-3 text-center min-w-[150px]">Điểm Trung Bình</th>
+                  <th className="py-2.5 px-3 text-center w-28">Chi tiết</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {criteriaAnalysis.map((crit, idx) => (
-                  <tr key={crit.id || idx} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-2 px-3 text-center font-mono font-bold text-emerald-700">
-                      {crit.code || `TC${idx + 1}`}
-                    </td>
-                    <td className="py-2 px-3 font-semibold text-slate-900">{crit.title}</td>
-                    <td className="py-2 px-3 text-slate-500 text-[11px]">{crit.group}</td>
-                    <td className="py-2 px-3 text-center text-slate-600 font-medium">{crit.min}đ</td>
-                    <td className="py-2 px-3 text-center text-slate-600 font-medium">{crit.max}đ</td>
-                    <td className="py-2 px-3 text-center">
-                      <span className="font-black text-[#0f766e] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
-                        {crit.avg} / 10
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {criteriaAnalysis.map((crit, idx) => {
+                  const isExpanded = selectedCriterionId === crit.id;
+                  const isMax = crit.avg === maxAvgScore && crit.avg > 0;
+                  const isMin = crit.avg === minAvgScore && crit.avg > 0 && minAvgScore !== maxAvgScore;
+
+                  // Danh sách chi tiết điểm cử tri đã chấm cho riêng tiêu chí này
+                  const votersForCrit = receivedEvaluations.map((ev, vIdx) => {
+                    const score = ev.scores?.[crit.id];
+                    const isAnonymous = currentPeriod?.votingMode === 'ANONYMOUS' || currentPeriod?.votingMode === 'ANONYMOUS_ONLY';
+                    let voterName = '';
+                    let voterRole = '';
+
+                    if (isAdmin && showVoterIdentity) {
+                      voterName = ev.evaluatorName || `Cán bộ Quỹ #${vIdx + 1}`;
+                      voterRole = ev.evaluatorPosition || 'Cán bộ';
+                    } else if (!isAnonymous) {
+                      voterName = ev.evaluatorName || `Cán bộ Quỹ #${vIdx + 1}`;
+                      voterRole = ev.evaluatorPosition || 'Cán bộ';
+                    } else {
+                      voterName = `Cử tri #${vIdx + 1} (Bỏ phiếu kín)`;
+                      voterRole = 'Ẩn danh';
+                    }
+
+                    return {
+                      voterName,
+                      voterRole,
+                      score: score !== undefined ? Number(score) : null,
+                      notes: ev.notes || '',
+                      submittedAt: ev.submittedAt || ev.createdAt,
+                    };
+                  });
+
+                  return (
+                    <React.Fragment key={crit.id || idx}>
+                      <tr
+                        onClick={() => setSelectedCriterionId(isExpanded ? null : crit.id)}
+                        className={`cursor-pointer transition-colors ${
+                          isExpanded ? 'bg-teal-50/60' : 'hover:bg-slate-50/70'
+                        }`}
+                      >
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-emerald-700">
+                          {crit.code || `TC${idx + 1}`}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <div className="font-semibold text-slate-900 flex flex-wrap items-center gap-1.5">
+                            <span>{crit.title}</span>
+                            {isMax && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                <TrendingUp className="w-3 h-3 text-emerald-700" />
+                                Cao nhất
+                              </span>
+                            )}
+                            {isMin && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+                                <TrendingDown className="w-3 h-3 text-amber-700" />
+                                Thấp nhất
+                              </span>
+                            )}
+                          </div>
+                          {crit.description && (
+                            <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                              {crit.description}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`font-black text-xs px-2.5 py-1 rounded-xl border ${
+                            isMax
+                              ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
+                              : isMin
+                              ? 'text-amber-800 bg-amber-50 border-amber-300'
+                              : 'text-teal-800 bg-teal-50 border-teal-200'
+                          }`}>
+                            {crit.avg} / 10
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            type="button"
+                            className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border transition-colors cursor-pointer ${
+                              isExpanded
+                                ? 'bg-teal-700 text-white border-teal-700'
+                                : 'text-teal-700 bg-white border-teal-200 hover:bg-teal-50'
+                            }`}
+                          >
+                            <span>{isExpanded ? 'Đóng' : 'Xem điểm'}</span>
+                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Khối xem chi tiết điểm từng cử tri chấm cho tiêu chí này */}
+                      {isExpanded && (
+                        <tr className="bg-teal-50/40">
+                          <td colSpan={4} className="p-3 sm:p-4">
+                            <div className="bg-white rounded-xl border border-teal-200 shadow-2xs p-3.5 space-y-3 animate-in fade-in duration-150">
+                              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                                <div className="text-xs font-bold text-teal-950 flex items-center gap-1.5">
+                                  <Users className="w-4 h-4 text-[#0f766e]" />
+                                  <span>Điểm cử tri đánh giá tiêu chí: <strong className="text-[#0f766e]">{crit.title}</strong></span>
+                                </div>
+                                <div className="text-[11px] text-slate-500">
+                                  Tổng số: <strong className="text-slate-800">{votersForCrit.length} phiếu</strong> • Điểm TB: <strong className="text-teal-800 font-bold">{crit.avg}/10</strong>
+                                </div>
+                              </div>
+
+                              {votersForCrit.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-slate-400 italic">
+                                  Chưa có phiếu đánh giá nào cho tiêu chí này.
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                  {votersForCrit.map((voter, vIdx) => (
+                                    <div
+                                      key={vIdx}
+                                      className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60 flex items-center justify-between gap-2"
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="font-bold text-slate-900 text-xs truncate">
+                                          {voter.voterName}
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 truncate">
+                                          {voter.voterRole}
+                                        </div>
+                                      </div>
+                                      <span className="text-xs font-black text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-lg shrink-0">
+                                        {voter.score !== null ? `${voter.score} / 10` : '—'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
