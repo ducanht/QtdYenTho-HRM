@@ -50,10 +50,6 @@ service cloud.firestore {
       );
     }
 
-    // Giữ alias tương thích
-    function isManagerOrChairman() {
-      return isBoardOrAdmin();
-    }
 
     // 5. Kiểm tra quyền sở hữu hồ sơ (hỗ trợ cả UID, authUid và email)
     function isOwner(userId) {
