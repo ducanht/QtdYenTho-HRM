@@ -171,7 +171,7 @@ const TrustOverviewReport = ({
           Kỳ Đánh Giá Đang Được Tiến Hành
         </h3>
         <p className="text-xs text-slate-500 leading-relaxed">
-          Báo cáo tổng hợp toàn Quỹ sẽ được công bố khi kỳ đánh giá chính thức khép lại. Hiện tại đồng chí có thể xem lại các phiếu mình đã nộp tại tab <strong>"2. Phiếu Tôi Đã Nộp"</strong>.
+          Báo cáo tổng hợp toàn Quỹ sẽ được công bố khi kỳ đánh giá chính thức khép lại. Hiện tại đồng chí có thể xem lại các phiếu mình đã nộp tại tab <strong>"Lịch sử"</strong>.
         </p>
       </div>
     );

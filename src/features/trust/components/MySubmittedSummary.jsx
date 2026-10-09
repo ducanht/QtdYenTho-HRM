@@ -30,16 +30,8 @@ const MySubmittedSummary = ({
   periods = [],
   criteria = [],
 }) => {
-  // Bộ lọc theo đợt đánh giá (mặc định là đợt hiện hành, hoặc 'ALL' cho tất cả)
-  const [filterPeriodId, setFilterPeriodId] = useState(currentPeriod?.id || 'ALL');
+  // Tìm kiếm cán bộ đã chấm
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Tự động đồng bộ đợt đánh giá khi người dùng chọn từ Cột Trái (Sidebar)
-  React.useEffect(() => {
-    if (currentPeriod?.id) {
-      setFilterPeriodId(currentPeriod.id);
-    }
-  }, [currentPeriod?.id]);
   
   // Modal xem chi tiết điểm từng tiêu chí của 1 phiếu đã nộp
   const [selectedSubmissionForDetail, setSelectedSubmissionForDetail] = useState(null);
@@ -70,12 +62,12 @@ const MySubmittedSummary = ({
     );
   }, [evaluations, currentUser]);
 
-  // Lọc theo đợt và từ khóa tìm kiếm cán bộ
+  // Lọc theo đợt đang chọn ở Cột Trái và từ khóa tìm kiếm cán bộ
   const filteredSubmissions = useMemo(() => {
     let list = myAllSubmissions;
 
-    if (filterPeriodId && filterPeriodId !== 'ALL') {
-      list = list.filter((ev) => ev.periodId === filterPeriodId);
+    if (currentPeriod?.id) {
+      list = list.filter((ev) => ev.periodId === currentPeriod.id);
     }
 
     if (searchTerm.trim()) {
@@ -93,7 +85,7 @@ const MySubmittedSummary = ({
       const dateB = new Date(b.submittedAt || b.createdAt || 0);
       return dateB - dateA;
     });
-  }, [myAllSubmissions, filterPeriodId, searchTerm]);
+  }, [myAllSubmissions, currentPeriod?.id, searchTerm]);
 
   // Tính điểm trung bình chung mà người dùng đã đánh giá
   const overallAverageGiven = useMemo(() => {
@@ -114,51 +106,32 @@ const MySubmittedSummary = ({
 
   return (
     <div className="space-y-4">
-      {/* 1. Thanh công cụ & Bộ lọc đợt */}
+      {/* 1. Thanh công cụ tinh gọn (Không lặp lại bộ chọn đợt đã có ở Cột Trái) */}
       <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Bộ chọn đợt */}
+        {/* Thống kê nhanh */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
-              <Calendar className="w-4 h-4 text-[#0f766e]" />
-              Đợt đánh giá:
-            </span>
-            <select
-              value={filterPeriodId}
-              onChange={(e) => setFilterPeriodId(e.target.value)}
-              className="text-xs sm:text-sm font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 shadow-2xs cursor-pointer hover:border-teal-500"
-            >
-              <option value="ALL">Tất cả các đợt ({myAllSubmissions.length} phiếu)</option>
-              {periods.map((p) => {
-                const countInPeriod = myAllSubmissions.filter((s) => s.periodId === p.id).length;
-                return (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({countInPeriod} phiếu)
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          <span className="text-xs font-semibold text-slate-500">
-            Tổng cộng: <strong className="text-teal-900 font-bold">{filteredSubmissions.length}</strong> phiếu đã nộp
+          <span className="text-xs font-semibold text-slate-600">
+            Tổng số: <strong className="text-teal-900 font-bold">{filteredSubmissions.length}</strong> phiếu đã nộp
           </span>
           {filteredSubmissions.length > 0 && (
-            <span className="text-xs font-semibold text-slate-500">
-              • Điểm TB đã cho: <strong className="text-teal-900 font-bold">{overallAverageGiven}/10</strong>
-            </span>
+            <>
+              <span className="text-slate-300">•</span>
+              <span className="text-xs font-semibold text-slate-600">
+                Điểm TB đã cho: <strong className="text-teal-900 font-bold">{overallAverageGiven}/10</strong>
+              </span>
+            </>
           )}
         </div>
 
         {/* Ô tìm kiếm nhanh */}
-        <div className="relative w-full sm:w-56 shrink-0">
+        <div className="relative w-full sm:w-64 shrink-0">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Tìm cán bộ đã chấm..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 bg-white"
+            className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0f766e]/30 bg-white"
           />
         </div>
       </div>
@@ -184,7 +157,6 @@ const MySubmittedSummary = ({
                   <th className="py-3 px-3 text-center w-12">TT</th>
                   <th className="py-3 px-4 min-w-[180px]">Cán bộ được đánh giá</th>
                   <th className="py-3 px-4 min-w-[140px]">Chức vụ</th>
-                  <th className="py-3 px-4 min-w-[140px]">Kỳ đánh giá</th>
                   <th className="py-3 px-4 text-center min-w-[110px]">Điểm TB đã cho</th>
                   <th className="py-3 px-4 min-w-[140px]">Thời gian nộp</th>
                   <th className="py-3 px-4 min-w-[160px]">Ghi chú</th>
@@ -195,7 +167,6 @@ const MySubmittedSummary = ({
                 {filteredSubmissions.map((sub, idx) => {
                   const scoreVals = Object.values(sub.scores || {}).map(Number).filter((s) => !isNaN(s) && s > 0);
                   const avg = scoreVals.length > 0 ? (scoreVals.reduce((a, b) => a + b, 0) / scoreVals.length).toFixed(1) : 0;
-                  const pInfo = periodMap.get(sub.periodId);
 
                   return (
                     <tr key={sub.id || idx} className="hover:bg-slate-50 transition-colors">
@@ -209,11 +180,6 @@ const MySubmittedSummary = ({
                         <div className="font-medium text-slate-700">
                           {sub.targetPosition || 'Cán bộ'}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
-                          {pInfo?.name || sub.periodName || 'Đợt đánh giá'}
-                        </span>
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className="text-xs font-black text-teal-800 bg-teal-50 px-2.5 py-1 rounded-xl border border-teal-200">
@@ -248,7 +214,6 @@ const MySubmittedSummary = ({
             {filteredSubmissions.map((sub, idx) => {
               const scoreVals = Object.values(sub.scores || {}).map(Number).filter((s) => !isNaN(s) && s > 0);
               const avg = scoreVals.length > 0 ? (scoreVals.reduce((a, b) => a + b, 0) / scoreVals.length).toFixed(1) : 0;
-              const pInfo = periodMap.get(sub.periodId);
 
               return (
                 <div key={sub.id || idx} className="p-3.5 space-y-2 hover:bg-slate-50/50 transition-colors">
@@ -271,13 +236,10 @@ const MySubmittedSummary = ({
                     </span>
                   </div>
 
-                  {/* Hàng 2: Kỳ đánh giá & Ngày nộp */}
-                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2 pt-1 border-t border-slate-100">
-                    <span className="font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                      {pInfo?.name || sub.periodName || 'Đợt đánh giá'}
-                    </span>
-                    <span className="text-slate-400">
-                      {formatDateTimeVN(sub.submittedAt || sub.createdAt)}
+                  {/* Hàng 2: Thời gian nộp */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                    <span className="text-slate-500">
+                      Thời gian nộp: <strong className="text-slate-700 font-semibold">{formatDateTimeVN(sub.submittedAt || sub.createdAt)}</strong>
                     </span>
                   </div>
 
