@@ -441,10 +441,26 @@ export const savePeriodConfig = async (periodId, configData) => {
   });
 
   const nowIso = new Date().toISOString();
+
+  // Làm sạch mảng criteria nếu có để đảm bảo 100% không chứa undefined
+  const sanitizedCriteria = Array.isArray(cleanData.criteria)
+    ? cleanData.criteria.map((c) => ({
+        id: c.id,
+        code: c.code || '',
+        title: c.title || '',
+        description: c.description || '',
+        group: c.group || 'Năng lực chuyên môn',
+        maxScore: Number(c.maxScore) || 10,
+        minScore: Number(c.minScore) || 0,
+        weight: Number(c.weight) || 10,
+      }))
+    : undefined;
+
   const configPayload = {
     ...cleanData,
     id: periodId,
     periodId,
+    ...(sanitizedCriteria ? { criteria: sanitizedCriteria } : {}),
     updatedAt: nowIso,
     serverTime: serverTimestamp(),
   };
@@ -459,10 +475,10 @@ export const savePeriodConfig = async (periodId, configData) => {
       updatedAt: nowIso,
     };
     if (cleanData.votingMode !== undefined) periodSyncData.votingMode = cleanData.votingMode;
-    if (cleanData.allowSelfEvaluation !== undefined) periodSyncData.allowSelfEvaluation = cleanData.allowSelfEvaluation;
+    if (cleanData.allowSelfEvaluation !== undefined) periodSyncData.allowSelfEvaluation = Boolean(cleanData.allowSelfEvaluation);
     if (cleanData.targetEmployeeIds !== undefined) periodSyncData.targetEmployeeIds = cleanData.targetEmployeeIds;
     if (cleanData.voterEmployeeIds !== undefined) periodSyncData.voterEmployeeIds = cleanData.voterEmployeeIds;
-    if (cleanData.criteria !== undefined) periodSyncData.customCriteria = cleanData.criteria;
+    if (sanitizedCriteria !== undefined) periodSyncData.customCriteria = sanitizedCriteria;
     if (
       cleanData.excellentThreshold !== undefined ||
       cleanData.goodThreshold !== undefined ||
@@ -471,18 +487,28 @@ export const savePeriodConfig = async (periodId, configData) => {
       cleanData.goodMinCrit !== undefined ||
       cleanData.weakVotesThresholdPercent !== undefined
     ) {
+      const excNum = Number(cleanData.excellentThreshold ?? 90);
+      const goodNum = Number(cleanData.goodThreshold ?? 70);
+      const passNum = Number(cleanData.passThreshold ?? 50);
+      const excMin = Number(cleanData.excellentMinCrit ?? 7);
+      const goodMin = Number(cleanData.goodMinCrit ?? 5);
+      const weakPct = Number(cleanData.weakVotesThresholdPercent ?? 50);
+
       periodSyncData.thresholds = {
-        excellent: cleanData.excellentThreshold ?? 90,
-        excellentMinCrit: cleanData.excellentMinCrit ?? 7,
-        good: cleanData.goodThreshold ?? 70,
-        goodMinCrit: cleanData.goodMinCrit ?? 5,
-        pass: cleanData.passThreshold ?? 50,
-        weakVotesThresholdPercent: cleanData.weakVotesThresholdPercent ?? 50,
+        excellent: excNum,
+        excellentMinCrit: excMin,
+        good: goodNum,
+        goodMinCrit: goodMin,
+        pass: passNum,
+        weakVotesThresholdPercent: weakPct,
       };
+      periodSyncData.excellentThreshold = excNum;
+      periodSyncData.goodThreshold = goodNum;
+      periodSyncData.passThreshold = passNum;
     }
 
-    if (cleanData.periodName) periodSyncData.name = cleanData.periodName;
-    if (cleanData.name) periodSyncData.name = cleanData.name;
+    if (cleanData.periodName) periodSyncData.name = cleanData.periodName.trim();
+    if (cleanData.name) periodSyncData.name = cleanData.name.trim();
     if (cleanData.status) periodSyncData.status = cleanData.status;
 
     await setDoc(doc(db, 'evaluation_periods', periodId), periodSyncData, { merge: true });

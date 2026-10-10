@@ -185,3 +185,22 @@ Thư viện dùng chung tại `src/lib/exportUtils.js` cung cấp hạ tầng xu
    - Khởi chạy ứng dụng tức thì 0ms, đảm bảo tải nhanh trên mạng di động 4G/5G.
 4. **An Toàn Mã Nguồn & Chống XSS**:
    - 100% không sử dụng `dangerouslySetInnerHTML`, `eval` hay `innerHTML`. Toàn bộ dữ liệu người dùng được escape và kiểm soát qua React JSX thuần túy.
+
+---
+
+## 💾 12. ĐỒNG BỘ CẤU HÌNH ĐỢT BỀN VỮNG TRÊN FIRESTORE & PHẢN HỒI SIDEBAR/TABS TỨC THÌ (v3.9)
+
+1. **Khắc Phục Triệt Để Race Condition Khi Nhập Liệu Cấu Hình**:
+   - Cơ chế `activePeriodIdRef`, `isDirtyRef.current` và hàm `updateLocalConfig`: Ngăn chặn snapshot Firestore tải chậm (~200ms) ghi đè lại giá trị cũ khi người dùng đang nhập liệu các ô ngưỡng điểm, quy chế bỏ phiếu, hoặc danh sách cử tri/đối tượng.
+   - Chỉ đồng bộ tự động từ Firestore khi chuyển sang đợt khác hoặc khi người dùng chưa có chỉnh sửa dở dang (`!isDirtyRef.current`).
+2. **Đồng Bộ Hai Chiều & Chống Lỗi CSDL Firestore**:
+   - Hàm `savePeriodConfig` trong `services.js`:
+     + Làm sạch sâu toàn bộ mảng `criteria` (`sanitizedCriteria`), triệt tiêu 100% giá trị `undefined` gây lỗi Firestore `Unsupported field value: undefined`.
+     + Lưu đồng thời vào bộ sưu tập riêng `period_configs` và đồng bộ 2 chiều vào `evaluation_periods`.
+     + Ghi nhận đồng thời cả cấu trúc lồng nhau `thresholds: { excellent, excellentMinCrit, good, goodMinCrit, pass, weakVotesThresholdPercent }` lẫn các trường phẳng (`excellentThreshold`, `goodThreshold`, `passThreshold`).
+   - Cung cấp `effectivePeriod` gộp đầy đủ cấu hình riêng biệt truyền vào component `TrustCriteriaSettings`, đảm bảo hiển thị đúng 100% cấu hình đã lưu sau khi tải lại trang (F5).
+3. **Phản Hồi Sidebar & Điều Hướng Tabs Mượt Mà**:
+   - Sửa lỗi Tab Cấu hình: Cho phép truy cập khi `canManageCriteria || canManagePeriods`, đồng bộ giữa `TrustModuleTabsNav`, `TrustBottomNav` và `TrustEvaluationContainer`.
+   - Bổ sung quyền `MANAGE_CRITERIA` cho vai trò Giám đốc (`manager`) trong ma trận `DEFAULT_ROLE_PERMISSIONS.trust`.
+   - Bảo toàn trạng thái chọn `'ALL'` (Tất cả các đợt đánh giá) trong `subscribeEvaluationPeriods` khi chuyển tab Lịch sử.
+   - Sửa bộ lọc năm trong `PeriodMasterSidebar` sang so sánh số `Number(p.year) === Number(filterYear)`, bổ sung thuộc tính accessibility `role="button"` và phản hồi xúc giác `active:scale-[0.99]`.

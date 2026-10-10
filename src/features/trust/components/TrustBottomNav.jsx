@@ -52,7 +52,7 @@ const TrustBottomNav = ({
       id: 'CRITERIA_SETTINGS',
       label: 'Cấu hình',
       icon: Sliders,
-      visible: canManageCriteria,
+      visible: canManageCriteria || canManagePeriods,
     },
     {
       id: 'PERMISSIONS_SETTINGS',

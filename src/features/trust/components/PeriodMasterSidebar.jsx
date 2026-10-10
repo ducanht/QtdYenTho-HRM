@@ -34,7 +34,7 @@ const PeriodMasterSidebar = ({
   // Lọc danh sách đợt theo năm được chọn
   const filteredPeriods = useMemo(() => {
     if (filterYear === 'ALL') return periods;
-    return periods.filter((p) => p.year === Number(filterYear));
+    return periods.filter((p) => Number(p.year) === Number(filterYear));
   }, [periods, filterYear]);
 
   return (
@@ -96,8 +96,10 @@ const PeriodMasterSidebar = ({
       <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
         {allowSelectAll && (
           <div
+            role="button"
+            tabIndex={0}
             onClick={() => onSelectPeriod && onSelectPeriod('ALL')}
-            className={`p-3 rounded-xl border transition-all cursor-pointer text-left relative group ${
+            className={`p-3 rounded-xl border transition-all cursor-pointer text-left relative group select-none touch-manipulation active:scale-[0.99] ${
               selectedPeriodId === 'ALL'
                 ? 'bg-teal-50/80 border-teal-600 ring-2 ring-teal-500/20 shadow-2xs'
                 : 'bg-slate-50/60 border-slate-200 hover:bg-white hover:border-slate-300'
@@ -129,8 +131,10 @@ const PeriodMasterSidebar = ({
             return (
               <div
                 key={p.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectPeriod && onSelectPeriod(p.id)}
-                className={`p-3 rounded-xl border transition-all cursor-pointer text-left relative group ${
+                className={`p-3 rounded-xl border transition-all cursor-pointer text-left relative group select-none touch-manipulation active:scale-[0.99] ${
                   isSelected
                     ? 'bg-teal-50/80 border-teal-600 ring-2 ring-teal-500/20 shadow-2xs'
                     : 'bg-slate-50/60 border-slate-200 hover:bg-white hover:border-slate-300'

@@ -312,6 +312,10 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
 - **`2026.10.09_v4.0_health_checker_fix_and_16_collections_synchronization`**:
   - **Khắc Phục Lỗi Health Checker**: Bổ sung các thuộc tính `connected: true`, `totalDocs`, `healthyCollections` và `totalCollections: 16` vào hàm `checkDatabaseHealth()`. Quét đồng thời toàn bộ 16 Collections nòng cốt (`Promise.all`) thay vì chỉ quét 5 bảng cũ. Triệt tiêu 100% lỗi sai lệch: *"Không kết nối được Firestore, đang chạy chế độ Offline"*.
   - **Chuẩn Hóa Đồng Bộ 16 Bảng CSDL**: Nâng cấp toàn diện giao diện `AutoInitDbModal.jsx`, `DatabaseManagementSettings.jsx`, `README.md` và tài liệu hướng dẫn: xóa bỏ hoàn toàn con số "9 bảng" legacy; hiển thị đầy đủ 16 Collections nòng cốt kèm số lượng tài liệu chi tiết từng bảng từ CSDL thực tế.
+- **`2026.10.10_v4.1_period_config_firestore_sync_and_sidebar_nav_resilience`**:
+  - **Lưu Bền Vững Cấu Hình Đợt Đánh Giá Trên Firestore**: Sửa đổi hàm `savePeriodConfig` trong `src/lib/services.js` làm sạch sâu toàn bộ mảng `criteria` (`sanitizedCriteria`) loại trừ `undefined`, đồng bộ 2 chiều vào cả `period_configs` và `evaluation_periods` với cấu trúc `thresholds` lồng nhau lẫn các trường phẳng.
+  - **Chống Race Condition Khi Nhập Liệu Cấu Hình**: Tích hợp `isDirtyRef.current`, `activePeriodIdRef` và `updateLocalConfig` trong `TrustCriteriaSettings.jsx`, ngăn Firestore snapshot nạp chậm ghi đè lại giá trị cũ khi người dùng đang nhập ngưỡng điểm hoặc thay đổi quy chế.
+  - **Sửa Lỗi Menu Sidebar & Tabs Không Phản Hồi**: Sửa vòng lặp chuyển tab `CRITERIA_SETTINGS` thành `canManageCriteria || canManagePeriods` trong `TrustEvaluationContainer.jsx` và `TrustBottomNav.jsx`. Bổ sung quyền `MANAGE_CRITERIA` cho Giám đốc (`manager`) trong `permissions.js`. Bảo toàn trạng thái chọn `'ALL'` (Tất cả đợt) trong `subscribeEvaluationPeriods`. Chuẩn hóa so sánh lọc năm `Number(p.year) === Number(filterYear)` trong `PeriodMasterSidebar.jsx`.
 
 ---
 

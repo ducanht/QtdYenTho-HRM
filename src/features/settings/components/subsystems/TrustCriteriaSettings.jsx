@@ -94,66 +94,89 @@ const TrustCriteriaSettings = ({
     weight: 10,
   });
 
-  // Đồng bộ state cấu hình mỗi khi đợt đánh giá thay đổi
+  // Lưu vết periodId đã nạp và trạng thái đang chỉnh sửa
+  const activePeriodIdRef = React.useRef(null);
+  const isDirtyRef = React.useRef(false);
+
+  // Wrapper cập nhật localConfig đánh dấu người dùng đang nhập liệu dở dang (isDirty)
+  const updateLocalConfig = React.useCallback((updater) => {
+    isDirtyRef.current = true;
+    setLocalConfig(updater);
+  }, []);
+
+  // Helper nạp dữ liệu từ nguồn cấu hình (periodConfig hoặc currentPeriod)
+  const applyConfigFromSource = React.useCallback((src) => {
+    if (!src) return;
+    const rawTargetIds = (src.targetEmployeeIds && src.targetEmployeeIds.length > 0)
+      ? src.targetEmployeeIds
+      : (currentPeriod?.targetEmployeeIds && currentPeriod.targetEmployeeIds.length > 0)
+      ? currentPeriod.targetEmployeeIds
+      : officialStaff.map((e) => e.id);
+    const cleanTargetIds = getEligibleTargetEmployees(employees, rawTargetIds).map((e) => e.id);
+
+    const rawVoterIds = (src.voterEmployeeIds && src.voterEmployeeIds.length > 0)
+      ? src.voterEmployeeIds
+      : (currentPeriod?.voterEmployeeIds && currentPeriod.voterEmployeeIds.length > 0)
+      ? currentPeriod.voterEmployeeIds
+      : officialStaff.map((e) => e.id);
+    const cleanVoterIds = rawVoterIds.filter((id) => !isSystemAdminAccount({ id, code: id }));
+
+    const excThresh = src.excellentThreshold ?? src.thresholds?.excellent ?? 90;
+    const excMin = src.excellentMinCrit ?? src.thresholds?.excellentMinCrit ?? 7;
+    const goodThresh = src.goodThreshold ?? src.thresholds?.good ?? 70;
+    const goodMin = src.goodMinCrit ?? src.thresholds?.goodMinCrit ?? 5;
+    const passThresh = src.passThreshold ?? src.thresholds?.pass ?? 50;
+    const weakPct = src.weakVotesThresholdPercent ?? src.thresholds?.weakVotesThresholdPercent ?? 50;
+
+    const critList = (src.criteria && Array.isArray(src.criteria) && src.criteria.length > 0)
+      ? src.criteria
+      : (src.customCriteria && Array.isArray(src.customCriteria) && src.customCriteria.length > 0)
+      ? src.customCriteria
+      : [...DEFAULT_CRITERIA];
+
+    setLocalConfig({
+      excellentThreshold: Number(excThresh),
+      excellentMinCrit: Number(excMin),
+      goodThreshold: Number(goodThresh),
+      goodMinCrit: Number(goodMin),
+      passThreshold: Number(passThresh),
+      weakVotesThresholdPercent: Number(weakPct),
+      votingMode: src.votingMode || currentPeriod?.votingMode || 'ANONYMOUS',
+      allowSelfEvaluation: Boolean(src.allowSelfEvaluation ?? currentPeriod?.allowSelfEvaluation ?? false),
+      voterEmployeeIds: cleanVoterIds,
+      targetEmployeeIds: cleanTargetIds,
+      criteria: critList,
+    });
+  }, [currentPeriod?.targetEmployeeIds, currentPeriod?.voterEmployeeIds, currentPeriod?.votingMode, currentPeriod?.allowSelfEvaluation, employees, officialStaff]);
+
+  // Đồng bộ state cấu hình khi đổi đợt hoặc khi periodConfig lần đầu được tải về
   useEffect(() => {
-    if (periodConfig) {
-      // Làm sạch targetEmployeeIds: đảm bảo 100% không chứa tài khoản quản trị hệ thống
-      const rawTargetIds = periodConfig.targetEmployeeIds || currentPeriod?.targetEmployeeIds;
-      const cleanTargetIds = getEligibleTargetEmployees(employees, rawTargetIds).map((e) => e.id);
+    const targetId = currentPeriod?.id || selectedPeriodId;
+    if (!targetId) return;
 
-      setLocalConfig({
-        excellentThreshold: periodConfig.excellentThreshold ?? 90,
-        excellentMinCrit: periodConfig.excellentMinCrit ?? 7,
-        goodThreshold: periodConfig.goodThreshold ?? 70,
-        goodMinCrit: periodConfig.goodMinCrit ?? 5,
-        passThreshold: periodConfig.passThreshold ?? 50,
-        weakVotesThresholdPercent: periodConfig.weakVotesThresholdPercent ?? 50,
-        votingMode: periodConfig.votingMode || currentPeriod?.votingMode || 'ANONYMOUS',
-        allowSelfEvaluation: periodConfig.allowSelfEvaluation ?? currentPeriod?.allowSelfEvaluation ?? false,
-        voterEmployeeIds: (
-          periodConfig.voterEmployeeIds ||
-          currentPeriod?.voterEmployeeIds ||
-          officialStaff.map((e) => e.id)
-        ).filter((id) => !isSystemAdminAccount({ id, code: id })),
-        targetEmployeeIds: cleanTargetIds,
-        criteria:
-          periodConfig.criteria && periodConfig.criteria.length > 0
-            ? periodConfig.criteria
-            : currentPeriod?.customCriteria && currentPeriod.customCriteria.length > 0
-            ? currentPeriod.customCriteria
-            : [...DEFAULT_CRITERIA],
-      });
-    } else if (currentPeriod) {
-      const cleanTargetIds = getEligibleTargetEmployees(employees, currentPeriod.targetEmployeeIds).map((e) => e.id);
-
-      setLocalConfig({
-        excellentThreshold: currentPeriod.thresholds?.excellent ?? currentPeriod.excellentThreshold ?? 90,
-        excellentMinCrit: currentPeriod.thresholds?.excellentMinCrit ?? 7,
-        goodThreshold: currentPeriod.thresholds?.good ?? currentPeriod.goodThreshold ?? 70,
-        goodMinCrit: currentPeriod.thresholds?.goodMinCrit ?? 5,
-        passThreshold: currentPeriod.thresholds?.pass ?? currentPeriod.passThreshold ?? 50,
-        weakVotesThresholdPercent: currentPeriod.thresholds?.weakVotesThresholdPercent ?? 50,
-        votingMode: currentPeriod.votingMode || 'ANONYMOUS',
-        allowSelfEvaluation: currentPeriod.allowSelfEvaluation ?? false,
-        voterEmployeeIds: (currentPeriod.voterEmployeeIds || officialStaff.map((e) => e.id)).filter((id) => !isSystemAdminAccount({ id, code: id })),
-        targetEmployeeIds: cleanTargetIds,
-        criteria:
-          currentPeriod.customCriteria && currentPeriod.customCriteria.length > 0
-            ? currentPeriod.customCriteria
-            : [...DEFAULT_CRITERIA],
-      });
+    if (activePeriodIdRef.current !== targetId) {
+      // 1. Chuyển sang đợt mới: Khởi tạo lại cấu hình từ đợt mới
+      activePeriodIdRef.current = targetId;
+      isDirtyRef.current = false;
+      const initialSource = (periodConfig && (periodConfig.id === targetId || periodConfig.periodId === targetId))
+        ? periodConfig
+        : currentPeriod;
+      applyConfigFromSource(initialSource);
+    } else if (!isDirtyRef.current && periodConfig && (periodConfig.id === targetId || periodConfig.periodId === targetId)) {
+      // 2. Cùng đợt và người dùng chưa sửa dở dang: Cập nhật nếu Firestore tải xong cấu hình
+      applyConfigFromSource(periodConfig);
     }
-  }, [periodConfig, currentPeriod, employees, officialStaff]);
+  }, [currentPeriod?.id, selectedPeriodId, periodConfig, applyConfigFromSource]);
 
   // Handler: Chọn nhanh Người tham gia bỏ phiếu (Cử tri) theo phòng ban (Chỉ cán bộ thực tế officialStaff)
   const handleSelectVotersByDept = (dept) => {
     if (dept === 'ALL') {
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         voterEmployeeIds: officialStaff.map((e) => e.id),
       }));
     } else if (dept === 'NONE') {
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         voterEmployeeIds: [],
       }));
@@ -165,13 +188,13 @@ const TrustCriteriaSettings = ({
         e.position?.includes('Chủ tịch') ||
         e.position?.includes('Giám đốc')
       ).map((e) => e.id);
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         voterEmployeeIds: Array.from(new Set([...(prev.voterEmployeeIds || []), ...matchingIds])),
       }));
     } else {
       const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         voterEmployeeIds: Array.from(new Set([...(prev.voterEmployeeIds || []), ...matchingIds])),
       }));
@@ -181,12 +204,12 @@ const TrustCriteriaSettings = ({
   // Handler: Chọn nhanh Cán bộ được lấy phiếu theo phòng ban (Chỉ trong danh sách chuyên môn officialStaff)
   const handleSelectEmployeesByDept = (dept) => {
     if (dept === 'ALL') {
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         targetEmployeeIds: officialStaff.map((e) => e.id),
       }));
     } else if (dept === 'NONE') {
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         targetEmployeeIds: [],
       }));
@@ -198,13 +221,13 @@ const TrustCriteriaSettings = ({
         e.position?.includes('Chủ tịch') ||
         e.position?.includes('Giám đốc')
       ).map((e) => e.id);
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         targetEmployeeIds: Array.from(new Set([...(prev.targetEmployeeIds || []), ...matchingIds])),
       }));
     } else {
       const matchingIds = officialStaff.filter((e) => e.department === dept).map((e) => e.id);
-      setLocalConfig((prev) => ({
+      updateLocalConfig((prev) => ({
         ...prev,
         targetEmployeeIds: Array.from(new Set([...(prev.targetEmployeeIds || []), ...matchingIds])),
       }));
@@ -246,7 +269,7 @@ const TrustCriteriaSettings = ({
     e.preventDefault();
     if (!critForm.title.trim()) return;
 
-    setLocalConfig((prev) => {
+    updateLocalConfig((prev) => {
       const updatedCriteria = [...(prev.criteria || [])];
       if (editingCritIndex !== null && updatedCriteria[editingCritIndex]) {
         updatedCriteria[editingCritIndex] = {
@@ -269,7 +292,7 @@ const TrustCriteriaSettings = ({
   // Handler: Xóa tiêu chí khỏi đợt này
   const handleDeleteCritFromPeriod = (idx, title) => {
     if (!window.confirm(`Xác nhận xóa tiêu chí [${title}] khỏi đợt này?`)) return;
-    setLocalConfig((prev) => ({
+    updateLocalConfig((prev) => ({
       ...prev,
       criteria: (prev.criteria || []).filter((_, index) => index !== idx),
     }));
@@ -278,8 +301,7 @@ const TrustCriteriaSettings = ({
   // Handler: Khôi phục cấu hình chuẩn cho đợt này
   const handleResetStandard = () => {
     if (!window.confirm('Khôi phục cấu hình đợt này về chuẩn mặc định 10 tiêu chí và 4 mức xếp loại quy chuẩn (90/70/50, khống chế tiêu chí 7/5, phiếu yếu 50%)?')) return;
-    setLocalConfig((prev) => ({
-      ...prev,
+    updateLocalConfig({
       excellentThreshold: 90,
       excellentMinCrit: 7,
       goodThreshold: 70,
@@ -288,15 +310,16 @@ const TrustCriteriaSettings = ({
       weakVotesThresholdPercent: 50,
       votingMode: 'ANONYMOUS',
       allowSelfEvaluation: false,
-      voterEmployeeIds: employees.map((e) => e.id),
-      targetEmployeeIds: employees.map((e) => e.id),
+      voterEmployeeIds: officialStaff.map((e) => e.id),
+      targetEmployeeIds: officialStaff.map((e) => e.id),
       criteria: [...DEFAULT_CRITERIA],
-    }));
+    });
   };
 
   // Handler: Lưu cấu hình riêng cho đợt này
   const handleSaveCurrentPeriodConfig = () => {
     if (!currentPeriod?.id) return;
+    isDirtyRef.current = false;
     onSavePeriodConfig(currentPeriod.id, {
       ...localConfig,
       periodId: currentPeriod.id,
@@ -407,7 +430,7 @@ const TrustCriteriaSettings = ({
                             type="number"
                             value={localConfig.excellentThreshold ?? 90}
                             onChange={(e) =>
-                              setLocalConfig((prev) => ({ ...prev, excellentThreshold: Number(e.target.value) }))
+                              updateLocalConfig((prev) => ({ ...prev, excellentThreshold: Number(e.target.value) }))
                             }
                             className="w-12 p-0.5 text-center font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded text-xs"
                           />
@@ -421,7 +444,7 @@ const TrustCriteriaSettings = ({
                             type="number"
                             value={localConfig.excellentMinCrit ?? 7}
                             onChange={(e) =>
-                              setLocalConfig((prev) => ({ ...prev, excellentMinCrit: Number(e.target.value) }))
+                              updateLocalConfig((prev) => ({ ...prev, excellentMinCrit: Number(e.target.value) }))
                             }
                             className="w-10 p-0.5 text-center font-bold text-emerald-800 bg-white border border-slate-300 rounded text-xs"
                           />
@@ -443,7 +466,7 @@ const TrustCriteriaSettings = ({
                             type="number"
                             value={localConfig.goodThreshold ?? 70}
                             onChange={(e) =>
-                              setLocalConfig((prev) => ({ ...prev, goodThreshold: Number(e.target.value) }))
+                              updateLocalConfig((prev) => ({ ...prev, goodThreshold: Number(e.target.value) }))
                             }
                             className="w-12 p-0.5 text-center font-bold text-teal-800 bg-teal-50 border border-teal-300 rounded text-xs"
                           />
@@ -457,7 +480,7 @@ const TrustCriteriaSettings = ({
                             type="number"
                             value={localConfig.goodMinCrit ?? 5}
                             onChange={(e) =>
-                              setLocalConfig((prev) => ({ ...prev, goodMinCrit: Number(e.target.value) }))
+                              updateLocalConfig((prev) => ({ ...prev, goodMinCrit: Number(e.target.value) }))
                             }
                             className="w-10 p-0.5 text-center font-bold text-teal-800 bg-white border border-slate-300 rounded text-xs"
                           />
@@ -479,7 +502,7 @@ const TrustCriteriaSettings = ({
                             type="number"
                             value={localConfig.passThreshold ?? 50}
                             onChange={(e) =>
-                              setLocalConfig((prev) => ({ ...prev, passThreshold: Number(e.target.value) }))
+                              updateLocalConfig((prev) => ({ ...prev, passThreshold: Number(e.target.value) }))
                             }
                             className="w-12 p-0.5 text-center font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded text-xs"
                           />
@@ -510,7 +533,7 @@ const TrustCriteriaSettings = ({
                             type="number"
                             value={localConfig.weakVotesThresholdPercent ?? 50}
                             onChange={(e) =>
-                              setLocalConfig((prev) => ({ ...prev, weakVotesThresholdPercent: Number(e.target.value) }))
+                              updateLocalConfig((prev) => ({ ...prev, weakVotesThresholdPercent: Number(e.target.value) }))
                             }
                             className="w-10 p-0.5 text-center font-bold text-rose-800 bg-white border border-slate-300 rounded text-xs"
                           />
@@ -535,7 +558,7 @@ const TrustCriteriaSettings = ({
                           type="checkbox"
                           checked={localConfig.votingMode === 'ANONYMOUS'}
                           onChange={(e) =>
-                            setLocalConfig((prev) => ({
+                            updateLocalConfig((prev) => ({
                               ...prev,
                               votingMode: e.target.checked ? 'ANONYMOUS' : 'PUBLIC',
                             }))
@@ -550,7 +573,7 @@ const TrustCriteriaSettings = ({
                           type="checkbox"
                           checked={Boolean(localConfig.allowSelfEvaluation)}
                           onChange={(e) =>
-                            setLocalConfig((prev) => ({ ...prev, allowSelfEvaluation: e.target.checked }))
+                            updateLocalConfig((prev) => ({ ...prev, allowSelfEvaluation: e.target.checked }))
                           }
                           className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
                         />
@@ -655,7 +678,7 @@ const TrustCriteriaSettings = ({
                             checked={isChecked}
                             onChange={(e) => {
                               const cur = localConfig.voterEmployeeIds || [];
-                              setLocalConfig((prev) => ({
+                              updateLocalConfig((prev) => ({
                                 ...prev,
                                 voterEmployeeIds: e.target.checked
                                   ? [...cur, emp.id]
@@ -741,7 +764,7 @@ const TrustCriteriaSettings = ({
                             checked={isChecked}
                             onChange={(e) => {
                               const cur = localConfig.targetEmployeeIds || [];
-                              setLocalConfig((prev) => ({
+                              updateLocalConfig((prev) => ({
                                 ...prev,
                                 targetEmployeeIds: e.target.checked
                                   ? [...cur, emp.id]

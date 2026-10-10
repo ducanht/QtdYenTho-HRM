@@ -224,7 +224,7 @@ const TrustEvaluationContainer = () => {
   useEffect(() => {
     if (activeTab === 'OVERVIEW' && !canViewOverview) {
       setActiveTab('SCORING');
-    } else if (activeTab === 'CRITERIA_SETTINGS' && !canManageCriteria) {
+    } else if (activeTab === 'CRITERIA_SETTINGS' && !(canManageCriteria || canManagePeriods)) {
       setActiveTab('SCORING');
     } else if (activeTab === 'PERMISSIONS_SETTINGS' && !(canManageCriteria || canManagePeriods)) {
       setActiveTab('SCORING');
@@ -323,7 +323,7 @@ const TrustEvaluationContainer = () => {
       if (list && list.length > 0) {
         setPeriods(list);
         setSelectedPeriodId((prev) => {
-          if (prev && list.some((p) => p.id === prev)) return prev;
+          if (prev && (prev === 'ALL' || list.some((p) => p.id === prev))) return prev;
           const active = list.find((p) => p.status === 'ACTIVE') || list[0];
           return active ? active.id : '';
         });
@@ -1278,7 +1278,7 @@ const TrustEvaluationContainer = () => {
           periods={periods}
           selectedPeriodId={selectedPeriodId}
           onSelectPeriod={setSelectedPeriodId}
-          currentPeriod={currentPeriod}
+          currentPeriod={effectivePeriod}
           periodConfig={currentPeriodConfig}
           employees={employees}
           onSavePeriodConfig={handleSavePeriodConfig}
