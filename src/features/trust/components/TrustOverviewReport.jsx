@@ -12,7 +12,8 @@ import {
   Eye,
   FileSpreadsheet,
   FileText,
-  Loader2
+  Loader2,
+  Calendar
 } from 'lucide-react';
 import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
@@ -302,21 +303,110 @@ const TrustOverviewReport = ({
 
   // Nếu là cán bộ thường và đợt chưa kết thúc
   if (!isAdmin && !isPeriodClosed) {
+    const isUpcoming = currentPeriod?.status === 'UPCOMING';
     return (
-      <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 text-center space-y-3 max-w-xl mx-auto">
-        <Clock className="w-12 h-12 mx-auto text-teal-700" />
+      <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 text-center space-y-3 max-w-xl mx-auto shadow-2xs">
+        <Clock className={`w-12 h-12 mx-auto ${isUpcoming ? 'text-amber-600' : 'text-teal-700'}`} />
         <h3 className="text-base sm:text-lg font-black text-slate-900">
-          Kỳ Đánh Giá Đang Được Tiến Hành
+          {isUpcoming ? 'Đợt Đánh Giá Chưa Đến Thời Gian Mở Cổng' : 'Kỳ Đánh Giá Đang Được Tiến Hành'}
         </h3>
         <p className="text-xs text-slate-500 leading-relaxed">
-          Báo cáo tổng hợp toàn Quỹ sẽ được công bố khi kỳ đánh giá chính thức khép lại. Hiện tại đồng chí có thể xem lại các phiếu mình đã nộp tại tab <strong>"Lịch sử"</strong>.
+          {isUpcoming
+            ? `Đợt đánh giá dự kiến diễn ra từ ${currentPeriod?.startDate || '...'} đến ${currentPeriod?.endDate || '...'}. Báo cáo tổng hợp sẽ công bố khi đợt khép lại.`
+            : 'Báo cáo tổng hợp toàn Quỹ sẽ được công bố khi kỳ đánh giá chính thức khép lại. Hiện tại đồng chí có thể xem lại các phiếu mình đã nộp tại tab "Lịch sử".'}
         </p>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
+          <Calendar className="w-4 h-4 text-slate-500" />
+          <span>Kỳ đang chọn: <strong>{currentPeriod?.name}</strong></span>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* 0. Header Đợt đang xem Báo cáo Tổng quan (Đồng bộ 100% Cột Trái) */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+              <Calendar className="w-3 h-3 text-[#0f766e]" />
+              <span>BÁO CÁO TỔNG HỢP KẾT QUẢ</span>
+            </span>
+
+            {currentPeriod && (
+              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                currentPeriod.status === 'ACTIVE'
+                  ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  : currentPeriod.status === 'UPCOMING'
+                  ? 'text-amber-700 bg-amber-50 border-amber-200'
+                  : 'text-slate-600 bg-slate-100 border-slate-200'
+              }`}>
+                {currentPeriod.status === 'ACTIVE' ? 'Đang diễn ra' : currentPeriod.status === 'UPCOMING' ? 'Sắp diễn ra' : 'Đã kết thúc'}
+              </span>
+            )}
+          </div>
+
+          <h2 className="text-base sm:text-xl font-black text-slate-900">
+            {currentPeriod?.name || 'Báo Cáo Tổng Hợp Đánh Giá Tín Nhiệm'}
+          </h2>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+            <span>Quý {currentPeriod?.quarter || 4} / {currentPeriod?.year || 2026}</span>
+            {currentPeriod?.startDate && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span>Thời gian: {currentPeriod.startDate} - {currentPeriod.endDate || 'Chưa định'}</span>
+              </>
+            )}
+            <span className="text-slate-300">•</span>
+            <span>Cử tri hợp lệ: <strong className="text-slate-800 font-bold">{reportData.voterStats.totalEligible}</strong> cán bộ</span>
+            <span className="text-slate-300">•</span>
+            <span>Đã nộp phiếu: <strong className="text-teal-900 font-bold">{reportData.voterStats.submittedCount}</strong> ({reportData.voterStats.turnoutPercent}%)</span>
+          </div>
+        </div>
+
+        {/* Nút Xuất Báo Cáo Nhanh (Excel, Word, In) */}
+        {isAdmin && (
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={exportingType === 'excel' ? Loader2 : FileSpreadsheet}
+              isLoading={exportingType === 'excel'}
+              onClick={handleExportExcel}
+              disabled={reportData.leaderboard.length === 0}
+              className="text-xs font-bold text-emerald-800 border-emerald-300 hover:bg-emerald-50"
+            >
+              Xuất Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={exportingType === 'word' ? Loader2 : FileText}
+              isLoading={exportingType === 'word'}
+              onClick={handleExportWord}
+              disabled={reportData.leaderboard.length === 0}
+              className="text-xs font-bold text-teal-800 border-teal-300 hover:bg-teal-50"
+            >
+              Xuất Word
+            </Button>
+            {onOpenPrintModal && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Printer}
+                onClick={onOpenPrintModal}
+                disabled={reportData.leaderboard.length === 0}
+                className="text-xs font-bold shadow-xs"
+              >
+                In Biên Bản
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* 1. Thẻ tóm tắt tỷ lệ toàn Quỹ (Quy chuẩn 4 mức mới) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-2xs space-y-1">

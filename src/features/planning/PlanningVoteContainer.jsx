@@ -176,6 +176,7 @@ const PlanningVoteContainer = () => {
           <PlanningVoteForm
             currentUser={currentUser}
             role={role}
+            currentPeriod={currentPeriod}
             candidateId={candidateId}
             setCandidateId={setCandidateId}
             proposedRole={proposedRole}
@@ -196,6 +197,7 @@ const PlanningVoteContainer = () => {
         <div className="lg:col-span-5 space-y-6">
           <PlanningTallyCard
             loading={loading}
+            currentPeriod={currentPeriod}
             candidateStats={candidateStats}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}

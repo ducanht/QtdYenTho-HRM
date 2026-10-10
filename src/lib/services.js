@@ -16,6 +16,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
+import { generatePeriodId } from './evaluationUtils';
 
 // ============================================================================
 // 1. HỒ SƠ CÁN BỘ & XÁC THỰC (users collection)
@@ -265,7 +266,7 @@ export const saveEvaluationPeriod = async (arg1, arg2) => {
     rawData = arg1;
     targetId =
       arg1.id ||
-      `PERIOD-${arg1.year || new Date().getFullYear()}-Q${arg1.quarter || 'ALL'}-${Date.now().toString().slice(-4)}`;
+      generatePeriodId(arg1.year || new Date().getFullYear(), arg1.quarter || 'ALL');
   } else {
     throw new Error('Dữ liệu đợt đánh giá không hợp lệ');
   }

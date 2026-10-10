@@ -5,6 +5,7 @@ import Spinner from '../../../components/common/Spinner';
 
 const PlanningTallyCard = ({
   loading = false,
+  currentPeriod = null,
   candidateStats = [],
   searchTerm = '',
   setSearchTerm,
@@ -12,7 +13,7 @@ const PlanningTallyCard = ({
   return (
     <Card
       title="Kết Quả Bỏ Phiếu Quy Hoạch (Tổng Hợp)"
-      subtitle="Tỷ lệ tín nhiệm theo từng nhân sự dự kiến"
+      subtitle={currentPeriod ? `Đợt: ${currentPeriod.name}` : 'Tỷ lệ tín nhiệm theo từng nhân sự dự kiến'}
       headerRight={
         <div className="relative w-40">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />

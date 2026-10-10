@@ -40,7 +40,7 @@ test.describe('Kiểm thử Toàn diện Phân Hệ Đánh Giá Tín Nhiệm (Tr
     await page.getByRole('button', { name: 'Cá nhân', exact: true }).click();
     await page.waitForTimeout(600);
     await expect(
-      page.getByRole('heading', { name: /Kỳ đánh giá đang trong thời gian lấy ý kiến/i })
+      page.getByRole('heading', { name: /Kỳ đánh giá đang trong thời gian lấy ý kiến|Đợt đánh giá chưa đến thời gian mở cổng/i })
         .or(page.getByRole('heading', { name: /Không thuộc diện lấy phiếu/i }))
         .or(page.getByText('Chưa có phiếu đánh giá trong kỳ này'))
     ).toBeVisible({ timeout: 10000 });

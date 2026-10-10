@@ -13,6 +13,7 @@ import Badge from '../../../components/common/Badge';
 const PlanningVoteForm = ({
   currentUser,
   role,
+  currentPeriod = null,
   candidateId,
   setCandidateId,
   proposedRole,
@@ -34,12 +35,18 @@ const PlanningVoteForm = ({
       className="border-teal-100 shadow-md"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Thông tin đại biểu */}
-        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
+        {/* Thông tin đại biểu & Đợt quy hoạch */}
+        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2">
           <div>
             <span className="text-slate-400 block text-[10px]">Đại biểu biểu quyết:</span>
             <span className="font-bold text-slate-800">{currentUser?.name}</span>
           </div>
+          {currentPeriod && (
+            <div>
+              <span className="text-slate-400 block text-[10px]">Đợt quy hoạch:</span>
+              <span className="font-bold text-teal-800">{currentPeriod.name}</span>
+            </div>
+          )}
           <Badge variant="primary" size="sm">
             {currentUser?.position || role}
           </Badge>

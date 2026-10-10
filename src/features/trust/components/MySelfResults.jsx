@@ -120,22 +120,36 @@ const MySelfResults = ({
 
   // Nếu đợt chưa kết thúc
   if (!isPeriodClosed) {
+    const isUpcoming = currentPeriod?.status === 'UPCOMING';
     return (
-      <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 text-center space-y-4 max-w-2xl mx-auto">
-        <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-[#0f766e] flex items-center justify-center mx-auto shadow-xs">
-          <Lock className="w-7 h-7" />
+      <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 text-center space-y-4 max-w-2xl mx-auto shadow-2xs">
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-xs ${
+          isUpcoming ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-teal-50 border border-teal-200 text-[#0f766e]'
+        }`}>
+          {isUpcoming ? <Clock className="w-7 h-7" /> : <Lock className="w-7 h-7" />}
         </div>
         <div className="space-y-1.5">
           <h3 className="text-base sm:text-lg font-black text-slate-900">
-            Kỳ đánh giá đang trong thời gian lấy ý kiến
+            {isUpcoming
+              ? 'Đợt đánh giá chưa đến thời gian mở cổng'
+              : 'Kỳ đánh giá đang trong thời gian lấy ý kiến'}
           </h3>
           <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-            Để đảm bảo tính khách quan và bảo mật thông tin, kết quả đánh giá cá nhân sẽ được hiển thị khi đợt đánh giá kết thúc và được công bố.
+            {isUpcoming
+              ? `Đợt đánh giá dự kiến diễn ra từ ${currentPeriod?.startDate || '...'} đến ${currentPeriod?.endDate || '...'}. Kết quả tín nhiệm sẽ hiển thị sau khi kỳ kết thúc.`
+              : 'Để đảm bảo tính khách quan và bảo mật thông tin, kết quả đánh giá cá nhân sẽ được hiển thị khi đợt đánh giá kết thúc và được công bố.'}
           </p>
         </div>
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
           <Clock className="w-4 h-4 text-slate-500" />
-          <span>Kỳ hiện tại: <strong>{currentPeriod?.name}</strong> (Đang mở)</span>
+          <span>
+            Kỳ đang chọn: <strong>{currentPeriod?.name}</strong>{' '}
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              isUpcoming ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {isUpcoming ? 'Sắp diễn ra' : 'Đang mở'}
+            </span>
+          </span>
         </div>
       </div>
     );

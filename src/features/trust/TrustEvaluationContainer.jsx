@@ -18,7 +18,7 @@ import {
   savePeriodConfig
 } from '../../lib/services';
 import { classifyTrustScore } from '../../lib/schema';
-import { getEligibleTargetEmployees, isSystemAdminAccount } from '../../lib/evaluationUtils';
+import { getEligibleTargetEmployees, isSystemAdminAccount, generatePeriodId } from '../../lib/evaluationUtils';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../lib/constants';
 import { DEFAULT_MODULE_TRUST_SETTINGS } from '../../lib/systemDefaults';
 import { 
@@ -648,10 +648,10 @@ const TrustEvaluationContainer = () => {
     return Math.round((scoredTotal / totalRequired) * 100);
   }, [evaluatableEmployees, activeCriteria, matrixScores]);
 
-  // Đã sẵn sàng nộp phiếu chính thức chưa? (Phải chấm đủ 100% và thuộc danh sách cử tri)
+  // Đã sẵn sàng nộp phiếu chính thức chưa? (Phải chấm đủ 100%, thuộc danh sách cử tri và đợt đang ACTIVE)
   const isFullyReadyToSubmit = useMemo(() => {
-    return isEligibleVoter && overallPercent === 100 && evaluatableEmployees.length > 0;
-  }, [isEligibleVoter, overallPercent, evaluatableEmployees.length]);
+    return isEligibleVoter && currentPeriod?.status === 'ACTIVE' && overallPercent === 100 && evaluatableEmployees.length > 0;
+  }, [isEligibleVoter, currentPeriod?.status, overallPercent, evaluatableEmployees.length]);
 
   // Nộp phiếu chính thức cho tất cả cán bộ (Chặn hoàn toàn nếu chưa hoàn thành hoặc không phải cử tri)
   const handleSubmitOfficial = async () => {
@@ -659,6 +659,16 @@ const TrustEvaluationContainer = () => {
 
     if (!isEligibleVoter) {
       toast.error('Đồng chí không thuộc danh sách cử tri được chỉ định tham gia bỏ phiếu trong đợt này!');
+      return;
+    }
+
+    if (currentPeriod.status === 'UPCOMING') {
+      toast.error(`Đợt đánh giá "${currentPeriod.name}" chưa mở cổng lấy phiếu (Dự kiến mở từ ${currentPeriod.startDate || '...'}).`);
+      return;
+    }
+
+    if (currentPeriod.status === 'CLOSED') {
+      toast.error(`Đợt đánh giá "${currentPeriod.name}" đã chính thức kết thúc/đóng cổng lấy phiếu.`);
       return;
     }
 
@@ -786,7 +796,7 @@ const TrustEvaluationContainer = () => {
     try {
       const periodId =
         periodFormMode === 'CREATE'
-          ? (periodFormData.id || `PERIOD-${periodFormData.year || 2026}-Q${periodFormData.quarter || 4}-${Date.now().toString().slice(-4)}`)
+          ? (periodFormData.id || generatePeriodId(periodFormData.year || 2026, periodFormData.quarter || 4))
           : periodFormData.id;
 
       const payload = {
@@ -1048,9 +1058,23 @@ const TrustEvaluationContainer = () => {
                     </span>
                   );
                 }
+                if (p.status === 'UPCOMING') {
+                  return (
+                    <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      Chờ mở cổng
+                    </span>
+                  );
+                }
+                if (p.status === 'CLOSED') {
+                  return (
+                    <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                      Đã kết thúc
+                    </span>
+                  );
+                }
                 return (
-                  <span className="text-[10px] text-slate-400">
-                    {p.status === 'ACTIVE' ? 'Đang mở' : 'Đã đóng'}
+                  <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Chưa nộp
                   </span>
                 );
               }}
@@ -1079,8 +1103,9 @@ const TrustEvaluationContainer = () => {
               </div>
             ) : (
               <>
-                {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm) */}
+                {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm, Hiện rõ tên đợt) */}
                 <TrustProgressBanner
+                  currentPeriod={effectivePeriod || currentPeriod}
                   totalEmployeesCount={evaluatableEmployees.length}
                   completedCriteriaCount={completedCriteriaCount}
                   totalCriteriaCount={activeCriteria.length}

@@ -204,3 +204,29 @@ Thư viện dùng chung tại `src/lib/exportUtils.js` cung cấp hạ tầng xu
    - Bổ sung quyền `MANAGE_CRITERIA` cho vai trò Giám đốc (`manager`) trong ma trận `DEFAULT_ROLE_PERMISSIONS.trust`.
    - Bảo toàn trạng thái chọn `'ALL'` (Tất cả các đợt đánh giá) trong `subscribeEvaluationPeriods` khi chuyển tab Lịch sử.
    - Sửa bộ lọc năm trong `PeriodMasterSidebar` sang so sánh số `Number(p.year) === Number(filterYear)`, bổ sung thuộc tính accessibility `role="button"` và phản hồi xúc giác `active:scale-[0.99]`.
+
+---
+
+## 🔄 13. ĐỒNG BỘ MASTER-DETAIL 0MS & CHUẨN HÓA MÃ ĐỢT BẰNG UUID (RFC 4122 v4)
+
+1. **Khắc Phục Hiện Tượng "Chọn Bên Trái, Bên Phải Không Đổi Theo"**:
+   - **Nguyên nhân gốc rễ**: Trước đây, component `TrustProgressBanner` (Cột Phải) không nhận prop `currentPeriod` và không hề hiển thị tên đợt đánh giá, quý/năm, hay trạng thái đợt. Khi người dùng click chuyển giữa Đợt Quý 3 và Đợt Quý 4 (cả 2 đều chưa có phiếu nộp, cùng 12 cán bộ, tiến độ 0%), giao diện Cột Phải giống hệt nhau 100%, khiến người dùng lầm tưởng hệ thống không phản hồi.
+   - **Giải pháp triệt để**:
+     + Bổ sung **Period Header Card** nổi bật ngay trên đầu banner Cột Phải: Hiển thị lớn, đậm nét tên đợt `currentPeriod.name`, huy hiệu Quý/Năm `Quý ${quarter}/${year}`, khoảng thời gian hiệu lực `Từ ${startDate} đến ${endDate}`, quy mô đối tượng và huy hiệu chế độ bỏ phiếu (`Kín 100%` / `Công khai`).
+     + Khi người dùng bấm chọn bất kỳ đợt nào ở Cột Trái (`PeriodMasterSidebar`), Cột Phải cập nhật tiêu đề, trạng thái và dữ liệu tức thì 0ms mà không cần tải lại trang.
+2. **Xử Lý Trực Quan Trạng Thái Đợt `UPCOMING` (Sắp diễn ra) và `CLOSED` (Đã đóng)**:
+   - Nếu đợt có trạng thái `UPCOMING`: Hiển thị Dải thông báo cảnh báo màu hổ phách giải thích rõ cổng lấy phiếu chưa mở (dự kiến mở từ `startDate`), nút nộp phiếu chuyển sang chế độ vô hiệu hóa `"Chờ mở cổng (từ ${startDate})"`.
+   - Nếu đợt có trạng thái `CLOSED`: Hiển thị Dải thông báo màu xám ghi nhận đợt đã đóng cổng, nút nộp phiếu chuyển sang `"Đợt đã đóng cổng"`.
+   - Nếu đợt có trạng thái `ACTIVE`: Hiển thị chấm tròn xanh lục nhấp nháy (`animate-ping`) và cho phép nộp phiếu chính thức khi hoàn tất 100% tiêu chí.
+3. **Khử Triệt Để Mâu Thuẫn Badge Trạng Thái Trên Thẻ Sidebar Cột Trái**:
+   - Trước đây, khi đợt có trạng thái `UPCOMING`, thẻ hiển thị bên trái là `"Sắp diễn ra"` nhưng bên phải lại hiển thị `"Đã đóng"` do toán tử 3 ngôi `status === 'ACTIVE' ? 'Đang mở' : 'Đã đóng'`.
+   - Đã sửa hàm `badgeRenderer` phân định chính xác 4 trạng thái: Đã nộp phiếu (`Đã nộp (X)` - xanh ngọc), Đang chấm dở (`Tiến độ: Y%` - xanh teal), Sắp diễn ra (`Chờ mở cổng` - hổ phách), Đã đóng (`Đã kết thúc` - slate) và Đang mở chưa nộp (`Chưa nộp` - xanh lục).
+4. **Đồng Bộ Hiển Thị Đợt Trên Toàn Bộ Các Tab & Module Khác**:
+   - **Tab Lịch sử (`MY_VOTES`)**: Header Cột Phải hiển thị tên đợt đang xem lịch sử hoặc `Lịch sử toàn bộ phiếu tín nhiệm đã nộp qua các kỳ` khi chọn Tất cả.
+   - **Tab Cá nhân (`MY_RESULTS`)**: Hiển thị rõ tên đợt đang xem và phân biệt thông báo đợt `UPCOMING` ("Đợt đánh giá chưa đến thời gian mở cổng") hay `ACTIVE` ("Kỳ đánh giá đang trong thời gian lấy ý kiến").
+   - **Tab Tổng quan (`OVERVIEW`)**: Header Cột Phải hiển thị tên đợt tổng hợp, tỷ lệ cử tri và các nút xuất nhanh Excel/Word/In A4.
+   - **Phân hệ Quy hoạch (`PlanningVote`)**: Form bỏ phiếu và Card tổng hợp kết quả hiển thị rõ tên đợt quy hoạch đang chọn.
+5. **Chuẩn Hóa Mã Đợt Đánh Giá Bằng UUID RFC 4122 v4**:
+   - Thay thế công thức sinh mã cũ dựa vào 4 số cuối timestamp (`slice(-4)` vốn chỉ có 10.000 giá trị và dễ trùng lặp).
+   - Chuẩn hóa mã đợt theo định dạng: `PERIOD-YYYY-QX-<UUID>` với hàm `generatePeriodId(year, quarter)` và `generateUUID()` sử dụng `crypto.randomUUID()` chuẩn RFC 4122 v4.
+   - Đảm bảo 100% không bao giờ trùng lặp ID đợt trong CSDL Cloud Firestore.

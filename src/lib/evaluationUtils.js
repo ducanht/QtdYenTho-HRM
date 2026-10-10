@@ -204,4 +204,27 @@ export const getEligibleVoterEmployees = (employees = [], voterEmployeeIds = nul
   return officialStaff;
 };
 
+/**
+ * Tạo mã UUID v4 an toàn, chuẩn RFC 4122 để định danh Đợt, Phiếu và Thực thể,
+ * triệt tiêu hoàn toàn nguy cơ trùng lặp ID (Zero ID Collisions).
+ */
+export const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+/**
+ * Sinh mã đợt đánh giá chuẩn UUID
+ * Ví dụ: PERIOD-2026-Q4-b89e7c54-9423-455b-80ee-e2ba96dca4e1
+ */
+export const generatePeriodId = (year = 2026, quarter = 4) => {
+  return `PERIOD-${year}-Q${quarter}-${generateUUID()}`;
+};
+
 

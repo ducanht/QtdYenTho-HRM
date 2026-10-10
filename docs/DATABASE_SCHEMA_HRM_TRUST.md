@@ -70,15 +70,19 @@ erDiagram
     }
 
     EVALUATION_PERIOD {
-        string id PK "Mã kỳ đánh giá (VD: PERIOD-2026-Q3)"
+        string id PK "Mã kỳ đánh giá chuẩn UUID v4 (VD: PERIOD-2026-Q4-b89e7c54-9423-455b-80ee-e2ba96dca4e1)"
         string name "Tên đợt đánh giá tín nhiệm"
-        string votingMode "ANONYMOUS_ONLY | IDENTIFIED_ONLY | OPTIONAL"
+        string votingMode "ANONYMOUS | ANONYMOUS_ONLY | IDENTIFIED_ONLY | OPTIONAL"
         boolean allowSelfEvaluation "true: cho phép tự đánh giá bản thân | false: không cho phép"
         int year "Năm đánh giá (VD: 2026)"
-        int quarter "Quý đánh giá (1, 2, 3, 4 hoặc null)"
+        int quarter "Quý đánh giá (1, 2, 3, 4)"
         date startDate "Ngày mở cổng bỏ phiếu"
         date endDate "Ngày đóng cổng bỏ phiếu"
-        string status "ACTIVE | CLOSED | LOCKED"
+        string status "ACTIVE | UPCOMING | CLOSED"
+        array voterEmployeeIds "Danh sách ID cán bộ được phân quyền cử tri bỏ phiếu"
+        array targetEmployeeIds "Danh sách ID cán bộ thuộc diện được lấy phiếu tín nhiệm"
+        array customCriteria "Bộ tiêu chí áp dụng riêng cho đợt (nếu có)"
+        object thresholds "Cấu hình ngưỡng điểm và khống chế 4 mức xếp loại"
     }
 
     TRUST_CRITERIA {

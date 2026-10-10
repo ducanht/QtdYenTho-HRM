@@ -109,6 +109,48 @@ const MySubmittedSummary = ({
 
   return (
     <div className="space-y-4">
+      {/* 0. Header Đợt đang xem (Đồng bộ 100% với Cột Trái) */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+              <Calendar className="w-3 h-3 text-[#0f766e]" />
+              <span>{selectedPeriodId === 'ALL' ? 'LỊCH SỬ TOÀN BỘ CÁC ĐỢT' : 'ĐỢT ĐANG XEM LỊCH SỬ'}</span>
+            </span>
+
+            {selectedPeriodId !== 'ALL' && currentPeriod && (
+              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                currentPeriod.status === 'ACTIVE'
+                  ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  : currentPeriod.status === 'UPCOMING'
+                  ? 'text-amber-700 bg-amber-50 border-amber-200'
+                  : 'text-slate-600 bg-slate-100 border-slate-200'
+              }`}>
+                {currentPeriod.status === 'ACTIVE' ? 'Đang mở' : currentPeriod.status === 'UPCOMING' ? 'Sắp diễn ra' : 'Đã kết thúc'}
+              </span>
+            )}
+          </div>
+
+          <h3 className="text-base sm:text-lg font-black text-slate-900">
+            {selectedPeriodId === 'ALL'
+              ? 'Lịch sử toàn bộ phiếu tín nhiệm đã nộp qua các kỳ'
+              : currentPeriod?.name || 'Đợt Đánh Giá Tín Nhiệm'}
+          </h3>
+
+          {selectedPeriodId !== 'ALL' && currentPeriod && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span>Quý {currentPeriod.quarter || 4} / {currentPeriod.year || 2026}</span>
+              {currentPeriod.startDate && (
+                <>
+                  <span>•</span>
+                  <span>Thời gian: {currentPeriod.startDate} đến {currentPeriod.endDate || 'Chưa định'}</span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 1. Thanh công cụ tinh gọn (Không lặp lại bộ chọn đợt đã có ở Cột Trái) */}
       <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Thống kê nhanh */}
