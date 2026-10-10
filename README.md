@@ -41,7 +41,7 @@ Một trong những quy định nghiệp vụ then chốt của Quỹ là:
 Người dùng **không cần phải tạo thủ công bất kỳ collection nào** trên Firebase Console:
 
 1. Dán cấu hình Firebase vào `src/lib/firebase.js` (hoặc để trống để chạy chế độ lưu trữ nội bộ).
-2. Nhấn nút **"⚡ Tự động CSDL"** trên thanh tiêu đề Navbar.
+2. Nhấn nút **"Đồng bộ CSDL"** trên thanh tiêu đề Navbar (dành cho Admin/SuperAdmin) hoặc mở **Cấu hình & Quản trị -> Quản trị CSDL (Tab 5)**.
 3. Hộp thoại **"Trung Tâm Khởi Tạo & Cập Nhật CSDL Tự Động"** xuất hiện.
 4. Bấm nút **"Tiến hành Khởi tạo & Cập nhật 16 Bảng CSDL Tự Động"**.
 5. Hệ thống chạy batch tự động nạp toàn bộ 16 bộ sưu tập nòng cốt:

@@ -58,7 +58,7 @@ Hệ thống được thiết kế theo cấu trúc `Data-Driven Dynamic Grid La
 | :---: | :--- | :--- | :---: | :---: | :--- |
 | **01** | `MODULE_PORTAL` | **Cổng Điều Hướng Phân Hệ** | 🟢 ACTIVE | `Grid` | Màn hình chính sau đăng nhập, hiển thị ô lưới các WebApp con. |
 | **02** | `MODULE_TRUST` | **Đánh Giá Tín Nhiệm Cán Bộ** | 🟢 ACTIVE | `ShieldCheck` | Đánh giá 10 tiêu chí đạo đức & nghiệp vụ, bỏ phiếu kín/công khai cấp đợt. |
-| **03** | `MODULE_HR` | **Hồ Sơ & Luân Chuyển Cán Bộ** | 🟢 ACTIVE | `Users` | Quản lý trích ngang 9 cán bộ, timeline điều động địa bàn theo chuẩn NHNN. |
+| **03** | `MODULE_HR` | **Hồ Sơ & Luân Chuyển Cán Bộ** | 🟢 ACTIVE | `Users` | Quản lý hồ sơ cán bộ nhân viên, timeline điều động địa bàn theo chuẩn NHNN. |
 | **04** | `MODULE_KPI` | **Chấm Điểm KPI 3 Cấp** | 🟢 ACTIVE | `TrendingUp` | Quy trình chấm điểm 40% tự chấm, 30% Giám đốc, 30% Chủ tịch HĐQT. |
 | **05** | `MODULE_PLANNING` | **Bỏ Phiếu Quy Hoạch Cán Bộ** | 🟢 ACTIVE | `UserCheck` | Lấy phiếu tín nhiệm nhân sự quy hoạch các vị trí chủ chốt. |
 | **06** | `MODULE_DASHBOARD`| **Bảng Điều Khiển & Phân Tích**| 🟢 ACTIVE | `BarChart3` | Giám sát chỉ số tín nhiệm, tỷ lệ hoàn thành và phân bổ phòng ban. |

@@ -22,18 +22,25 @@
 
 ## 1. TỔNG QUAN KIẾN TRÚC CSDL & BẢO MẬT
 
-Hệ thống quản lý dữ liệu trên Cloud Firestore theo 9 bộ sưu tập chuẩn hóa:
+Hệ thống quản lý dữ liệu trên Cloud Firestore theo 16 bộ sưu tập chuẩn hóa:
 
 ```mermaid
 graph TD
-    A[evaluation_periods<br/>Cấu hình Đợt Ẩn danh/Công khai] --> D[evaluations_trust<br/>Phiếu đánh giá tín nhiệm 10 tiêu chí]
-    B[users<br/>Hồ sơ cán bộ & CCCD & Quyền hạn] --> D
-    B --> E[work_history<br/>Lịch sử luân chuyển công tác]
-    B --> F[evaluations_kpi<br/>Chấm điểm KPI 3 cấp 40-30-30]
-    B --> G[evaluations_planning<br/>Bỏ phiếu quy hoạch cán bộ]
-    C[trust_criteria<br/>10 Tiêu chí tín nhiệm chuẩn] --> D
-    H[system_modules<br/>Danh mục phân hệ mở rộng] --> I[HRM System Core]
-    J[roles_permissions<br/>Ma trận phân quyền chi tiết] --> I
+    ACC[accounts<br/>Tài khoản & Xác thực] --> EMP[employees<br/>100% Cán bộ chính thức]
+    EMP --> USR[users<br/>Hồ sơ cán bộ & CCCD & Quyền hạn]
+    EMP --> WH[work_history<br/>Lịch sử luân chuyển công tác]
+    PERIOD[evaluation_periods<br/>Cấu hình Đợt Ẩn danh/Công khai] --> CFG[period_configs<br/>Cấu hình đợt độc lập]
+    PERIOD --> EVAL[evaluations_trust<br/>Phiếu đánh giá tín nhiệm 10 tiêu chí]
+    CRIT[trust_criteria<br/>10 Tiêu chí tín nhiệm chuẩn] --> EVAL
+    USR --> EVAL
+    USR --> KPI[evaluations_kpi<br/>Chấm điểm KPI 3 cấp 40-30-30]
+    USR --> PLAN[evaluations_planning<br/>Bỏ phiếu quy hoạch cán bộ]
+    MOD[system_modules<br/>Danh mục 8 phân hệ] --> CORE[HRM System Core]
+    ROLE[roles_permissions<br/>Ma trận phân quyền chi tiết] --> CORE
+    SETT[system_settings<br/>Tham số hệ thống & phân hệ] --> CORE
+    DEPT[departments<br/>Phòng ban] --> EMP
+    POS[positions<br/>Chức vụ & Vị trí] --> EMP
+    META[system_metadata<br/>Phiên bản CSDL & Migration] --> CORE
 ```
 
 ### Nguyên tắc bảo mật bỏ phiếu kín:

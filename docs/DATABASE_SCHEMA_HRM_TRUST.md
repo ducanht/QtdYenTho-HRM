@@ -216,9 +216,9 @@ Khi ở chế độ `OPTIONAL`, trên form biểu mẫu [TrustEvaluation.jsx](fi
 
 ---
 
-## 👥 5. Danh Sách 12 Cán Bộ Nhân Viên Chính Thức Đã Nạp Vào CSDL Firestore
+## 👥 5. Danh Sách Cán Bộ Nhân Viên Chính Thức Đã Nạp Vào CSDL Firestore
 
-Dữ liệu thực tế 12 CBNV đã được chuẩn hóa và nạp thành công vào Firestore (`users`), đồng thời khởi tạo tài khoản Firebase Authentication tương ứng (Mật khẩu mặc định: `Qtd@2003`, kích hoạt cờ bắt buộc đổi mật khẩu lần đầu `mustChangePassword: true`):
+Dữ liệu thực tế Cán bộ Nhân viên đã được chuẩn hóa và nạp thành công vào Firestore (`employees` và `users`), đồng thời khởi tạo tài khoản Firebase Authentication tương ứng trong `accounts` (Mật khẩu mặc định: `Qtd@2003`, kích hoạt cờ bắt buộc đổi mật khẩu lần đầu `mustChangePassword: true`):
 
 | TT | Mã CB | Họ và Tên | Giới tính | Chức vụ chính quyền | Phân quyền (Role) | Phòng ban | CCCD | Điện thoại | Email công vụ | Mật khẩu ban đầu |
 |:---:|:---:|:---|:---:|:---|:---:|:---|:---:|:---:|:---|:---:|
@@ -234,6 +234,7 @@ Dữ liệu thực tế 12 CBNV đã được chuẩn hóa và nạp thành côn
 | 10 | `CB10` | **Hoàng Thị Lan** | Nữ | Kế toán viên | `staff` (Nhân viên) | Phòng Kế toán - Ngân quỹ | `038189040044` | 0965178666 | `hoanglan1289@gmail.com` | `Qtd@2003` |
 | 11 | `CB11` | **Phạm Thị Thảo** | Nữ | Thủ quỹ | `staff` (Nhân viên) | Phòng Kế toán - Ngân quỹ | `038190051894` | 0965567596 | `qtdyentho.phamthao@gmail.com` | `Qtd@2003` |
 | 12 | `CB12` | **Lưu Thị Định** | Nữ | CB tín dụng | `staff` (Nhân viên) | Phòng Tín dụng | `038189028302` | 0961007855 | `qtdyentho.luudinh@gmail.com` | `Qtd@2003` |
+| 13 | `CB13` | **Vũ Thị Hiền** | Nữ | Thành viên HĐQT chuyên trách | `staff` (Nhân viên) | Hội đồng Quản trị | `038185002222` | 0988123456 | `qtdyentho.vuhien@gmail.com` | `Qtd@2003` |
 
 ### 🔐 5.1. Chính Sách Đăng Nhập & Bảo Mật Mật Khẩu Lần Đầu
 - **Loại bỏ Đăng nhập nhanh**: Trang Login tuyệt đối không hiển thị nút hoặc khối đăng nhập nhanh/tài khoản mẫu để phòng ngừa rủi ro bảo mật thông tin.
@@ -312,6 +313,20 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
   - **Khắc Phục Lỗi Health Checker**: Bổ sung các thuộc tính `connected: true`, `totalDocs`, `healthyCollections` và `totalCollections: 16` vào hàm `checkDatabaseHealth()`. Quét đồng thời toàn bộ 16 Collections nòng cốt (`Promise.all`) thay vì chỉ quét 5 bảng cũ. Triệt tiêu 100% lỗi sai lệch: *"Không kết nối được Firestore, đang chạy chế độ Offline"*.
   - **Chuẩn Hóa Đồng Bộ 16 Bảng CSDL**: Nâng cấp toàn diện giao diện `AutoInitDbModal.jsx`, `DatabaseManagementSettings.jsx`, `README.md` và tài liệu hướng dẫn: xóa bỏ hoàn toàn con số "9 bảng" legacy; hiển thị đầy đủ 16 Collections nòng cốt kèm số lượng tài liệu chi tiết từng bảng từ CSDL thực tế.
 
+---
 
+## 🛡️ 8. NGUYÊN TẮC BẢO TOÀN CSDL KHI MỞ RỘNG PHÂN HỆ MỚI
 
-
+1. **Module Đang Ổn Định Là Bất Xâm Phạm**:
+   - Module A (`MODULE_TRUST` - Đánh giá Tín nhiệm), Module F (`MODULE_SETTINGS` - Cấu hình Hệ thống) và Cổng phân hệ (`MODULE_PORTAL`) đã hoạt động rất tốt và ổn định.
+   - Khi phát triển thêm các phân hệ mới (`MODULE_HR`, `MODULE_KPI`, `MODULE_PLANNING`, `MODULE_TIMEKEEPING`, `MODULE_PAYROLL`...), CSDL các bảng nòng cốt đang chạy ổn định được bảo toàn tuyệt đối, không được làm gián đoạn hay phá vỡ tương thích.
+2. **Quy Chuẩn Đồng Bộ Mã Nguồn & CSDL (Code & DB In-Sync)**:
+   - Khi có bất kỳ thay đổi nào về thiết kế table CSDL, bắt buộc phải cập nhật đồng thời cả về mã nguồn:
+     - `src/lib/schema.js`: Schema & hàm validation.
+     - `src/lib/systemDefaults.js`: Dữ liệu seed mặc định chuẩn mực.
+     - `src/lib/services.js`: Hàm CRUD & Firestore listener.
+     - `src/lib/autoInitDb.js`: Danh sách `CORE_COLLECTIONS` & version.
+     - `firestore.rules`: Luật bảo mật Firestore tương ứng.
+   - Tuyệt đối không để xảy ra tình trạng bảng chỉ có trên tài liệu hoặc chỉ có trong CSDL mà mã nguồn không có.
+3. **Mở Rộng Không Phá Vỡ (Zero-Downtime Migration)**:
+   - Dùng trường tùy chọn kèm fallback, dùng `merge: true` khi ghi và tự chữa lành qua `CURRENT_SCHEMA_VERSION`.

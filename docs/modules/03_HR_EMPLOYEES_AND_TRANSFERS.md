@@ -10,7 +10,7 @@
 
 ## 🏛️ 1. MỤC TIÊU NGHIỆP VỤ
 
-1. Quản trị danh bạ trích ngang 9 cán bộ nhân viên Quỹ Tín Dụng Nhân Dân Yên Thọ (Họ tên, CCCD, trình độ học vấn, chức vụ Đảng - Đoàn, hợp đồng, địa bàn phụ trách).
+1. Quản trị danh bạ trích ngang cán bộ nhân viên Quỹ Tín Dụng Nhân Dân Yên Thọ (Họ tên, CCCD, trình độ học vấn, chức vụ Đảng - Đoàn, hợp đồng, địa bàn phụ trách).
 2. **Theo dõi quá trình luân chuyển công tác & điều động địa bàn**:
    - Theo quy định của Ngân hàng Nhà nước, cán bộ làm công tác thẩm định tín dụng, thủ quỹ, kế toán bắt buộc phải luân chuyển địa bàn định kỳ sau thời gian 3 năm để phòng ngừa rủi ro đạo đức và rủi ro quan hệ thân tộc với khách hàng vay vốn.
    - Hệ thống hiển thị **Timeline quá trình luân chuyển** với đầy đủ: Số quyết định, ngày hiệu lực, người ký, hình thức luân chuyển (định kỳ, bổ nhiệm, điều động), chức vụ và địa bàn cũ $\rightarrow$ mới, tình trạng bàn giao hồ sơ nợ.
