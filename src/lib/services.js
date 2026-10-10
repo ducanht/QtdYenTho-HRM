@@ -115,7 +115,7 @@ export const subscribeWorkHistory = (employeeId = null, callback) => {
   try {
     let q = collection(db, 'work_history');
     if (employeeId) {
-      q = query(q, where('employeeId', '==', employeeId), orderBy('effectiveDate', 'desc'));
+      q = query(q, where('employeeId', '==', employeeId));
     } else {
       q = query(q, orderBy('effectiveDate', 'desc'));
     }
@@ -124,6 +124,9 @@ export const subscribeWorkHistory = (employeeId = null, callback) => {
       q,
       (snapshot) => {
         const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (employeeId) {
+          list.sort((a, b) => (b.effectiveDate || '').localeCompare(a.effectiveDate || ''));
+        }
         callback(list);
       },
       (error) => {

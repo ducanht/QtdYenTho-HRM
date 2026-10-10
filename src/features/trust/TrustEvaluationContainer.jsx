@@ -64,7 +64,7 @@ const TrustEvaluationContainer = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Tab chức năng chính & Kỳ đánh giá: Lưu trữ đồng bộ 100% với searchParams để khôi phục chuẩn khi F5 hoặc Back
+  // Tab chức năng chính & Kỳ đánh giá: Khởi tạo từ URL nếu có
   const urlTab = searchParams.get('tab');
   const urlPeriodId = searchParams.get('periodId');
 
@@ -74,46 +74,57 @@ const TrustEvaluationContainer = () => {
   const setSelectedPeriodId = useCallback((idOrUpdater) => {
     setSelectedPeriodIdState((prev) => {
       const nextId = typeof idOrUpdater === 'function' ? idOrUpdater(prev) : idOrUpdater;
-      setSearchParams((p) => {
-        const nextParams = new URLSearchParams(p);
-        if (nextId) {
-          nextParams.set('periodId', nextId);
-        } else {
-          nextParams.delete('periodId');
-        }
-        return nextParams;
-      }, { replace: true });
       return nextId;
     });
-  }, [setSearchParams]);
+  }, []);
 
   const setActiveTab = useCallback((tabOrUpdater) => {
     setActiveTabState((prev) => {
       const nextTab = typeof tabOrUpdater === 'function' ? tabOrUpdater(prev) : tabOrUpdater;
-      setSearchParams((p) => {
-        const nextParams = new URLSearchParams(p);
-        if (nextTab) {
-          nextParams.set('tab', nextTab);
-        } else {
-          nextParams.delete('tab');
-        }
-        return nextParams;
-      }, { replace: true });
       return nextTab;
     });
-  }, [setSearchParams]);
+  }, []);
 
-  // Đồng bộ URL -> State khi người dùng bấm nút Back/Forward của trình duyệt
+  // Đồng bộ State -> URL SearchParams một cách an toàn (ngoài chu trình render)
   useEffect(() => {
-    const currentTab = searchParams.get('tab');
-    if (currentTab && currentTab !== activeTab) {
-      setActiveTabState(currentTab);
+    const curTab = searchParams.get('tab') || 'SCORING';
+    const curPid = searchParams.get('periodId') || '';
+
+    const tabChanged = activeTab && activeTab !== curTab;
+    const pidChanged = selectedPeriodId && selectedPeriodId !== curPid;
+
+    if (tabChanged || pidChanged) {
+      setSearchParams(
+        (prev) => {
+          const nextParams = new URLSearchParams(prev);
+          if (activeTab && activeTab !== 'SCORING') {
+            nextParams.set('tab', activeTab);
+          } else {
+            nextParams.delete('tab');
+          }
+          if (selectedPeriodId) {
+            nextParams.set('periodId', selectedPeriodId);
+          } else {
+            nextParams.delete('periodId');
+          }
+          return nextParams;
+        },
+        { replace: true }
+      );
     }
-    const currentPid = searchParams.get('periodId');
-    if (currentPid && currentPid !== selectedPeriodId) {
-      setSelectedPeriodIdState(currentPid);
+  }, [activeTab, selectedPeriodId, searchParams, setSearchParams]);
+
+  // Đồng bộ URL SearchParams -> State khi người dùng bấm nút Back/Forward của trình duyệt
+  useEffect(() => {
+    const curTab = searchParams.get('tab') || 'SCORING';
+    if (curTab !== activeTab) {
+      setActiveTabState(curTab);
     }
-  }, [searchParams, activeTab, selectedPeriodId]);
+    const curPid = searchParams.get('periodId') || '';
+    if (curPid && curPid !== selectedPeriodId) {
+      setSelectedPeriodIdState(curPid);
+    }
+  }, [searchParams]);
 
   // Chế độ xem tiêu chí: 'STEPPER' (từng tiêu chí một) | 'ALL' (toàn bộ 10 tiêu chí cuộn liên tục)
   const [viewMode, setViewMode] = useState('STEPPER');
