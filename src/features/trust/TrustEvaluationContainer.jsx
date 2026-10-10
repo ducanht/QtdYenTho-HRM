@@ -1311,7 +1311,7 @@ const TrustEvaluationContainer = () => {
         onClose={() => setIsPrintModalOpen(false)}
         currentPeriod={effectivePeriod}
         leaderboard={
-          printModalData?.periodId === currentPeriod?.id && printModalData.data?.length > 0
+          (printModalData && currentPeriod?.id && printModalData.periodId === currentPeriod.id && Array.isArray(printModalData.data) && printModalData.data.length > 0)
             ? printModalData.data
             : fallbackRealLeaderboard
         }

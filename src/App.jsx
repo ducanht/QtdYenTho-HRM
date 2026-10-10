@@ -5,6 +5,7 @@ import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import Spinner from './components/common/Spinner';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Cơ chế Phục hồi Tự động Chunk Loading SPA khi deploy phiên bản mới (Zero Stale Chunk Crash)
 const lazyWithRetry = (componentImport) =>
@@ -199,7 +200,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
