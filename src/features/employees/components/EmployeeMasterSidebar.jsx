@@ -14,9 +14,6 @@ const EmployeeMasterSidebar = ({
   onSelectEmployee,
   searchTerm,
   setSearchTerm,
-  selectedDept,
-  setSelectedDept,
-  departments = [],
   hrConfig = null,
   onOpenAddModal,
   canManage = false,
@@ -60,21 +57,20 @@ const EmployeeMasterSidebar = ({
     }
   };
 
-  // Lọc danh sách theo phòng ban và từ khóa tìm kiếm
+  // Lọc danh sách theo từ khóa tìm kiếm (họ tên, chức danh, phòng ban, số điện thoại, địa bàn)
   const filteredList = useMemo(() => {
+    const s = (searchTerm || '').toLowerCase().trim();
+    if (!s) return employees;
     return employees.filter((emp) => {
-      const matchDept = selectedDept === 'ALL' || emp.department === selectedDept;
-      const s = (searchTerm || '').toLowerCase().trim();
-      const matchSearch =
-        !s ||
+      return (
         emp.name?.toLowerCase().includes(s) ||
         emp.position?.toLowerCase().includes(s) ||
         emp.department?.toLowerCase().includes(s) ||
         emp.phone?.includes(s) ||
-        emp.assignedArea?.toLowerCase().includes(s);
-      return matchDept && matchSearch;
+        emp.assignedArea?.toLowerCase().includes(s)
+      );
     });
-  }, [employees, selectedDept, searchTerm]);
+  }, [employees, searchTerm]);
 
   // Xuất danh bạ toàn Quỹ sang Excel
   const handleExportDirectory = async () => {
@@ -140,39 +136,6 @@ const EmployeeMasterSidebar = ({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 transition-all text-slate-800 placeholder-slate-400"
           />
-        </div>
-
-        {/* Bộ lọc nhanh Phòng ban */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[11px]">
-          <button
-            type="button"
-            onClick={() => setSelectedDept('ALL')}
-            className={`px-2.5 py-1 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
-              selectedDept === 'ALL'
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            Tất cả ({employees.length})
-          </button>
-          {departments.map((dept) => {
-            const count = employees.filter((e) => e.department === dept).length;
-            const isSelected = selectedDept === dept;
-            return (
-              <button
-                key={dept}
-                type="button"
-                onClick={() => setSelectedDept(dept)}
-                className={`px-2.5 py-1 rounded-lg font-medium shrink-0 transition-all cursor-pointer whitespace-nowrap ${
-                  isSelected
-                    ? 'bg-emerald-800 text-white font-bold shadow-2xs'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                {dept} ({count})
-              </button>
-            );
-          })}
         </div>
       </div>
 

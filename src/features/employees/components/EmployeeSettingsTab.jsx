@@ -5,7 +5,7 @@ import {
   ShieldAlert, 
   CheckCircle2, 
   ShieldCheck, 
-  Sliders, 
+  GraduationCap, 
   Save, 
   Lock, 
   Eye, 
@@ -34,8 +34,6 @@ const EmployeeSettingsTab = ({
   // Form Cấu hình Phân hệ
   const [allowStaffViewDirectory, setAllowStaffViewDirectory] = useState(true);
   const [canStaffUploadTraining, setCanStaffUploadTraining] = useState(true);
-  const [transferMaxMonths, setTransferMaxMonths] = useState(36);
-  const [transferWarningMonths, setTransferWarningMonths] = useState(6);
   const [transferRules, setTransferRules] = useState([]);
 
   useEffect(() => {
@@ -45,12 +43,6 @@ const EmployeeSettingsTab = ({
       }
       if (hrConfig.canStaffUploadTraining !== undefined) {
         setCanStaffUploadTraining(Boolean(hrConfig.canStaffUploadTraining));
-      }
-      if (hrConfig.transferMaxMonths !== undefined) {
-        setTransferMaxMonths(Number(hrConfig.transferMaxMonths) || 36);
-      }
-      if (hrConfig.transferWarningMonths !== undefined) {
-        setTransferWarningMonths(Number(hrConfig.transferWarningMonths) || 6);
       }
       if (Array.isArray(hrConfig.transferRules)) {
         setTransferRules(hrConfig.transferRules);
@@ -108,8 +100,8 @@ const EmployeeSettingsTab = ({
         {
           positionName: posName,
           requiresTransfer: field === 'requiresTransfer' ? value : false,
-          maxMonths: field === 'maxMonths' ? value : transferMaxMonths || 36,
-          warningMonths: field === 'warningMonths' ? value : transferWarningMonths || 6,
+          maxMonths: field === 'maxMonths' ? value : 36,
+          warningMonths: field === 'warningMonths' ? value : 6,
         },
       ];
     });
@@ -128,8 +120,8 @@ const EmployeeSettingsTab = ({
     return {
       positionName: posName,
       requiresTransfer: defaultRequires,
-      maxMonths: transferMaxMonths || 36,
-      warningMonths: transferWarningMonths || 6,
+      maxMonths: 36,
+      warningMonths: 6,
     };
   };
 
@@ -145,8 +137,6 @@ const EmployeeSettingsTab = ({
       await saveSubsystemConfig('hr', {
         allowStaffViewDirectory,
         canStaffUploadTraining,
-        transferMaxMonths: Number(transferMaxMonths) || 36,
-        transferWarningMonths: Number(transferWarningMonths) || 6,
         transferRules,
       });
       toast?.showSuccess?.('Đã lưu cấu hình và phân quyền luân chuyển thành công!');
@@ -230,64 +220,31 @@ const EmployeeSettingsTab = ({
             </div>
           </div>
 
-          {/* Cấu hình 2: Quyền quản lý chứng chỉ & Tham số luân chuyển chung */}
+          {/* Cấu hình 2: Quyền cập nhật văn bằng & chứng chỉ */}
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
             <div className="flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-emerald-700" />
-              <h4 className="font-bold text-slate-900">Tham Số Giám Sát Luân Chuyển Mặc Định</h4>
+              <GraduationCap className="w-4 h-4 text-emerald-700" />
+              <h4 className="font-bold text-slate-900">Quyền Cập Nhật Văn Bằng &amp; Chứng Chỉ</h4>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  Chu kỳ luân chuyển mặc định (tháng):
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="12"
-                    max="60"
-                    value={transferMaxMonths}
-                    onChange={(e) => setTransferMaxMonths(e.target.value)}
-                    disabled={!canManage}
-                    className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-                  />
-                  <span className="text-slate-500 text-[11px]">tháng (Áp dụng làm giá trị chuẩn ban đầu)</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  Thời gian cảnh báo trước hạn mặc định (tháng):
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={transferWarningMonths}
-                    onChange={(e) => setTransferWarningMonths(e.target.value)}
-                    disabled={!canManage}
-                    className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-                  />
-                  <span className="text-slate-500 text-[11px]">tháng trước khi đến hạn luân chuyển</span>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={canStaffUploadTraining}
-                    onChange={(e) => setCanStaffUploadTraining(e.target.checked)}
-                    disabled={!canManage}
-                    className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
-                  />
-                  <span className="text-slate-800 font-bold">
-                    Cho phép cán bộ tự cập nhật văn bằng, chứng chỉ của mình
+            <div className="p-2 rounded-lg hover:bg-white transition-colors">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={canStaffUploadTraining}
+                  onChange={(e) => setCanStaffUploadTraining(e.target.checked)}
+                  disabled={!canManage}
+                  className="mt-0.5 w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+                />
+                <div>
+                  <span className="text-slate-800 font-bold block">
+                    Cho phép cán bộ tự cập nhật văn bằng, chứng chỉ đào tạo
                   </span>
-                </label>
-              </div>
+                  <span className="text-[11px] text-slate-500 block mt-0.5">
+                    Khi bật, cán bộ nhân viên có thể chủ động bổ sung các chứng chỉ tập huấn, bồi dưỡng nghiệp vụ vào hồ sơ cá nhân.
+                  </span>
+                </div>
+              </label>
             </div>
           </div>
         </div>

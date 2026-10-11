@@ -260,7 +260,7 @@ Hệ thống quản lý chuẩn hóa 11 chức vụ nòng cốt trong Quỹ tín
 1. `pos-01` (`CT_HDQT`): Chủ tịch Hội đồng Quản trị
 2. `pos-02` (`PH_HDQT`): Phó Chủ tịch HĐQT
 3. `pos-03` (`TV_HDQT`): Thành viên HĐQT
-4. `pos-04` (`GD`): Giám đốc
+4. `pos-04` (`TV_HDQT_GD`): Thành viên HĐQT - Giám đốc (thuộc Ban Điều hành, đảm nhiệm cả vai trò quản trị HĐQT và điều hành kinh doanh Quỹ)
 5. `pos-05` (`PGD`): Phó Giám đốc
 6. `pos-06` (`TB_BKS`): Trưởng ban Kiểm soát
 7. `pos-07` (`TV_BKS`): Thành viên BKS

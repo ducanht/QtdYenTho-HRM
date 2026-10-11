@@ -81,11 +81,11 @@ export const buildUserData = (fbUser, profile) => {
     defaultArea = 'Lãnh đạo toàn diện HĐQT & Định hướng chiến lược Quỹ';
   } else if (emailLower.includes('son') || emailLower.includes('giamdoc')) {
     defaultName = 'Nguyễn Văn Sơn';
-    defaultPosition = 'Giám đốc';
+    defaultPosition = 'Thành viên HĐQT - Giám đốc';
     defaultDepartment = 'Ban Điều hành';
     defaultCode = 'CB03';
     defaultPartyRole = 'Phó Bí thư Chi bộ';
-    defaultArea = 'Điều hành toàn diện hoạt động kinh doanh Quỹ';
+    defaultArea = 'Thành viên HĐQT, Điều hành toàn diện hoạt động kinh doanh Quỹ';
   } else if (emailLower.includes('vuhien') || emailLower.includes('hdqt')) {
     defaultName = 'Vũ Thị Hiền';
     defaultPosition = 'Thành viên HĐQT chuyên trách';

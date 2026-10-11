@@ -71,9 +71,8 @@ const EmployeesContainer = () => {
     );
   }, [currentUser, role]);
 
-  // Bộ lọc Sidebar
+  // Bộ lọc tìm kiếm Cán bộ Sidebar
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDept, setSelectedDept] = useState('ALL');
 
   // URL State Sync
   const urlTab = searchParams.get('tab') || 'PROFILE';
@@ -280,9 +279,6 @@ const EmployeesContainer = () => {
               onSelectEmployee={setSelectedEmpIdState}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
-              selectedDept={selectedDept}
-              setSelectedDept={setSelectedDept}
-              departments={departments}
               hrConfig={hrConfig}
               onOpenAddModal={handleOpenAdd}
               canManage={canManage}

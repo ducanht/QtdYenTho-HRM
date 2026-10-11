@@ -258,8 +258,14 @@ const EmployeeFormModal = ({
                 onChange={(e) => setPosition(e.target.value)}
                 placeholder="VD: Cán bộ tín dụng / Kế toán trưởng"
                 required
+                list="positions-list"
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
+              <datalist id="positions-list">
+                {positions.map((p) => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="block text-slate-700 font-bold mb-1">Ngày bắt đầu chức vụ:</label>
