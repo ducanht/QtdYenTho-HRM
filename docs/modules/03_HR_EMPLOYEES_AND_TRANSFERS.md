@@ -65,7 +65,8 @@
 ### 3.1. Collection `employees` (hoặc `users`):
 ```typescript
 interface Employee {
-  id: string;               // Mã định danh duy nhất (VD: emp-001)
+  id: string;               // Mã định danh doc (VD: emp-001)
+  uuid: string;             // Mã UUID bất biến v4 chuẩn RFC 4122 (VD: 3f8a9c2e-4b11-4a88-9d10-8b1e0f22c19a)
   code: string;             // Mã cán bộ (VD: CB01, CB02, ..., CB13)
   name: string;             // Họ và tên đầy đủ
   gender: 'Nam' | 'Nữ';
@@ -93,6 +94,7 @@ interface Employee {
 interface WorkHistoryRecord {
   id: string;               // Mã bản ghi (VD: trans-001)
   employeeId: string;       // FK -> employees.id
+  employeeUuid: string;     // FK -> employees.uuid (UUID RFC 4122 v4)
   employeeCode: string;     // CB01, CB02...
   employeeName: string;     // Họ tên cán bộ
   decisionNumber: string;   // Số quyết định (VD: 15/QĐ-HĐQT-2024)
@@ -118,6 +120,7 @@ interface WorkHistoryRecord {
 interface EmployeeTraining {
   id: string;               // Mã chứng chỉ (VD: train-uuid)
   employeeId: string;       // FK -> employees.id
+  employeeUuid: string;     // FK -> employees.uuid (UUID RFC 4122 v4)
   employeeName: string;     // Họ tên cán bộ
   courseName: string;       // Tên khóa học / bồi dưỡng / chứng chỉ
   institution: string;      // Đơn vị cấp / Đào tạo (Học viện Ngân hàng, NHNN...)
@@ -137,6 +140,7 @@ interface EmployeeTraining {
 interface EmployeeKpiRecord {
   id: string;               // Mã bản ghi KPI (VD: kpi-2026-q1-emp001)
   employeeId: string;       // FK -> employees.id
+  employeeUuid: string;     // FK -> employees.uuid (UUID RFC 4122 v4)
   periodName: string;       // Tên kỳ đánh giá (VD: Quý 1/2026)
   year: number;             // Năm đánh giá
   quarter?: number;         // Quý đánh giá
@@ -169,18 +173,66 @@ interface EmployeeKpiRecord {
 
 ## 💻 5. CÁC THÀNH PHẦN GIAO DIỆN (UI COMPONENTS)
 
-Hệ thống giao diện phân hệ Quản trị Nhân sự bao gồm:
-1. `EmployeesContainer.jsx`: Khung chứa chính, quản lý state danh bạ cán bộ, bộ lọc phòng ban, thâm niên và mở các modal nghiệp vụ.
-2. `EmployeeCard.jsx`: Thẻ hiển thị trích ngang cán bộ:
-   - Hiển thị ảnh Avatar (hỗ trợ đổi ảnh trực tiếp bằng camera/tải tệp kèm nén tự động).
-   - Hiển thị badge phòng ban, chức vụ chính quyền và chức vụ Đảng.
-   - Hiển thị **Thâm niên giữ chức vụ** (năm/tháng). Hỗ trợ chỉnh sửa ngày bổ nhiệm inline.
-   - 2 nút hành động chuyên nghiệp:
-     - 🎓 **Đào tạo & CC**: Mở modal quản lý danh sách và cấp mới văn bằng chứng chỉ.
-     - 🔄 **Luân chuyển**: Mở modal xem timeline quá trình luân chuyển hoặc tạo quyết định điều động mới.
-3. `EmployeeTrainingModal.jsx`: Modal chuyên biệt quản lý Đào tạo & Chứng chỉ:
-   - Danh sách các chứng chỉ đã đạt được của cán bộ kèm hình ảnh thu nhỏ thumbnail.
-   - Chức năng phóng to xem ảnh chứng chỉ toàn màn hình (Modal Preview).
-   - Form thêm mới khóa đào tạo/chứng chỉ với tính năng tự động nén ảnh qua Canvas trước khi lưu vào Firestore.
-   - Chức năng xóa chứng chỉ (yêu cầu xác nhận an toàn).
-4. `WorkHistoryModal.jsx`: Modal Timeline hiển thị quá trình luân chuyển công tác, điều động địa bàn theo thời gian thực.
+Hệ thống giao diện Phân hệ Quản trị Nhân sự kế thừa trọn vẹn kiến trúc Master - Detail 2 phần tương tự Phân hệ Đánh giá Tín nhiệm, tối ưu hóa hiển thị trên iPad, máy tính bảng và màn hình lớn:
+
+### 5.1. Bố Cục Tổng Thể & Điều Hướng:
+1. `EmployeesContainer.jsx`: Component điều phối trung tâm:
+   - Quản lý đồng bộ URL parameters: `?tab=PROFILE&empId=emp-001` (khắc phục triệt để lỗi F5/Back/Refresh trình duyệt).
+   - Tự động nạp danh sách 13 cán bộ chính thức từ Firestore (`employees` và `users`).
+   - Tự động chọn cán bộ đầu tiên khi mở phân hệ.
+   - Bố cục lưới Responsive 12 cột: Cột trái Master Sidebar chiếm 3-4 cột (hoặc toàn màn hình trên mobile khi chưa chọn CB), Cột phải Detail Panel chiếm 8-9 cột.
+2. `HRModuleTabsNav.jsx`: Thanh Tab điều hướng chính trên Desktop và iPad (5 phân hệ chuyên sâu):
+   - 👤 **Hồ sơ trích ngang** (`PROFILE`): Sơ yếu lý lịch chuẩn 2C/TCTD.
+   - 🔄 **Luân chuyển công tác** (`TRANSFERS`): Timeline luân chuyển & Giám sát chu kỳ NHNN.
+   - 🎓 **Đào tạo & Chứng chỉ** (`TRAINING`): Quản lý văn bằng chứng chỉ & Ảnh scan.
+   - 📊 **Cơ cấu & Thống kê** (`ANALYTICS`): Thống kê cơ cấu nhân sự & Cảnh báo luân chuyển toàn Quỹ.
+   - ⚙️ **Danh mục & Chức danh** (`SETTINGS`): Quản lý 5 phòng ban & 11 chức danh chuẩn (có KSNB).
+3. `HRBottomNav.jsx`: Thanh điều hướng cố định đáy trên thiết bị di động (Mobile Bottom Navigation):
+   - Gồm 5 icon tương ứng 5 tab chức năng, touch target $\ge 48$px, hỗ trợ thao tác bằng một tay nhanh chóng và thuận tiện.
+
+### 5.2. Cột Trái: Master Sidebar (`EmployeeMasterSidebar.jsx`):
+- **Bộ lọc phòng ban linh hoạt**: Tất cả phòng ban, Phòng Tín dụng, Phòng Kế toán - Ngân quỹ, Ban Kiểm soát, HĐQT & BĐH.
+- **Ô tìm kiếm tức thì**: Lọc theo Họ tên, Mã cán bộ (`CB01`...), Số CCCD, hoặc Số điện thoại.
+- **Danh sách thẻ cán bộ mini (Card List)**:
+  - Ảnh đại diện Avatar nén Canvas WebP $< 45$KB.
+  - Mã CB, Họ và tên in đậm, chức vụ chính quyền và huy hiệu Đảng viên.
+  - **Huy hiệu Thâm niên giữ chức vụ** tự động tính toán từ `positionStartDate`.
+  - **Chỉ báo cảnh báo luân chuyển NHNN**:
+    - Màu vàng: Thâm niên $\ge 2.5$ năm (sắp đến hạn luân chuyển theo quy định NHNN).
+    - Màu đỏ nhấp nháy: Thâm niên $\ge 3$ năm (quá hạn luân chuyển bắt buộc cho vị trí nhạy cảm).
+- **Nút Thêm cán bộ mới**: Kích hoạt `EmployeeFormModal` với mã UUID v4 tự động sinh ngẫu nhiên.
+
+### 5.3. Cột Phải: Các Panel Nghiệp Vụ Chuyên Sâu:
+1. `EmployeeProfileDetail.jsx` (Tab Hồ sơ trích ngang):
+   - Trình bày thông tin theo chuẩn Mẫu 2C/TCTD của Ngân hàng Nhà nước.
+   - Thay đổi ảnh chân dung cán bộ trực tiếp, nén Canvas WebP $< 45$KB.
+   - Nút **"Sửa hồ sơ"** và nút **"In trích ngang A4"**.
+2. `EmployeeTransferHistory.jsx` (Tab Luân chuyển công tác):
+   - Banner cảnh báo chu kỳ luân chuyển 36 tháng đối với các vị trí nhạy cảm (CBTD, Kế toán, Thủ quỹ, BKS).
+   - Timeline trực quan hiển thị toàn bộ các quyết định điều động, bổ nhiệm, luân chuyển địa bàn trong quá khứ.
+   - Nút **"Lập quyết định luân chuyển"**: Kích hoạt `TransferDecisionModal`.
+3. `EmployeeTrainingTab.jsx` (Tab Đào tạo & Chứng chỉ):
+   - Danh mục các văn bằng, chứng chỉ chuyên môn đã được cấp.
+   - Kiểm tra hạn hiệu lực (còn hạn / hết hạn).
+   - Xem ảnh scan văn bằng phóng to toàn màn hình.
+   - Nút **"Thêm chứng chỉ"**: Kích hoạt `AddTrainingModal`.
+4. `EmployeeAnalyticsTab.jsx` (Tab Cơ cấu & Thống kê):
+   - 4 thẻ KPI tổng quan: Tổng số CBNV (13), Số Đảng viên (tỷ lệ %), Tuổi bình quân, Vị trí nhạy cảm cần luân chuyển.
+   - Phân bổ nhân sự theo từng phòng ban và khối chuyên môn.
+   - **Bảng giám sát luân chuyển toàn Quỹ**: Đánh giá toàn diện 100% cán bộ, phân loại mức độ cấp thiết cần luân chuyển theo quy định NHNN.
+5. `EmployeeSettingsTab.jsx` (Tab Danh mục & Chức danh):
+   - Quản lý danh mục 5 Phòng ban nòng cốt.
+   - Quản lý 11 Chức vụ chuẩn mực trong QTDND (bao gồm chức danh Kiểm soát nội bộ `pos-11` / `KSNB`).
+
+### 5.4. Các Modal Nghiệp Vụ & In Ấn A4:
+1. `EmployeeFormModal.jsx`: Modal thêm mới / chỉnh sửa hồ sơ cán bộ:
+   - Tự động sinh mã `uuid` chuẩn RFC 4122 v4 không trùng lặp khi thêm mới.
+   - Đầy đủ các trường nghiệp vụ: CCCD 12 số, ngày cấp, ngày vào Đảng, ngày chính thức, trình độ học vấn, thâm niên chức vụ.
+2. `TransferDecisionModal.jsx`: Modal lập quyết định điều động / luân chuyển:
+   - Nhập số quyết định, ngày ký, ngày hiệu lực, hình thức luân chuyển, người ký, lý do và tài liệu đính kèm.
+   - Cờ tích chọn *"Đồng bộ chức vụ và địa bàn mới vào hồ sơ cán bộ hiện tại"*.
+3. `AddTrainingModal.jsx`: Modal thêm chứng chỉ đào tạo:
+   - Tải lên ảnh scan/chụp chứng chỉ, nén tự động qua Canvas WebP $< 45$KB trước khi lưu Firestore.
+4. `EmployeeA4PrintModal.jsx`: Màn hình xem trước và in Sơ yếu lý lịch trích ngang:
+   - Định dạng chuẩn trang A4 in ấn, quốc huy/quốc hiệu, thông tin cá nhân, quá trình đào tạo và quá trình công tác.
+

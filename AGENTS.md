@@ -81,19 +81,27 @@ Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 
 
 ---
 
-## 👥 6. CHUẨN HÓA ĐỊNH DANH CÁN BỘ & TRIỆT TIÊU TRÙNG LẶP (ZERO DUPLICATE POLICY)
+## 👥 6. CHUẨN HÓA ĐỊNH DANH CÁN BỘ & MÃ UUID BẤT BIẾN RFC 4122 V4 (ZERO DUPLICATE POLICY)
 
 > **QUY TẮC CỐT LÕI (BẮT BUỘC TUÂN THỦ 100%)**:
-> Tuyệt đối không để xảy ra hiện tượng trùng lặp danh bạ CBNV, lặp đôi tên cán bộ trong danh sách cử tri ("Chưa nộp phiếu", "Đã nộp phiếu") hay danh mục đối tượng được đánh giá.
+> - Mỗi Cán bộ Nhân viên sở hữu một mã `uuid` chuẩn RFC 4122 v4 (36 ký tự phân tách bằng dấu gạch ngang) bảo đảm duy nhất, không trùng lặp toàn hệ thống.
+> - Tuyệt đối không để xảy ra hiện tượng trùng lặp danh bạ CBNV, lặp đôi tên cán bộ trong danh sách cử tri ("Chưa nộp phiếu", "Đã nộp phiếu") hay danh mục đối tượng được đánh giá.
 
-1. **Chuẩn Hóa ID Cán Bộ**:
-   - Sử dụng định danh duy nhất chuẩn: `emp-001` đến `emp-013` (13 Cán bộ Nhân viên chính thức của Quỹ).
+1. **Chuẩn Hóa Mã UUID & ID Cán Bộ**:
+   - Trường `uuid`: Lưu mã UUID v4 bất biến cho 100% cán bộ trong Firestore (`employees` và `users`). Hàm `createEmployeeProfile` tự động gán `uuid = generateUUID()` khi thêm mới nhân sự.
+   - Trường `id`: Sử dụng định danh chuẩn: `emp-001` đến `emp-013` (13 Cán bộ Nhân viên chính thức của Quỹ).
    - Tài khoản Quản trị Cấp cao hệ thống: `emp-root` (code: `ROOT`, email: `qtdyentho@gmail.com`).
-   - Tuyệt đối không lưu hành song song ID dạng UUID legacy (`e0a80101-...`) hoặc các bản ghi rác.
-2. **Cấu Hình Đợt Đánh Giá (`voterEmployeeIds`, `targetEmployeeIds`)**:
-   - Chỉ lưu trữ mảng ID cán bộ hợp lệ chuẩn (`validStaffIds`: `['emp-001', ..., 'emp-013']`).
-   - Hàm `autoSyncDatabaseSchema` phải tự động lọc bỏ các ID không thuộc `validStaffIds` trước khi lưu vào `evaluation_periods` và `period_configs`.
-3. **Cơ Chế Khử Trùng Lặp Đa Tầng (Defense-in-depth)**:
+   - Các collection phụ thuộc (`work_history`, `employee_training`, `employee_kpi_history`) lưu trữ đồng thời cả `employeeId` và `employeeUuid` để phục vụ liên thông và mở rộng về sau.
+2. **Cấu Trúc Các Table Lưu Trữ Độc Lập Phục Vụ Mở Rộng**:
+   - Mọi thực thể nghiệp vụ nhân sự chuyên sâu được lưu vào các collection riêng biệt: `work_history`, `employee_training`, `employee_kpi_history`, `departments`, `positions`.
+   - Thiết kế này bảo đảm khi mở rộng phân hệ mới (như Chấm công `MODULE_TIMEKEEPING`, Tính lương `MODULE_PAYROLL` hay Khen thưởng `MODULE_AWARDS`) sẽ không làm xáo trộn các bảng hiện hữu.
+3. **Kiến Trúc Giao Diện Master - Detail 2 Phần Kế Thừa Phân Hệ Đánh Giá**:
+   - Phân hệ Quản trị Nhân sự (`MODULE_HR` / `/employees`) kế thừa trọn vẹn bố cục Master-Detail iPad 2 phần:
+     * **Cột trái (Master Sidebar)**: Tìm kiếm, lọc theo phòng ban, danh sách thẻ cán bộ mini với Avatar nén Canvas, huy hiệu thâm niên và chỉ báo cảnh báo luân chuyển NHNN 36 tháng (vàng $\ge 2.5$ năm, đỏ $\ge 3$ năm).
+     * **Cột phải (Detail Panel)**: 5 Tab chức năng (*Hồ sơ trích ngang 2C/TCTD*, *Luân chuyển công tác*, *Đào tạo & Chứng chỉ*, *Cơ cấu & Thống kê*, *Danh mục & Chức danh*).
+     * **Thanh Bottom Navigation Di Động**: 5 icon điều hướng cố định đáy màn hình mobile/tablet.
+   - 100% responsive, triệt tiêu toàn bộ từ ngữ AI hay giải thích thừa thãi, tập trung vào nghiệp vụ ngân hàng hợp tác.
+4. **Cơ Chế Khử Trùng Lặp Đa Tầng (Defense-in-depth)**:
    - `subscribeEmployees`: Tự động khử trùng lặp qua `Map` theo `code` (CB01..CB13) hoặc `email`, ưu tiên giữ bản ghi có ID `emp-xxx` và sắp xếp theo `order`.
    - `getOfficialStaff`, `getEligibleTargetEmployees`, `getEligibleVoterEmployees`: Luôn lọc qua bộ khử trùng lặp `Map` và loại trừ tài khoản kỹ thuật quản trị webapp (`isSystemAdminAccount`).
    - Bảng tổng quan `TrustOverviewReport`: Khử trùng lặp danh sách cử tri hợp lệ qua `getEligibleVoterEmployees`.

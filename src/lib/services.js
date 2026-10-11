@@ -161,6 +161,64 @@ export const updateEmployeeProfile = async (employeeId, profileData) => {
   }
 };
 
+/**
+ * Thêm mới hồ sơ cán bộ nhân viên với mã UUID chuẩn RFC 4122 v4 không trùng lặp
+ */
+export const createEmployeeProfile = async (employeeData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  
+  const uuid = employeeData.uuid || generateUUID();
+  const id = employeeData.id || `emp-${uuid.slice(0, 8)}`;
+
+  const cleanData = {};
+  Object.keys(employeeData || {}).forEach((k) => {
+    if (employeeData[k] !== undefined) {
+      cleanData[k] = employeeData[k];
+    }
+  });
+
+  const payload = {
+    ...cleanData,
+    id,
+    uuid,
+    status: cleanData.status || 'ACTIVE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
+  };
+
+  try {
+    await setDoc(doc(db, 'users', id), payload, { merge: true });
+    await setDoc(doc(db, 'employees', id), payload, { merge: true }).catch(() => {});
+    return { success: true, id, uuid, data: payload };
+  } catch (err) {
+    console.error('Lỗi thêm mới hồ sơ cán bộ:', err);
+    throw err;
+  }
+};
+
+/**
+ * Xóa/Chuyển trạng thái thôi việc cho cán bộ nhân viên
+ */
+export const deleteEmployeeProfile = async (employeeId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!employeeId) throw new Error('Thiếu ID cán bộ cần xóa');
+
+  try {
+    const payload = {
+      status: 'LEAVE',
+      updatedAt: new Date().toISOString(),
+      serverTime: serverTimestamp(),
+    };
+    await setDoc(doc(db, 'users', employeeId), payload, { merge: true });
+    await setDoc(doc(db, 'employees', employeeId), payload, { merge: true }).catch(() => {});
+    return { success: true, id: employeeId };
+  } catch (err) {
+    console.error(`Lỗi chuyển trạng thái thôi việc [${employeeId}]:`, err);
+    throw err;
+  }
+};
+
 // ============================================================================
 // 2. QUÁ TRÌNH LUÂN CHUYỂN CÔNG TÁC (work_history collection)
 // ============================================================================
@@ -209,11 +267,45 @@ export const saveWorkHistory = async (transferRecord) => {
   };
 
   try {
-    const docRef = await addDoc(collection(db, 'work_history'), payload);
-    return { success: true, id: docRef.id };
+    let targetDocId;
+    if (transferRecord.id) {
+      targetDocId = transferRecord.id;
+      await setDoc(doc(db, 'work_history', targetDocId), payload, { merge: true });
+    } else {
+      const docRef = await addDoc(collection(db, 'work_history'), payload);
+      targetDocId = docRef.id;
+    }
+
+    // Nếu người dùng chọn đồng bộ trực tiếp vào hồ sơ hiện tại của cán bộ
+    if (transferRecord.syncToProfile && transferRecord.employeeId) {
+      const profileUpdate = {};
+      if (transferRecord.toPosition) profileUpdate.position = transferRecord.toPosition;
+      if (transferRecord.toDepartment) profileUpdate.department = transferRecord.toDepartment;
+      if (transferRecord.toAssignedArea) profileUpdate.assignedArea = transferRecord.toAssignedArea;
+      if (transferRecord.effectiveDate) profileUpdate.positionStartDate = transferRecord.effectiveDate;
+
+      if (Object.keys(profileUpdate).length > 0) {
+        await updateEmployeeProfile(transferRecord.employeeId, profileUpdate).catch((err) => {
+          console.warn('Lỗi đồng bộ hồ sơ sau luân chuyển:', err);
+        });
+      }
+    }
+
+    return { success: true, id: targetDocId };
   } catch (error) {
-    console.error('Lỗi Firestore addDoc work_history:', error);
+    console.error('Lỗi Firestore lưu work_history:', error);
     throw error;
+  }
+};
+
+export const deleteWorkHistory = async (recordId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  try {
+    await deleteDoc(doc(db, 'work_history', recordId));
+    return { success: true, id: recordId };
+  } catch (err) {
+    console.error(`Lỗi xóa quyết định luân chuyển [${recordId}]:`, err);
+    throw err;
   }
 };
 
@@ -1322,5 +1414,22 @@ export const subscribeEmployeeKpiHistory = (employeeId = null, callback) => {
   }
 };
 
+export const saveEmployeeKpiHistory = async (kpiData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const targetId = kpiData.id || `kpi_${generateUUID()}`;
+  const payload = {
+    ...kpiData,
+    id: targetId,
+    createdAt: kpiData.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
+  };
+  await setDoc(doc(db, 'employee_kpi_history', targetId), payload, { merge: true });
+  return { success: true, id: targetId, data: payload };
+};
 
-
+export const deleteEmployeeKpiHistory = async (historyId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await deleteDoc(doc(db, 'employee_kpi_history', historyId));
+  return { success: true, id: historyId };
+};

@@ -27,6 +27,7 @@ erDiagram
 
     EMPLOYEE {
         string id PK "Mã định danh duy nhất (UID / EMP_ID)"
+        string uuid UK "Mã UUID bất biến v4 chuẩn RFC 4122 (VD: 3f8a9c2e-4b11-4a88-9d10-8b1e0f22c19a)"
         string code UK "Mã cán bộ (VD: CB01, CB02)"
         string name "Họ và tên đầy đủ theo CCCD"
         string gender "Nam / Nữ"
@@ -53,6 +54,7 @@ erDiagram
     EMPLOYEE_TRAINING {
         string id PK "Mã chứng chỉ (train-uuid)"
         string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
         string employeeName "Họ tên cán bộ"
         string courseName "Tên khóa đào tạo / bồi dưỡng / chứng chỉ"
         string institution "Đơn vị đào tạo / cấp chứng chỉ"
@@ -67,6 +69,7 @@ erDiagram
     EMPLOYEE_KPI_HISTORY {
         string id PK "Mã bản ghi KPI (kpi-uuid)"
         string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
         string periodName "Tên kỳ đánh giá KPI"
         int year "Năm đánh giá KPI"
         int quarter "Quý đánh giá (1, 2, 3, 4)"
@@ -79,6 +82,7 @@ erDiagram
     WORK_HISTORY {
         string id PK "Mã bản ghi luân chuyển (TRANS_ID)"
         string employeeId FK "Mã cán bộ (FK -> users.id)"
+        string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
         string employeeCode "Mã cán bộ (CB01, CB02...)"
         string employeeName "Họ tên cán bộ"
         string decisionNumber "Số quyết định (VD: 15/QĐ-HĐQT-2024)"
@@ -166,6 +170,7 @@ Theo chỉ đạo của Ngân hàng Nhà nước, các vị trí nhạy cảm t�
 | :--- | :--- | :--- | :--- |
 | `id` | `string` | **PK** | Mã định danh bản ghi luân chuyển (VD: `trans-001`). |
 | `employeeId` | `string` | **FK -> users.id** | Cán bộ được điều động, luân chuyển. |
+| `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
 | `employeeCode` | `string` | Snapshot | Mã cán bộ (VD: `CB03`). |
 | `employeeName` | `string` | Snapshot | Họ tên cán bộ. |
 | `decisionNumber` | `string` | **Not Null** | Số Quyết định chính thức (VD: `18/QĐ-HĐQT-2025`). |
@@ -196,6 +201,7 @@ Quản lý lịch sử toàn bộ các khóa đào tạo, bồi dưỡng nghiệ
 | :--- | :--- | :--- | :--- |
 | `id` | `string` | **PK** | Mã định danh chứng chỉ (VD: `train-f47ac10b-...`). |
 | `employeeId` | `string` | **FK -> employees.id** | Cán bộ được cấp văn bằng / chứng chỉ. |
+| `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
 | `employeeName` | `string` | Snapshot | Họ tên cán bộ tại thời điểm lưu. |
 | `courseName` | `string` | **Not Null** | Tên khóa học / bồi dưỡng / chứng chỉ (VD: Nghiệp vụ Quỹ TDND, Thẩm định Tài sản...). |
 | `institution` | `string` | **Not Null** | Đơn vị đào tạo / cấp chứng chỉ (Học viện Ngân hàng, Hiệp hội QTDND, NHNN...). |
@@ -220,6 +226,7 @@ Lưu trữ điểm số KPI và xếp loại thi đua qua từng kỳ đánh gi�
 | :--- | :--- | :--- | :--- |
 | `id` | `string` | **PK** | Mã bản ghi lịch sử KPI (VD: `kpi-2026-q1-emp001`). |
 | `employeeId` | `string` | **FK -> employees.id** | Cán bộ nhân viên nhận kết quả KPI. |
+| `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
 | `periodName` | `string` | **Not Null** | Tên kỳ đánh giá (VD: Đánh giá KPI Quý 1/2026). |
 | `year` | `number` | **Not Null** | Năm đánh giá (VD: 2026). |
 | `quarter` | `number` | 1 - 4 | Quý đánh giá (nếu có). |
@@ -416,6 +423,20 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
   - **Quản Lý Thâm Niên Chức Danh (`positionStartDate`)**: Bổ sung trường ngày bắt đầu đảm nhiệm chức danh hiện tại vào hồ sơ cán bộ `employees`/`users` và tiện ích tính thâm niên tự động `calculatePositionTenure`.
   - **Nén Ảnh Client-side Canvas Base64 (< 50KB)**: Toàn bộ ảnh Avatar cán bộ và ảnh scan/chụp Chứng chỉ đào tạo đều được nén tự động qua HTML5 Canvas WebP/JPEG, lưu trực tiếp dạng Base64 Data URL trong Firestore document. Triệt tiêu 100% rủi ro tràn dung lượng, bảo toàn gói miễn phí Firebase Spark Plan (1 GiB đủ lưu > 25.000 ảnh/chứng chỉ).
   - **Bảo Mật Tầng CSDL (`firestore.rules`)**: Cấu hình phân quyền bảo mật chặt chẽ cho 2 collections mới: cho phép cán bộ tự xem và quản lý chứng chỉ của bản thân, Ban Lãnh đạo toàn quyền phê duyệt và quản lý toàn bộ hệ thống.
+- **`2026.10.11_v5.1_employee_uuid_rfc4122_and_master_detail_hr_system`**:
+  - **Mã UUID RFC 4122 v4 Bất Biến & Duy Nhất Cho Toàn Bộ CBNV**: Gán mã `uuid` chuẩn (36 ký tự phân tách bằng dấu gạch nối) cho 100% cán bộ trong Firestore (`employees` và `users`), tự động gán UUID v4 ngẫu nhiên không trùng lặp khi tạo mới cán bộ thông qua hàm `generateUUID()`.
+  - **Lưu Trữ Tách Biệt Các Table Độc Lập Phục Vụ Mở Rộng**:
+    - `employees` & `users`: Lưu trữ thông tin hồ sơ trích ngang, chức vụ, địa bàn, thâm niên.
+    - `work_history`: Quá trình luân chuyển, điều động, bổ nhiệm theo quy định luân chuyển NHNN 2.5 - 3 năm đối với vị trí nhạy cảm, liên kết qua `employeeId` và `employeeUuid`.
+    - `employee_training`: Lịch sử các khóa bồi dưỡng, văn bằng chứng chỉ, kiểm soát hạn hiệu lực, lưu trữ ảnh chứng chỉ nén WebP Canvas < 45KB.
+    - `employee_kpi_history`: Lịch sử đánh giá kết quả và xếp loại KPI theo kỳ/quý/năm.
+    - `departments` & `positions`: Quản lý danh mục 5 phòng ban và 11 chức vụ chuẩn hoá (bao gồm KSNB).
+  - **Kiến Trúc Giao Diện Master - Detail 2 Phần Kế Thừa Phân Hệ Đánh Giá**:
+    - **Cột Trái (Master Sidebar, 3-4/12 cột)**: Danh sách cán bộ thẻ mini, tìm kiếm nhanh, lọc theo phòng ban, huy hiệu thâm niên, chỉ báo cảnh báo luân chuyển NHNN (màu vàng $\ge 2.5$ năm, màu đỏ $\ge 3$ năm), nút Thêm cán bộ mới.
+    - **Cột Phải (Detail Panel, 8-9/12 cột)**: 5 Tab chức năng chuyên sâu gồm *Hồ sơ trích ngang* (Mẫu 2C/TCTD, in A4), *Luân chuyển công tác*, *Đào tạo & Chứng chỉ*, *Cơ cấu & Thống kê* (analytics Quỹ), *Danh mục & Chức danh*.
+    - **Thanh Bottom Navigation Di Động**: 5 icon thao tác nhanh trên mobile/tablet với touch target $\ge 48$px.
+    - **100% Ngôn Ngữ Nghiệp Vụ Chuẩn Mực**: Triệt tiêu toàn bộ từ ngữ kiểu AI hoặc giải thích rườm rà.
+
 
 
 ---

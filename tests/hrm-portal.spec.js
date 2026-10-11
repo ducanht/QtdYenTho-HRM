@@ -88,22 +88,21 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
     await expect(page.getByText('Trịnh Đức Anh').first()).toBeVisible();
     await expect(page.getByText(/CB07/i).first()).toBeVisible();
 
-    // Kiểm tra hiển thị Thâm niên chức vụ trên thẻ cán bộ
-    await expect(page.getByText(/Thâm niên chức vụ:/i).first()).toBeVisible();
+    // Kiểm tra hiển thị Thâm niên trên giao diện
+    await expect(page.getByText(/Thâm niên/i).first()).toBeVisible();
 
-    // Mở modal Đào tạo & Chứng chỉ
-    const trainingButton = page.getByRole('button', { name: /Đào tạo & CC/i }).first();
-    if (await trainingButton.isVisible({ timeout: 4000 }).catch(() => false)) {
-      await trainingButton.click();
-      await expect(page.getByRole('heading', { name: /Hồ Sơ Đào Tạo & Chứng Chỉ/i })).toBeVisible({ timeout: 10000 });
-      await page.keyboard.press('Escape');
+    // Chuyển tab Luân chuyển công tác
+    const transferTab = page.getByRole('button', { name: /Luân chuyển công tác|Luân chuyển/i }).first();
+    if (await transferTab.isVisible({ timeout: 4000 }).catch(() => false)) {
+      await transferTab.click();
+      await expect(page.getByText(/Theo Dõi Luân Chuyển Công Tác|Chu kỳ luân chuyển/i).first()).toBeVisible({ timeout: 10000 });
     }
 
-    // Mở modal Lịch sử luân chuyển công tác của cán bộ đầu tiên
-    const historyButton = page.getByRole('button', { name: /Luân chuyển/i }).first();
-    if (await historyButton.isVisible({ timeout: 4000 }).catch(() => false)) {
-      await historyButton.click();
-      await page.keyboard.press('Escape');
+    // Chuyển tab Đào tạo & Chứng chỉ
+    const trainingTab = page.getByRole('button', { name: /Đào tạo & Chứng chỉ|Đào tạo/i }).first();
+    if (await trainingTab.isVisible({ timeout: 4000 }).catch(() => false)) {
+      await trainingTab.click();
+      await expect(page.getByText(/Hồ Sơ Đào Tạo & Chứng Chỉ Chuyên Môn|Danh Mục Văn Bằng/i).first()).toBeVisible({ timeout: 10000 });
     }
   });
 

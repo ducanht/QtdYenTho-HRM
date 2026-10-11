@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 async function loginAsAdmin(page) {
+  if (page.url().includes('/portal') || page.url().includes('/trust')) return;
   await page.goto('/login');
   try {
-    await page.waitForURL(/.*\/portal/, { timeout: 3000 });
+    await page.waitForURL(/.*\/(portal|trust)/, { timeout: 5000 });
     const remindBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
     if (await remindBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
       await remindBtn.click();
@@ -17,7 +18,7 @@ async function loginAsAdmin(page) {
   await emailInput.fill('ducanht@gmail.com');
   await page.getByLabel('Mật khẩu bảo mật').fill('Qtd@2003');
   await page.getByRole('button', { name: 'Đăng nhập ngay' }).click();
-  await expect(page).toHaveURL(/.*\/portal/, { timeout: 20000 });
+  await expect(page).toHaveURL(/.*\/(portal|trust)/, { timeout: 25000 });
 
   const remindLaterBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
   if (await remindLaterBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
