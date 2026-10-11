@@ -8,8 +8,10 @@ import {
   subscribeWorkHistory, 
   subscribeEmployeeTraining, 
   subscribeDepartments,
+  subscribePositions,
   subscribeSubsystemConfig
 } from '../../lib/services';
+import { DEFAULT_POSITIONS } from '../../lib/systemDefaults';
 import { getOfficialStaff } from '../../lib/evaluationUtils';
 import Spinner from '../../components/common/Spinner';
 
@@ -46,6 +48,7 @@ const EmployeesContainer = () => {
   // Dữ liệu Realtime Firestore
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [positions, setPositions] = useState(DEFAULT_POSITIONS);
   const [workHistory, setWorkHistory] = useState([]);
   const [trainings, setTrainings] = useState([]);
   const [hrConfig, setHrConfig] = useState(null);
@@ -186,6 +189,14 @@ const EmployeesContainer = () => {
       }
     });
 
+    const unsubPos = subscribePositions((list) => {
+      if (list && list.length > 0) {
+        setPositions(list);
+      } else {
+        setPositions(DEFAULT_POSITIONS);
+      }
+    });
+
     const unsubWork = subscribeWorkHistory(null, (list) => {
       setWorkHistory(list || []);
     });
@@ -201,6 +212,7 @@ const EmployeesContainer = () => {
     return () => {
       unsubEmp();
       unsubDept();
+      unsubPos();
       unsubWork();
       unsubTrain();
       unsubConfig();
@@ -349,6 +361,7 @@ const EmployeesContainer = () => {
           onClose={() => setIsFormModalOpen(false)}
           initialData={formModalData}
           departments={departments}
+          positions={positions}
           existingEmployees={officialEmployees}
           onSuccess={() => {}}
         />
@@ -361,6 +374,7 @@ const EmployeesContainer = () => {
           selectedEmp={transferTargetEmp || currentEmp}
           employees={officialEmployees}
           departments={departments}
+          positions={positions}
           onSuccess={() => {}}
         />
       )}
