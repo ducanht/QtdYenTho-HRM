@@ -6,6 +6,7 @@ import Spinner from '../../components/common/Spinner';
 import EmployeeFilterToolbar from './components/EmployeeFilterToolbar';
 import EmployeeCard from './components/EmployeeCard';
 import WorkHistoryModal from './components/WorkHistoryModal';
+import EmployeeTrainingModal from './components/EmployeeTrainingModal';
 
 const EmployeesContainer = () => {
   const [employees, setEmployees] = useState([]);
@@ -17,6 +18,9 @@ const EmployeesContainer = () => {
   // Quản lý Modal xem Lịch sử luân chuyển công tác
   const [selectedEmpHistory, setSelectedEmpHistory] = useState(null);
   const [empWorkHistory, setEmpWorkHistory] = useState([]);
+
+  // Quản lý Modal xem và thêm Chứng chỉ / Khóa đào tạo nghiệp vụ
+  const [selectedEmpTraining, setSelectedEmpTraining] = useState(null);
 
   useEffect(() => {
     const unsubEmp = subscribeEmployees((list) => {
@@ -53,6 +57,14 @@ const EmployeesContainer = () => {
     setSelectedEmpHistory(null);
   }, []);
 
+  const handleOpenTraining = useCallback((emp) => {
+    setSelectedEmpTraining(emp);
+  }, []);
+
+  const handleCloseTraining = useCallback(() => {
+    setSelectedEmpTraining(null);
+  }, []);
+
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
       const matchDept = selectedDept === 'ALL' || emp.department === selectedDept;
@@ -80,7 +92,7 @@ const EmployeesContainer = () => {
       {/* Loading & Grid of Employee Cards */}
       {loading && employees.length === 0 ? (
         <div className="py-20 flex justify-center items-center">
-          <Spinner text="Đang đồng bộ hồ sơ cán bộ từ cơ sở dữ liệu..." />
+          <Spinner text="Đang đồng bộ hồ sơ cán bộ từ cơ sở dữ liệu Cloud Firestore..." />
         </div>
       ) : filteredEmployees.length === 0 ? (
         <Card className="text-center py-16">
@@ -93,6 +105,7 @@ const EmployeesContainer = () => {
               key={emp.id}
               emp={emp}
               onOpenHistory={handleOpenHistory}
+              onOpenTraining={handleOpenTraining}
             />
           ))}
         </div>
@@ -103,6 +116,12 @@ const EmployeesContainer = () => {
         selectedEmp={selectedEmpHistory}
         onClose={handleCloseHistory}
         workHistory={empWorkHistory}
+      />
+
+      {/* Modal Quản lý Đào tạo & Chứng chỉ nghiệp vụ */}
+      <EmployeeTrainingModal
+        selectedEmp={selectedEmpTraining}
+        onClose={handleCloseTraining}
       />
     </div>
   );

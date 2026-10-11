@@ -16,7 +16,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
-import { generatePeriodId } from './evaluationUtils';
+import { generatePeriodId, generateUUID } from './evaluationUtils';
 
 // ============================================================================
 // 1. HỒ SƠ CÁN BỘ & XÁC THỰC (users collection)
@@ -101,6 +101,40 @@ export const subscribeEmployees = (callback) => {
     console.error('Lỗi thiết lập onSnapshot users:', err);
     callback([]);
     return () => {};
+  }
+};
+
+/**
+ * Cập nhật hồ sơ cán bộ nhân viên (đồng bộ cả users và employees)
+ */
+export const updateEmployeeProfile = async (employeeId, profileData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!employeeId) throw new Error('Thiếu ID cán bộ cần cập nhật');
+
+  const cleanData = {};
+  Object.keys(profileData || {}).forEach((k) => {
+    if (profileData[k] !== undefined) {
+      cleanData[k] = profileData[k];
+    }
+  });
+
+  const payload = {
+    ...cleanData,
+    updatedAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
+  };
+
+  try {
+    // 1. Cập nhật bảng users (nguồn chính)
+    await setDoc(doc(db, 'users', employeeId), payload, { merge: true });
+
+    // 2. Đồng bộ sang bảng employees nếu document tồn tại
+    await setDoc(doc(db, 'employees', employeeId), payload, { merge: true }).catch(() => {});
+
+    return { success: true, id: employeeId };
+  } catch (err) {
+    console.error(`Lỗi cập nhật hồ sơ cán bộ [${employeeId}]:`, err);
+    throw err;
   }
 };
 
@@ -649,6 +683,25 @@ export const subscribeTrustEvaluations = (callback) => {
   }
 };
 
+/**
+ * Xóa toàn bộ phiếu đánh giá tín nhiệm của một đợt cụ thể (phục vụ reset hoặc dọn dẹp kiểm thử)
+ */
+export const deleteTrustEvaluationsByPeriod = async (periodId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!periodId) return { count: 0 };
+
+  try {
+    const q = query(collection(db, 'evaluations_trust'), where('periodId', '==', periodId));
+    const snapshot = await getDocs(q);
+    const deletePromises = snapshot.docs.map((docItem) => deleteDoc(docItem.ref));
+    await Promise.all(deletePromises);
+    return { success: true, count: snapshot.docs.length };
+  } catch (error) {
+    console.error(`Lỗi khi xóa phiếu đánh giá của đợt [${periodId}]:`, error);
+    throw error;
+  }
+};
+
 // ============================================================================
 // 6. CHẤM ĐIỂM KPI 3 CẤP (evaluations_kpi collection)
 // Trọng số: Cán bộ tự chấm (40%) - Ban điều hành (30%) - Chủ tịch HĐQT (30%)
@@ -1121,5 +1174,130 @@ export const saveRolePermissions = async (permissionsData) => {
   await setDoc(doc(db, 'system_settings', 'role_permissions'), payload, { merge: true });
   return { success: true };
 };
+
+// ============================================================================
+// 13. ĐÀO TẠO & CHỨNG CHỈ NGHỆP VỤ (employee_training collection)
+// Quản lý lịch sử các khóa đào tạo, bồi dưỡng và văn bằng chứng chỉ của cán bộ
+// ============================================================================
+export const subscribeEmployeeTraining = (employeeId = null, callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    let q = collection(db, 'employee_training');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    } else {
+      q = query(q, orderBy('issueDate', 'desc'));
+    }
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (employeeId) {
+          list.sort((a, b) => (b.issueDate || '').localeCompare(a.issueDate || ''));
+        }
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot employee_training:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot employee_training:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const saveEmployeeTraining = async (trainingData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!trainingData.employeeId) throw new Error('Thiếu mã cán bộ nhân viên');
+
+  const targetId = trainingData.id || `train_${generateUUID()}`;
+  const nowIso = new Date().toISOString();
+
+  const payload = {
+    ...trainingData,
+    id: targetId,
+    courseName: trainingData.courseName ? trainingData.courseName.trim() : '',
+    institution: trainingData.institution ? trainingData.institution.trim() : '',
+    certificateNo: trainingData.certificateNo ? trainingData.certificateNo.trim() : '',
+    issueDate: trainingData.issueDate || '',
+    expireDate: trainingData.expireDate || '',
+    grade: trainingData.grade || 'Giỏi',
+    type: trainingData.type || 'CHUYEN_MON', // 'CHUYEN_MON' | 'CHUNG_CHI_HANH_NGHE' | 'LY_LUAN_CHINH_TRI' | 'KHAC'
+    updatedAt: nowIso,
+    serverTime: serverTimestamp(),
+  };
+
+  if (!payload.createdAt) {
+    payload.createdAt = nowIso;
+  }
+
+  try {
+    await setDoc(doc(db, 'employee_training', targetId), payload, { merge: true });
+    return { success: true, id: targetId, data: payload };
+  } catch (err) {
+    console.error('Lỗi lưu chứng chỉ/khóa học vào employee_training:', err);
+    throw err;
+  }
+};
+
+export const deleteEmployeeTraining = async (trainingId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!trainingId) throw new Error('Thiếu ID chứng chỉ đào tạo cần xóa');
+
+  try {
+    await deleteDoc(doc(db, 'employee_training', trainingId));
+    return { success: true, id: trainingId };
+  } catch (err) {
+    console.error(`Lỗi xóa chứng chỉ đào tạo [${trainingId}]:`, err);
+    throw err;
+  }
+};
+
+// ============================================================================
+// 14. LỊCH SỬ KPI CÁN BỘ (employee_kpi_history collection - Mở rộng về sau)
+// ============================================================================
+export const subscribeEmployeeKpiHistory = (employeeId = null, callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    let q = collection(db, 'employee_kpi_history');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    } else {
+      q = query(q, orderBy('period', 'desc'));
+    }
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (employeeId) {
+          list.sort((a, b) => (b.period || '').localeCompare(a.period || ''));
+        }
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot employee_kpi_history:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot employee_kpi_history:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
 
 

@@ -3,13 +3,25 @@ import { generateUUID, generatePeriodId } from '../src/lib/evaluationUtils';
 
 async function loginAsAdmin(page) {
   await page.goto('/login');
-  await page.getByLabel('Địa chỉ Email Cán bộ').fill('ducanht@gmail.com');
+  try {
+    await page.waitForURL(/.*\/portal/, { timeout: 3000 });
+    const remindBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
+    if (await remindBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await remindBtn.click();
+    }
+    return;
+  } catch {
+    // Chưa đăng nhập, tiếp tục điền form
+  }
+
+  const emailInput = page.getByLabel('Địa chỉ Email Cán bộ');
+  await emailInput.fill('ducanht@gmail.com');
   await page.getByLabel('Mật khẩu bảo mật').fill('Qtd@2003');
   await page.getByRole('button', { name: 'Đăng nhập ngay' }).click();
   await expect(page).toHaveURL(/.*\/portal/, { timeout: 20000 });
 
   const remindLaterBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
-  if (await remindLaterBtn.isVisible({ timeout: 4000 }).catch(() => false)) {
+  if (await remindLaterBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
     await remindLaterBtn.click();
   }
 }

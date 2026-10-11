@@ -33,9 +33,9 @@ const TRUST_HEADER_CONFIG = {
 
 const HR_HEADER_CONFIG = {
   code: 'MODULE_HR',
-  title: 'Phân hệ Hồ sơ Cán bộ & Luân chuyển Công tác',
-  short: 'Hồ sơ & Luân chuyển',
-  badge: 'Quy định Luân chuyển 3 năm',
+  title: 'Phân hệ Quản trị Nhân sự',
+  short: 'Nhân sự',
+  badge: 'Hồ sơ, Đào tạo & Thâm niên',
   icon: Users,
   iconColor: 'text-[#0f766e]',
   badgeBg: 'bg-teal-50 text-[#0f766e] border-teal-200',

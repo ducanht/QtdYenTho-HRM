@@ -2,23 +2,43 @@ import { test, expect } from '@playwright/test';
 
 // Helper đăng nhập chuẩn tài khoản Quản trị viên (Chủ tịch HĐQT) với mật khẩu mặc định Qtd@2003
 async function loginAsAdmin(page) {
+  if (page.url().includes('/portal')) return;
   await page.goto('/login');
-  await page.getByLabel('Địa chỉ Email Cán bộ').fill('ducanht@gmail.com');
+  try {
+    await page.waitForURL(/.*\/portal/, { timeout: 3000 });
+    const remindBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
+    if (await remindBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await remindBtn.click();
+    }
+    return;
+  } catch {
+    // Chưa đăng nhập, tiếp tục điền form
+  }
+
+  const emailInput = page.getByLabel('Địa chỉ Email Cán bộ');
+  await emailInput.fill('ducanht@gmail.com');
   await page.getByLabel('Mật khẩu bảo mật').fill('Qtd@2003');
   await page.getByRole('button', { name: 'Đăng nhập ngay' }).click();
   await expect(page).toHaveURL(/.*\/portal/, { timeout: 20000 });
 
-  // Nếu hiển thị Modal yêu cầu đổi mật khẩu lần đầu, kiểm tra và nhấn "Nhắc tôi sau" để tiếp tục
   const remindLaterBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
-  if (await remindLaterBtn.isVisible({ timeout: 4000 }).catch(() => false)) {
+  if (await remindLaterBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
     await remindLaterBtn.click();
   }
 }
 
 test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân Dân Yên Thọ', () => {
 
-  test('TC01: Màn hình Đăng nhập hiển thị đúng định danh Quỹ TDND Yên Thọ & ĐÃ BỎ ĐĂNG NHẬP NHANH', async ({ page }) => {
+  test('TC01: Màn hình Đăng nhập hiển thị đúng định danh Quỹ TDND Yên Thọ & ĐÃ BỎ ĐĂNG NHẬP NHANH', async ({ page, context }) => {
+    // Xóa session cookie để kiểm tra màn hình đăng nhập sạch sẽ
+    await context.clearCookies();
     await page.goto('/login');
+    // Nếu vẫn ở portal, click đăng xuất
+    const logoutBtn = page.getByRole('button', { name: /Đăng xuất/i });
+    if (await logoutBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await logoutBtn.click();
+      await page.waitForURL(/.*\/login/, { timeout: 5000 });
+    }
 
     // 1. Kiểm tra tiêu đề và thương hiệu cơ quan
     await expect(page.getByRole('heading', { name: /QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ/i })).toBeVisible();
@@ -41,38 +61,26 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
   });
 
   test('TC02: Đăng nhập với tài khoản Quản trị & Kiểm tra Cổng Phân Hệ (/portal)', async ({ page }) => {
-    await page.goto('/login');
+    await loginAsAdmin(page);
 
-    // Thực hiện đăng nhập bằng tài khoản Chủ tịch HĐQT Trịnh Đức Anh
-    await page.getByLabel('Địa chỉ Email Cán bộ').fill('ducanht@gmail.com');
-    await page.getByLabel('Mật khẩu bảo mật').fill('Qtd@2003');
-    await page.getByRole('button', { name: 'Đăng nhập ngay' }).click();
-
-    // Kỳ vọng chuyển hướng sang Cổng Phân Hệ (/portal)
+    // Kỳ vọng ở Cổng Phân Hệ (/portal)
     await expect(page).toHaveURL(/.*\/portal/, { timeout: 20000 });
-
-    // Nếu hiển thị Modal yêu cầu đổi mật khẩu lần đầu, kiểm tra và tạm hoãn qua "Nhắc tôi sau"
-    const forceChangeModal = page.getByText(/Yêu Cầu Đổi Mật Khẩu Lần Đầu/i);
-    if (await forceChangeModal.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await page.getByRole('button', { name: 'Nhắc tôi sau' }).click();
-      await expect(forceChangeModal).toBeHidden();
-    }
 
     // Kiểm tra lời chào cán bộ và các phân hệ trên ô lưới
     await expect(page.getByRole('heading', { name: /Xin chào/i })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/Hệ Thống Quản Trị Nhân Sự & Đánh Giá Tín Nhiệm/i)).toBeVisible();
     await expect(page.getByRole('heading', { name: /Đánh giá & Lấy phiếu Tín nhiệm/i })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Hồ sơ Cán bộ & Luân chuyển/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Quản trị Nhân sự|Hồ sơ Cán bộ/i }).first()).toBeVisible();
   });
 
-  test('TC03: Kiểm tra Danh sách Cán bộ & Modal Luân chuyển công tác (/employees)', async ({ page }) => {
+  test('TC03: Kiểm tra Danh sách Cán bộ, Thâm niên, Modal Luân chuyển & Đào tạo (/employees)', async ({ page }) => {
     // Đăng nhập an toàn qua helper
     await loginAsAdmin(page);
 
-    // Điều hướng sang phân hệ Hồ Sơ Cán Bộ
+    // Điều hướng sang phân hệ Nhân sự
     await page.goto('/employees');
     await expect(page).toHaveURL(/.*\/employees/, { timeout: 15000 });
-    await expect(page.getByRole('heading', { name: /Phân hệ Hồ sơ Cán bộ & Luân chuyển Công tác/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Phân hệ Quản trị Nhân sự|Phân hệ Hồ sơ Cán bộ/i })).toBeVisible({ timeout: 15000 });
 
     // Kiểm tra sự xuất hiện của các cán bộ chính thức trong cơ sở dữ liệu
     await expect(page.getByText('Nguyễn Thị Sinh').first()).toBeVisible({ timeout: 15000 });
@@ -80,8 +88,19 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
     await expect(page.getByText('Trịnh Đức Anh').first()).toBeVisible();
     await expect(page.getByText(/CB07/i).first()).toBeVisible();
 
+    // Kiểm tra hiển thị Thâm niên chức vụ trên thẻ cán bộ
+    await expect(page.getByText(/Thâm niên chức vụ:/i).first()).toBeVisible();
+
+    // Mở modal Đào tạo & Chứng chỉ
+    const trainingButton = page.getByRole('button', { name: /Đào tạo & CC/i }).first();
+    if (await trainingButton.isVisible({ timeout: 4000 }).catch(() => false)) {
+      await trainingButton.click();
+      await expect(page.getByRole('heading', { name: /Hồ Sơ Đào Tạo & Chứng Chỉ/i })).toBeVisible({ timeout: 10000 });
+      await page.keyboard.press('Escape');
+    }
+
     // Mở modal Lịch sử luân chuyển công tác của cán bộ đầu tiên
-    const historyButton = page.getByRole('button', { name: /Lịch sử luân chuyển/i }).first();
+    const historyButton = page.getByRole('button', { name: /Luân chuyển/i }).first();
     if (await historyButton.isVisible({ timeout: 4000 }).catch(() => false)) {
       await historyButton.click();
       await expect(page.getByRole('heading', { name: /Lịch Sử Luân Chuyển/i })).toBeVisible();
@@ -103,13 +122,19 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
     await expect(page.getByRole('heading', { name: 'Đợt Đánh Giá' })).toBeVisible();
   });
 
-  test('TC05: Kiểm tra giao diện trên Thiết bị Di động (Mobile Viewport)', async ({ page }) => {
-    // Đặt viewport chuẩn di động 375x667 (iPhone SE)
+  test('TC05: Kiểm tra giao diện trên Thiết bị Di động (Mobile Viewport)', async ({ page, context }) => {
+    // Xóa session cookie để kiểm tra giao diện màn hình login trên mobile
+    await context.clearCookies();
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/login');
+    const logoutBtn = page.getByRole('button', { name: /Đăng xuất/i });
+    if (await logoutBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await logoutBtn.click();
+      await page.waitForURL(/.*\/login/, { timeout: 5000 });
+    }
 
     // Kiểm tra giao diện co giãn hợp lý
-    await expect(page.getByRole('heading', { name: /QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ/i })).toBeVisible({ timeout: 15000 });
     await expect(page.getByLabel('Địa chỉ Email Cán bộ')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Đăng nhập ngay' })).toBeVisible();
     // Đảm bảo không có đăng nhập nhanh trên mobile

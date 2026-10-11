@@ -3,3 +3,4 @@ export { default as Employees } from './EmployeesContainer';
 export { default as EmployeeFilterToolbar } from './components/EmployeeFilterToolbar';
 export { default as EmployeeCard } from './components/EmployeeCard';
 export { default as WorkHistoryModal } from './components/WorkHistoryModal';
+export { default as EmployeeTrainingModal } from './components/EmployeeTrainingModal';

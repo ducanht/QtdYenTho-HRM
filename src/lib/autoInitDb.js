@@ -95,10 +95,10 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.09_v4.0_health_checker_fix_and_16_collections_synchronization';
+export const CURRENT_SCHEMA_VERSION = '2026.10.10_v5.0_personnel_training_certifications_and_ksnb_position';
 
 /**
- * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ
+ * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (18 Collections chuẩn hóa)
  */
 export const CORE_COLLECTIONS = [
   'accounts',
@@ -117,6 +117,8 @@ export const CORE_COLLECTIONS = [
   'evaluations_trust',
   'evaluations_kpi',
   'evaluations_planning',
+  'employee_training',
+  'employee_kpi_history',
 ];
 
 /**
@@ -504,11 +506,13 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       evaluations_trust: 0,
       evaluations_kpi: 0,
       evaluations_planning: 0,
+      employee_training: 0,
+      employee_kpi_history: 0,
     };
 
     result.success = true;
     result.details = localCounts;
-    result.message = 'Đã tự động khởi tạo và đồng bộ toàn bộ 16 bảng dữ liệu cục bộ thành công!';
+    result.message = 'Đã tự động khởi tạo và đồng bộ toàn bộ 18 bảng dữ liệu cục bộ thành công!';
     return result;
   }
 
@@ -647,7 +651,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
 
     onProgress('Bước 12/14: Xác nhận tính toàn vẹn các bảng phân hệ đánh giá...');
 
-    onProgress('Bước 13/14: Thống kê và tổng hợp số liệu 16 bảng CSDL Firestore...');
+    onProgress('Bước 13/14: Thống kê và tổng hợp số liệu 18 bảng CSDL Firestore...');
     const details = {};
     for (const colName of CORE_COLLECTIONS) {
       try {
@@ -663,9 +667,9 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       sessionStorage.setItem('qtd_hrm_schema_synced_ver', CURRENT_SCHEMA_VERSION);
     }
 
-    onProgress('Bước 14/14: Hoàn tất 100%! Toàn bộ 16 bảng CSDL Firestore đã sẵn sàng vận hành.');
+    onProgress('Bước 14/14: Hoàn tất 100%! Toàn bộ 18 bảng CSDL Firestore đã sẵn sàng vận hành.');
     result.success = true;
-    result.message = 'Khởi tạo và đồng bộ 16 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
+    result.message = 'Khởi tạo và đồng bộ 18 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
     return result;
   } catch (error) {
     console.error('Lỗi tự động khởi tạo CSDL Firebase:', error);

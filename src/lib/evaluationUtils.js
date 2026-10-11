@@ -227,4 +227,32 @@ export const generatePeriodId = (year = 2026, quarter = 4) => {
   return `PERIOD-${year}-Q${quarter}-${generateUUID()}`;
 };
 
+/**
+ * Tính thời gian đảm nhiệm chức vụ (Thâm niên chức danh)
+ * Trả về chuỗi thân thiện: ví dụ "3 năm 4 tháng" hoặc "8 tháng"
+ */
+export const calculatePositionTenure = (startDate) => {
+  if (!startDate) return '—';
+  try {
+    const start = new Date(startDate);
+    if (isNaN(start.getTime())) return '—';
+    const now = new Date();
+    
+    let years = now.getFullYear() - start.getFullYear();
+    let months = now.getMonth() - start.getMonth();
+    
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+    
+    if (years <= 0 && months <= 0) return 'Dưới 1 tháng';
+    if (years <= 0) return `${months} tháng`;
+    if (months === 0) return `${years} năm`;
+    return `${years} năm ${months} tháng`;
+  } catch {
+    return '—';
+  }
+};
+
 

@@ -30,6 +30,7 @@ export const DEFAULT_POSITIONS = [
   { id: 'pos-08', code: 'TQ', name: 'Thủ quỹ', department: 'Phòng Kế toán - Ngân quỹ', order: 8 },
   { id: 'pos-09', code: 'CBTD', name: 'Cán bộ tín dụng', department: 'Phòng Tín dụng', order: 9 },
   { id: 'pos-10', code: 'TDTS', name: 'Thẩm định tài sản', department: 'Phòng Tín dụng', order: 10 },
+  { id: 'pos-11', code: 'KSNB', name: 'Kiểm soát nội bộ (Kiểm soát viên chuyên trách)', department: 'Ban Kiểm soát', order: 11 },
 ];
 
 // ============================================================================
@@ -43,6 +44,7 @@ export const DEFAULT_PLANNING_POSITIONS = [
   'Phó Giám đốc phụ trách Kế toán - Kho quỹ',
   'Trưởng Ban Kiểm soát',
   'Thành viên Ban Kiểm soát',
+  'Kiểm soát nội bộ (Kiểm soát viên chuyên trách)',
   'Kế toán trưởng',
   'Trưởng phòng Tín dụng',
 ];

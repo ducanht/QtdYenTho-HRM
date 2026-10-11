@@ -15,6 +15,8 @@
 ```mermaid
 erDiagram
     EMPLOYEE ||--o{ WORK_HISTORY : "có quá trình luân chuyển"
+    EMPLOYEE ||--o{ EMPLOYEE_TRAINING : "có chứng chỉ đào tạo"
+    EMPLOYEE ||--o{ EMPLOYEE_KPI_HISTORY : "có lịch sử KPI"
     EMPLOYEE ||--o{ TRUST_EVALUATION : "thực hiện đánh giá (người chấm)"
     EMPLOYEE ||--o{ TRUST_EVALUATION : "nhận đánh giá (người được chấm)"
     EVALUATION_PERIOD ||--o{ TRUST_EVALUATION : "thuộc kỳ đánh giá"
@@ -33,7 +35,8 @@ erDiagram
         string phone "Số điện thoại di động"
         string email UK "Email công vụ nội bộ"
         string department "Phòng Tín dụng / Kế toán / BKS / HĐQT / BĐH"
-        string position "Chủ tịch HĐQT, Giám đốc, Kế toán trưởng, CBTD..."
+        string position "Chủ tịch HĐQT, Giám đốc, Kế toán trưởng, CBTD, KSNB..."
+        string positionStartDate "Ngày bắt đầu đảm nhiệm chức vụ hiện tại (YYYY-MM-DD)"
         string assignedArea "Địa bàn phụ trách hiện tại (Xã Quý Lộc, Yên Thọ...)"
         string politicalRole "Bí thư Chi bộ, Phó Bí thư, Chi ủy viên, Đảng viên..."
         boolean partyMember "true: Đảng viên ĐCSVN"
@@ -44,7 +47,33 @@ erDiagram
         string contractType "Không xác định thời hạn, Theo nhiệm kỳ..."
         string role "staff | manager | chairman"
         string status "ACTIVE | LEAVE | INACTIVE"
-        string avatar "Link ảnh đại diện"
+        string avatar "Chuỗi Base64 ảnh chân dung đã nén qua Canvas (< 50KB)"
+    }
+
+    EMPLOYEE_TRAINING {
+        string id PK "Mã chứng chỉ (train-uuid)"
+        string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string employeeName "Họ tên cán bộ"
+        string courseName "Tên khóa đào tạo / bồi dưỡng / chứng chỉ"
+        string institution "Đơn vị đào tạo / cấp chứng chỉ"
+        date issueDate "Ngày cấp chứng chỉ (YYYY-MM-DD)"
+        date expiryDate "Ngày hết hạn (YYYY-MM-DD)"
+        string certificateNumber "Số hiệu văn bằng / chứng chỉ"
+        string certificateImage "Chuỗi Base64 ảnh scan chứng chỉ nén qua Canvas (< 50KB)"
+        string status "COMPLETED | IN_PROGRESS | EXPIRED"
+        timestamp createdAt "Thời gian khởi tạo"
+    }
+
+    EMPLOYEE_KPI_HISTORY {
+        string id PK "Mã bản ghi KPI (kpi-uuid)"
+        string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string periodName "Tên kỳ đánh giá KPI"
+        int year "Năm đánh giá KPI"
+        int quarter "Quý đánh giá (1, 2, 3, 4)"
+        float score "Điểm KPI tổng hợp (0 - 100)"
+        string classification "Xếp loại kết quả (Xuất sắc | Tốt | Hoàn thành...)"
+        string approvedBy "Người phê duyệt"
+        timestamp createdAt "Thời gian phê duyệt"
     }
 
     WORK_HISTORY {
@@ -154,6 +183,67 @@ Theo chỉ đạo của Ngân hàng Nhà nước, các vị trí nhạy cảm t�
 | `handoverStatus` | `string` | Enum | `'DA_BAN_GIAO'`, `'DANG_BAN_GIAO'`, `'CHUA_BAN_GIAO'`. |
 | `attachmentUrl` | `string` | Nullable | Link tệp PDF/ảnh scan quyết định lưu trữ điện tử. |
 | `createdAt` | `timestamp` | Server Time | Thời điểm cập nhật vào hệ thống. |
+
+---
+
+## 🎓 2.1. Chi Tiết Thực Thể: Hồ Sơ Đào Tạo & Chứng Chỉ Chuyên Môn (`employee_training`)
+
+Collection Firestore: `employee_training`  
+Quản lý lịch sử toàn bộ các khóa đào tạo, bồi dưỡng nghiệp vụ chuyên ngành và chứng chỉ hành nghề của cán bộ, nhân viên Quỹ tín dụng nhân dân.
+
+### Cấu trúc dữ liệu:
+| Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | **PK** | Mã định danh chứng chỉ (VD: `train-f47ac10b-...`). |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ được cấp văn bằng / chứng chỉ. |
+| `employeeName` | `string` | Snapshot | Họ tên cán bộ tại thời điểm lưu. |
+| `courseName` | `string` | **Not Null** | Tên khóa học / bồi dưỡng / chứng chỉ (VD: Nghiệp vụ Quỹ TDND, Thẩm định Tài sản...). |
+| `institution` | `string` | **Not Null** | Đơn vị đào tạo / cấp chứng chỉ (Học viện Ngân hàng, Hiệp hội QTDND, NHNN...). |
+| `issueDate` | `string` | `YYYY-MM-DD` | Ngày cấp văn bằng / chứng chỉ. |
+| `expiryDate` | `string` | `YYYY-MM-DD` | Ngày hết hạn hiệu lực (để trống nếu có giá trị vô thời hạn). |
+| `certificateNumber` | `string` | Text | Số hiệu chứng chỉ / số vào sổ cấp chứng chỉ. |
+| `certificateImage` | `string` | Base64 Text | Ảnh scan/chụp chứng chỉ đã được nén tự động qua Canvas WebP/JPEG (< 50KB). |
+| `status` | `string` | Enum | `'COMPLETED'` (Đã hoàn thành), `'IN_PROGRESS'` (Đang học), `'EXPIRED'` (Hết hạn). |
+| `notes` | `string` | Text | Ghi chú thêm về kết quả học tập / xếp loại. |
+| `createdAt` | `timestamp` | Server Time | Thời điểm tạo bản ghi. |
+| `updatedAt` | `timestamp` | Server Time | Thời điểm cập nhật lần cuối. |
+
+---
+
+## 📊 2.2. Chi Tiết Thực Thể: Lịch Sử Đánh Giá Hiệu Suất KPI (`employee_kpi_history`)
+
+Collection Firestore: `employee_kpi_history`  
+Lưu trữ điểm số KPI và xếp loại thi đua qua từng kỳ đánh giá (quý/năm) của cán bộ nhân viên, tạo cơ sở dữ liệu xuyên suốt phục vụ khen thưởng và nâng lương.
+
+### Cấu trúc dữ liệu:
+| Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | **PK** | Mã bản ghi lịch sử KPI (VD: `kpi-2026-q1-emp001`). |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ nhân viên nhận kết quả KPI. |
+| `periodName` | `string` | **Not Null** | Tên kỳ đánh giá (VD: Đánh giá KPI Quý 1/2026). |
+| `year` | `number` | **Not Null** | Năm đánh giá (VD: 2026). |
+| `quarter` | `number` | 1 - 4 | Quý đánh giá (nếu có). |
+| `score` | `number` | 0 - 100 | Điểm KPI tổng hợp đạt được. |
+| `classification` | `string` | Enum | Xếp loại (`Xuất sắc`, `Tốt`, `Hoàn thành`, `Chưa hoàn thành`). |
+| `approvedBy` | `string` | Text | Người ký phê duyệt kết quả KPI (Giám đốc / Chủ tịch HĐQT). |
+| `createdAt` | `timestamp` | Server Time | Thời điểm phê duyệt và ghi nhận. |
+
+---
+
+## 🏛️ 2.3. Danh Mục Chức Vụ Chuẩn & Chức Danh Kiểm Soát Nội Bộ (`positions`)
+
+Hệ thống quản lý chuẩn hóa 11 chức vụ nòng cốt trong Quỹ tín dụng nhân dân Yên Thọ:
+1. `pos-01` (`CT_HDQT`): Chủ tịch Hội đồng Quản trị
+2. `pos-02` (`PH_HDQT`): Phó Chủ tịch HĐQT
+3. `pos-03` (`TV_HDQT`): Thành viên HĐQT
+4. `pos-04` (`GD`): Giám đốc
+5. `pos-05` (`PGD`): Phó Giám đốc
+6. `pos-06` (`TB_BKS`): Trưởng ban Kiểm soát
+7. `pos-07` (`TV_BKS`): Thành viên BKS
+8. `pos-08` (`KTT`): Kế toán trưởng
+9. `pos-09` (`TP_TD`): Trưởng phòng Tín dụng
+10. `pos-10` (`NV`): Cán bộ chuyên môn / Nhân viên
+11. **`pos-11` (`KSNB`)**: **Kiểm soát nội bộ (Kiểm soát viên chuyên trách)** — Thuộc Ban Kiểm soát, thực hiện kiểm toán và giám sát độc lập các quy trình tín dụng, kế toán và ngân quỹ.
 
 ---
 
@@ -320,6 +410,13 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
   - **Lưu Bền Vững Cấu Hình Đợt Đánh Giá Trên Firestore**: Sửa đổi hàm `savePeriodConfig` trong `src/lib/services.js` làm sạch sâu toàn bộ mảng `criteria` (`sanitizedCriteria`) loại trừ `undefined`, đồng bộ 2 chiều vào cả `period_configs` và `evaluation_periods` với cấu trúc `thresholds` lồng nhau lẫn các trường phẳng.
   - **Chống Race Condition Khi Nhập Liệu Cấu Hình**: Tích hợp `isDirtyRef.current`, `activePeriodIdRef` và `updateLocalConfig` trong `TrustCriteriaSettings.jsx`, ngăn Firestore snapshot nạp chậm ghi đè lại giá trị cũ khi người dùng đang nhập ngưỡng điểm hoặc thay đổi quy chế.
   - **Sửa Lỗi Menu Sidebar & Tabs Không Phản Hồi**: Sửa vòng lặp chuyển tab `CRITERIA_SETTINGS` thành `canManageCriteria || canManagePeriods` trong `TrustEvaluationContainer.jsx` và `TrustBottomNav.jsx`. Bổ sung quyền `MANAGE_CRITERIA` cho Giám đốc (`manager`) trong `permissions.js`. Bảo toàn trạng thái chọn `'ALL'` (Tất cả đợt) trong `subscribeEvaluationPeriods`. Chuẩn hóa so sánh lọc năm `Number(p.year) === Number(filterYear)` trong `PeriodMasterSidebar.jsx`.
+- **`2026.10.10_v5.0_personnel_training_certifications_and_ksnb_position`**:
+  - **Nâng Cấp CSDL 18 Collections Nòng Cốt**: Bổ sung 2 collections mới `employee_training` (quản lý khóa đào tạo, bồi dưỡng, chứng chỉ chuyên môn) và `employee_kpi_history` (lưu trữ lịch sử xếp loại và điểm số KPI qua các kỳ), nâng tổng quy mô CSDL Firestore lên **18 collections**.
+  - **Bổ Sung Chức Danh Kiểm Soát Nội Bộ (`pos-11` / `KSNB`)**: Bổ sung chức danh *"Kiểm soát nội bộ (Kiểm soát viên chuyên trách)"* thuộc Ban Kiểm soát vào danh mục chức vụ chuẩn `positions` và danh sách chức danh quy hoạch `DEFAULT_PLANNING_POSITIONS`.
+  - **Quản Lý Thâm Niên Chức Danh (`positionStartDate`)**: Bổ sung trường ngày bắt đầu đảm nhiệm chức danh hiện tại vào hồ sơ cán bộ `employees`/`users` và tiện ích tính thâm niên tự động `calculatePositionTenure`.
+  - **Nén Ảnh Client-side Canvas Base64 (< 50KB)**: Toàn bộ ảnh Avatar cán bộ và ảnh scan/chụp Chứng chỉ đào tạo đều được nén tự động qua HTML5 Canvas WebP/JPEG, lưu trực tiếp dạng Base64 Data URL trong Firestore document. Triệt tiêu 100% rủi ro tràn dung lượng, bảo toàn gói miễn phí Firebase Spark Plan (1 GiB đủ lưu > 25.000 ảnh/chứng chỉ).
+  - **Bảo Mật Tầng CSDL (`firestore.rules`)**: Cấu hình phân quyền bảo mật chặt chẽ cho 2 collections mới: cho phép cán bộ tự xem và quản lý chứng chỉ của bản thân, Ban Lãnh đạo toàn quyền phê duyệt và quản lý toàn bộ hệ thống.
+
 
 ---
 

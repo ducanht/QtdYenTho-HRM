@@ -221,5 +221,29 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isBoardOrAdmin();
     }
+
+    // ===============================================================
+    // 15. Quá trình Đào tạo & Bồi dưỡng (employee_training)
+    // ===============================================================
+    match /employee_training/{trainingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        isBoardOrAdmin() ||
+        request.resource.data.employeeId == request.auth.uid
+      );
+      allow update, delete: if isAuthenticated() && (
+        isBoardOrAdmin() ||
+        (resource != null && resource.data.employeeId == request.auth.uid)
+      );
+    }
+
+    // ===============================================================
+    // 16. Lịch sử Đánh giá KPI Cán bộ (employee_kpi_history)
+    // ===============================================================
+    match /employee_kpi_history/{historyId} {
+      allow read: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
+    }
   }
 }
+
