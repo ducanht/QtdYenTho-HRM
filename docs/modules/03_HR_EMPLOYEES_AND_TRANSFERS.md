@@ -226,38 +226,47 @@ Hệ thống giao diện Phân hệ Quản trị Nhân sự kế thừa trọn v
    - Gồm 5 icon tương ứng 5 tab chức năng, touch target $\ge 48$px, hỗ trợ thao tác bằng một tay nhanh chóng và thuận tiện.
 
 ### 5.2. Cột Trái: Master Sidebar (`EmployeeMasterSidebar.jsx`):
-- **Bộ lọc phòng ban linh hoạt**: Tất cả phòng ban, Phòng Tín dụng, Phòng Kế toán - Ngân quỹ, Ban Kiểm soát, HĐQT & BĐH.
-- **Ô tìm kiếm tức thì**: Lọc theo Họ tên, Mã cán bộ (`CB01`...), Số CCCD, hoặc Số điện thoại.
+- **Giao diện tinh gọn, không bọc cuộn ngang**: Loại bỏ hoàn toàn thanh bộ lọc phòng ban cuộn ngang thừa thãi, tối đa hóa chiều cao danh sách cán bộ.
+- **Ô tìm kiếm tức thì**: Lọc theo Họ tên, Chức vụ, Phòng ban, Số điện thoại, hoặc Địa bàn phụ trách.
 - **Danh sách thẻ cán bộ mini (Card List)**:
-  - Ảnh đại diện Avatar nén Canvas WebP $< 45$KB.
-  - Mã CB, Họ và tên in đậm, chức vụ chính quyền và huy hiệu Đảng viên.
+  - Ảnh đại diện Avatar chân dung gọn gàng.
+  - Họ và tên in đậm, chức vụ chính quyền và phòng ban.
   - **Huy hiệu Thâm niên giữ chức vụ** tự động tính toán từ `positionStartDate`.
   - **Chỉ báo cảnh báo luân chuyển NHNN**:
-    - Màu vàng: Thâm niên $\ge 2.5$ năm (sắp đến hạn luân chuyển theo quy định NHNN).
-    - Màu đỏ nhấp nháy: Thâm niên $\ge 3$ năm (quá hạn luân chuyển bắt buộc cho vị trí nhạy cảm).
-- **Nút Thêm cán bộ mới**: Kích hoạt `EmployeeFormModal` với mã UUID v4 tự động sinh ngẫu nhiên.
+    - Sắp đến hạn luân chuyển (theo chu kỳ cấu hình).
+    - Hạn luân chuyển (khi vượt quá thời hạn quy định cho vị trí đó).
+- **Thanh tác vụ Header**: Nút xuất toàn bộ Danh bạ sang Excel (`.xlsx`) và nút Thêm mới cán bộ.
 
 ### 5.3. Cột Phải: Các Panel Nghiệp Vụ Chuyên Sâu:
 1. `EmployeeProfileDetail.jsx` (Tab Hồ sơ trích ngang):
-   - Trình bày thông tin theo chuẩn Mẫu 2C/TCTD của Ngân hàng Nhà nước.
-   - Thay đổi ảnh chân dung cán bộ trực tiếp, nén Canvas WebP $< 45$KB.
-   - Nút **"Sửa hồ sơ"** và nút **"In trích ngang A4"**.
+   - **Khối định danh cán bộ (Header Card)**:
+     - Avatar chân dung $16 \times 16$ / $18 \times 18$ rounded-2xl kèm tính năng cập nhật ảnh.
+     - Họ tên cán bộ nổi bật (`text-xl font-black`), bên cạnh là 2 badge nhỏ gọn gàng: `[● Đang công tác]` (xanh lá) và `[Đảng viên]` (vàng hổ phách), loại bỏ hoàn toàn các huy hiệu to cồng kềnh.
+     - Dòng thông tin chức danh & phòng ban chuẩn mực: `Thành viên HĐQT - Giám đốc • Ban Điều hành`.
+   - **Hàng nút chức năng riêng biệt (Action Bar)**:
+     - Tách xuống một hàng toolbar riêng biệt có đường phân cách viền mờ `border-t border-slate-100`, không bị chèn ép ở góc phải.
+     - Nhóm Xuất tài liệu: **Xuất Word** (`.docx`), **Xuất Excel** (`.xlsx`), **In trích ngang A4** (xem trước).
+     - Nhóm Quản trị cán bộ: **Chỉnh sửa hồ sơ** và **Xóa cán bộ** (có xác nhận an toàn).
+   - **Lưới 4 phân khu lý lịch 2C/TCTD**:
+     - Phân khu 1: Thông tin Cá nhân & Liên hệ (CCCD, Ngày sinh, Giới tính, SĐT, Email).
+     - Phân khu 2: Công tác & Thâm niên (Chức danh, Phòng ban, Ngày bổ nhiệm, Thâm niên vị trí, Tổng thâm niên, HĐLĐ, Địa bàn tín dụng).
+     - Phân khu 3: Chính trị & Đảng - Đoàn thể (Đảng viên ĐCSVN, Chức vụ Chi bộ, Ngày vào Đảng dự bị, Ngày chính thức).
+     - Phân khu 4: Trình độ & Chuyên môn Đào tạo (Học vị, Chuyên ngành, Tin học, Ngoại ngữ).
 2. `EmployeeTransferHistory.jsx` (Tab Luân chuyển công tác):
-   - Banner cảnh báo chu kỳ luân chuyển 36 tháng đối với các vị trí nhạy cảm (CBTD, Kế toán, Thủ quỹ, BKS).
+   - Phân hệ thuần túy phục vụ **theo dõi thâm niên, chu kỳ và tiến độ luân chuyển**; không dùng để lập quyết định.
+   - Hiển thị thanh tiến độ thời gian công tác theo cấu hình động `transferRules` của từng chức danh.
    - Timeline trực quan hiển thị toàn bộ các quyết định điều động, bổ nhiệm, luân chuyển địa bàn trong quá khứ.
-   - Nút **"Lập quyết định luân chuyển"**: Kích hoạt `TransferDecisionModal`.
 3. `EmployeeTrainingTab.jsx` (Tab Đào tạo & Chứng chỉ):
-   - Danh mục các văn bằng, chứng chỉ chuyên môn đã được cấp.
-   - Kiểm tra hạn hiệu lực (còn hạn / hết hạn).
-   - Xem ảnh scan văn bằng phóng to toàn màn hình.
-   - Nút **"Thêm chứng chỉ"**: Kích hoạt `AddTrainingModal`.
+   - Quản lý chi tiết từng khóa học: Đơn vị tổ chức (NHNN, Hiệp hội QTDND, Học viện Ngân hàng...), Quyết định/Kế hoạch, Thời gian, Địa điểm, Nội dung bồi dưỡng, Số hiệu chứng chỉ, Ngày cấp, Ngày hết hạn, Xếp loại và Xem ảnh scan.
+   - Trạng thái hiệu lực tự động: Còn hiệu lực, Sắp hết hạn, Đã hết hạn, Hoàn thành tập huấn.
 4. `EmployeeAnalyticsTab.jsx` (Tab Cơ cấu & Thống kê):
-   - 4 thẻ KPI tổng quan: Tổng số CBNV (13), Số Đảng viên (tỷ lệ %), Tuổi bình quân, Vị trí nhạy cảm cần luân chuyển.
-   - Phân bổ nhân sự theo từng phòng ban và khối chuyên môn.
-   - **Bảng giám sát luân chuyển toàn Quỹ**: Đánh giá toàn diện 100% cán bộ, phân loại mức độ cấp thiết cần luân chuyển theo quy định NHNN.
-5. `EmployeeSettingsTab.jsx` (Tab Danh mục & Chức danh):
-   - Quản lý danh mục 5 Phòng ban nòng cốt.
-   - Quản lý 11 Chức vụ chuẩn mực trong QTDND (bao gồm chức danh Kiểm soát nội bộ `pos-11` / `KSNB`).
+   - 4 thẻ chỉ số tổng quan: Tổng nhân sự, Tỷ lệ Đảng viên, Cơ cấu Giới tính (Nam/Nữ), Số cán bộ đến hạn luân chuyển.
+   - Thống kê Cơ cấu Trình độ Chuyên môn / Học vấn toàn Quỹ (Thạc sĩ, Đại học, Cao đẳng, Trung cấp...).
+   - Bảng Giám sát luân chuyển định kỳ toàn Quỹ theo cấu hình linh hoạt `transferRules`.
+5. `EmployeeSettingsTab.jsx` (Tab Danh mục & Cấu hình):
+   - Cấu hình Quy tắc Luân chuyển theo từng Chức danh (`transferRules`): Vị trí nào phải luân chuyển, Thời hạn tối đa (tháng), Thời gian cảnh báo trước (tháng).
+   - Cấu hình Phân quyền Phân hệ: Quyền xem danh bạ toàn Quỹ (`allowStaffViewDirectory`), Quyền tải lên chứng chỉ (`canStaffUploadTraining`).
+   - Quản lý danh mục Phòng ban và Chức vụ chính quyền chuẩn mực.
 
 ### 5.4. Các Modal Nghiệp Vụ & In Ấn A4:
 1. `EmployeeFormModal.jsx`: Modal thêm mới / chỉnh sửa hồ sơ cán bộ:
