@@ -230,3 +230,29 @@ Thư viện dùng chung tại `src/lib/exportUtils.js` cung cấp hạ tầng xu
    - Thay thế công thức sinh mã cũ dựa vào 4 số cuối timestamp (`slice(-4)` vốn chỉ có 10.000 giá trị và dễ trùng lặp).
    - Chuẩn hóa mã đợt theo định dạng: `PERIOD-YYYY-QX-<UUID>` với hàm `generatePeriodId(year, quarter)` và `generateUUID()` sử dụng `crypto.randomUUID()` chuẩn RFC 4122 v4.
    - Đảm bảo 100% không bao giờ trùng lặp ID đợt trong CSDL Cloud Firestore.
+
+---
+
+## ⏰ 14. CẤU HÌNH KHUNG GIỜ ĐÁNH GIÁ (GIỜ, PHÚT) & CƠ CHẾ KHÓA CHẤM ĐIỂM KHI CHƯA MỞ (v5.5)
+
+1. **Cấu Hình Khung Giờ Mở/Đóng Theo Giờ, Phút (`startTime`, `endTime`)**:
+   - Bên cạnh ngày bắt đầu (`startDate`) và ngày kết thúc (`endDate`), hệ thống hỗ trợ cấu hình khung giờ chi tiết:
+     + `startTime`: Giờ mở cổng đánh giá (VD: `08:00`).
+     + `endTime`: Giờ đóng cổng đánh giá (VD: `17:30`).
+   - Phù hợp với thực tế tại Quỹ khi có những đợt lấy phiếu tín nhiệm đột xuất hoặc nhanh chỉ diễn ra trong khoảng thời gian nhất định trong ngày.
+   - Quản trị viên và Lãnh đạo có thể thiết lập trực tiếp tại Modal tạo/sửa đợt (`TrustPeriodModal.jsx`) thông qua 2 ô chọn giờ phút (`type="time"`).
+
+2. **Thuật Toán Kiểm Tra Trạng Thái Thời Gian Thực (`checkPeriodActiveStatus`)**:
+   - Hàm `checkPeriodActiveStatus(period)` trong `src/lib/evaluationUtils.js` kết hợp ngày và giờ phút (`YYYY-MM-DDTHH:mm:00`) để so sánh chính xác với mốc thời gian thực hiện tại (`new Date()`).
+   - Phân định rõ 4 trạng thái vận hành:
+     + `NOT_YET_OPEN` (Chưa đến giờ mở): Cổng chưa mở, thông báo thời gian chính xác dự kiến mở cổng.
+     + `ACTIVE_OPEN` (Đang mở cổng): Cổng đang mở cho phép cử tri chấm điểm và nộp phiếu; tính toán thời gian còn lại đến khi đóng cổng.
+     + `EXPIRED_CLOSED` (Đã hết hạn): Đã vượt quá giờ đóng cổng; thông báo đợt đã khép lại.
+     + `MANUAL_CLOSED` (Khóa thủ công): Trạng thái đợt được cấu hình là `CLOSED`.
+
+3. **Cơ Chế Khóa Đánh Giá Tuyệt Đối (Strict Read-Only Enforcement)**:
+   - Khi đợt chưa mở (`!periodStatusInfo.isOpen`) hoặc đã đóng:
+     + **Bảng chấm điểm (`CriteriaScoringTable.jsx`)**: Tự động vô hiệu hóa toàn bộ các nút chọn điểm 1..10 (`disabled={true}`) và ô nhập ghi chú; hiển thị dải thông báo cảnh báo màu hổ phách/xám giải thích rõ lý do.
+     + **Container điều khiển (`TrustEvaluationContainer.jsx`)**: Khóa chặn các hành động cập nhật điểm (`handleSetScore`), ghi chú (`handleSetNote`), và vô hiệu hóa nút nộp phiếu chính thức (`isFullyReadyToSubmit = false`).
+     + **Banner tiến độ (`TrustProgressBanner.jsx`)**: Hiển thị đếm ngược thời gian và khung giờ mở cổng cụ thể, đảm bảo tính minh bạch và công bằng cho toàn thể cử tri.
+

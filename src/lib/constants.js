@@ -27,6 +27,7 @@ export const DEPARTMENTS = [
   'Hội đồng Quản trị',
   'Ban Kiểm soát',
   'Ban Điều hành',
+  'Hội đồng Quản trị & Ban Điều hành',
   'Phòng Tín dụng',
   'Phòng Kế toán - Ngân quỹ',
 ];

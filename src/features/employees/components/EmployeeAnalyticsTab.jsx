@@ -5,11 +5,11 @@ import {
   ShieldAlert, 
   Clock, 
   CheckCircle2, 
-  Building2, 
   PieChart,
-  GraduationCap
+  GraduationCap,
+  MapPin
 } from 'lucide-react';
-import { calculatePositionTenure } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 
 /**
@@ -18,7 +18,6 @@ import { formatDateVN } from '../../../lib/dateUtils';
  */
 const EmployeeAnalyticsTab = ({
   employees = [],
-  departments = [],
   hrConfig = {},
   onSelectEmployeeForTransfer,
 }) => {
@@ -32,15 +31,6 @@ const EmployeeAnalyticsTab = ({
 
   const partyMembersCount = employees.filter((e) => e.partyMember).length;
   const partyPercent = totalEmployees ? Math.round((partyMembersCount / totalEmployees) * 100) : 0;
-
-  // 2. Thống kê theo phòng ban
-  const deptStats = useMemo(() => {
-    return departments.map((dept) => {
-      const count = employees.filter((e) => e.department === dept).length;
-      const percent = totalEmployees ? Math.round((count / totalEmployees) * 100) : 0;
-      return { name: dept, count, percent };
-    });
-  }, [employees, departments, totalEmployees]);
 
   // Tra cứu quy tắc luân chuyển theo cấu hình
   const getTransferRule = (posName) => {
@@ -58,13 +48,17 @@ const EmployeeAnalyticsTab = ({
     return partialMatch || null;
   };
 
-  // 3. Phân tích danh sách cán bộ vị trí nhạy cảm cần luân chuyển (theo cấu hình động)
+  // 2. Phân tích danh sách cán bộ vị trí nhạy cảm & cán bộ tín dụng luân chuyển địa bàn
   const transferMonitoringList = useMemo(() => {
     const list = [];
     const rules = hrConfig?.transferRules || [];
 
     employees.forEach((emp) => {
       const posName = emp.position || '';
+      const isCreditOfficer = (emp.department || '').includes('Tín dụng') || 
+        posName.toLowerCase().includes('tín dụng') || 
+        Boolean(emp.assignedArea);
+
       let isSensitive = false;
       let maxMonths = 36;
       let warningMonths = 6;
@@ -86,27 +80,41 @@ const EmployeeAnalyticsTab = ({
           p.includes('kiểm soát');
       }
 
-      if (!isSensitive) return;
+      if (!isSensitive && !isCreditOfficer) return;
 
       const effectiveStart = emp.positionStartDate || emp.joinDate;
-      const tenureText = calculatePositionTenure(effectiveStart);
+      const areaStart = emp.areaStartDate || effectiveStart;
 
+      let tenureText = '';
       let tenureMonths = 0;
-      if (effectiveStart) {
-        try {
-          const start = new Date(effectiveStart);
-          const now = new Date();
-          if (!isNaN(start.getTime())) {
-            tenureMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-          }
-        } catch {
-          tenureMonths = 0;
-        }
-      }
+      let isDue = false;
+      let isNear = false;
+      let dueDateText = '';
 
-      const warningThreshold = Math.max(0, maxMonths - warningMonths);
-      const isDue = tenureMonths >= maxMonths;
-      const isNear = tenureMonths >= warningThreshold && tenureMonths < maxMonths;
+      if (isCreditOfficer) {
+        const areaInfo = calculateAreaTenureAndDueDate(areaStart, maxMonths, warningMonths);
+        tenureText = areaInfo.tenureText;
+        tenureMonths = areaInfo.tenureMonths;
+        isDue = areaInfo.isDue;
+        isNear = areaInfo.isNear;
+        dueDateText = areaInfo.dueDateText;
+      } else {
+        tenureText = calculatePositionTenure(effectiveStart);
+        if (effectiveStart) {
+          try {
+            const start = new Date(effectiveStart);
+            const now = new Date();
+            if (!isNaN(start.getTime())) {
+              tenureMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+            }
+          } catch {
+            tenureMonths = 0;
+          }
+        }
+        const warningThreshold = Math.max(0, maxMonths - warningMonths);
+        isDue = tenureMonths >= maxMonths;
+        isNear = tenureMonths >= warningThreshold && tenureMonths < maxMonths;
+      }
 
       list.push({
         id: emp.id,
@@ -114,7 +122,9 @@ const EmployeeAnalyticsTab = ({
         name: emp.name,
         department: emp.department,
         position: emp.position,
-        assignedArea: emp.assignedArea,
+        isCreditOfficer,
+        assignedArea: emp.assignedArea || '',
+        areaStartDate: emp.areaStartDate || '',
         startDate: effectiveStart,
         tenureText,
         tenureMonths,
@@ -122,6 +132,7 @@ const EmployeeAnalyticsTab = ({
         warningMonths,
         isDue,
         isNear,
+        dueDateText,
       });
     });
 
@@ -264,9 +275,9 @@ const EmployeeAnalyticsTab = ({
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
                   <th className="py-2.5 px-3 text-center w-12">STT</th>
                   <th className="py-2.5 px-3">Họ và tên</th>
-                  <th className="py-2.5 px-3">Chức vụ & Phòng ban</th>
+                  <th className="py-2.5 px-3">Chức vụ & Địa bàn / Bộ phận</th>
                   <th className="py-2.5 px-3">Ngày bắt đầu</th>
-                  <th className="py-2.5 px-3">Thâm niên chức vụ</th>
+                  <th className="py-2.5 px-3">Thâm niên theo dõi</th>
                   <th className="py-2.5 px-3">Chu kỳ quy định</th>
                   <th className="py-2.5 px-3 text-right">Trạng thái theo dõi</th>
                 </tr>
@@ -286,13 +297,30 @@ const EmployeeAnalyticsTab = ({
                     </td>
                     <td className="py-2.5 px-3 text-slate-600">
                       <span className="font-bold text-slate-800">{row.position}</span>
-                      <span className="text-[11px] text-slate-400 block">{row.department}</span>
+                      {row.isCreditOfficer && row.assignedArea ? (
+                        <span className="text-[11px] text-emerald-800 font-semibold flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span>{row.assignedArea}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 block">{row.department}</span>
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-slate-600 font-medium">
-                      {formatDateVN(row.startDate)}
+                      {row.isCreditOfficer && row.areaStartDate ? (
+                        <div>
+                          <span className="font-semibold text-slate-800 block">{formatDateVN(row.areaStartDate)}</span>
+                          <span className="text-[10px] text-slate-400 block">Địa bàn</span>
+                        </div>
+                      ) : (
+                        formatDateVN(row.startDate)
+                      )}
                     </td>
                     <td className="py-2.5 px-3 font-bold text-slate-800">
-                      {row.tenureText}
+                      <span>{row.tenureText}</span>
+                      {row.dueDateText && (
+                        <span className="text-[10px] text-slate-500 font-normal block">Hạn: {row.dueDateText}</span>
+                      )}
                     </td>
                     <td className="py-2.5 px-3 font-semibold text-slate-700">
                       {row.maxMonths} tháng
@@ -301,12 +329,12 @@ const EmployeeAnalyticsTab = ({
                       {row.isDue ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
                           <ShieldAlert className="w-3.5 h-3.5" />
-                          Đến hạn luân chuyển
+                          {row.isCreditOfficer ? 'Đến hạn đổi địa bàn' : 'Đến hạn luân chuyển'}
                         </span>
                       ) : row.isNear ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
                           <Clock className="w-3.5 h-3.5" />
-                          Sắp đến hạn (&lt; {row.warningMonths} tháng)
+                          {row.isCreditOfficer ? 'Sắp đến hạn đổi địa bàn' : `Sắp đến hạn (< ${row.warningMonths} tháng)`}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
@@ -346,31 +374,6 @@ const EmployeeAnalyticsTab = ({
                 <div
                   className="bg-emerald-700 h-1.5 rounded-full"
                   style={{ width: `${item.percent}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Phân Bổ Nhân Sự Theo Phòng Ban */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
-        <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-100">
-          <Building2 className="w-4 h-4 text-emerald-700" />
-          <span>Phân Bổ Nhân Sự Theo Phòng Ban & Bộ Phận</span>
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {deptStats.map((d) => (
-            <div key={d.name} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-800">{d.name}</span>
-                <span className="font-black text-emerald-800">{d.count} người ({d.percent}%)</span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="bg-emerald-700 h-1.5 rounded-full"
-                  style={{ width: `${d.percent}%` }}
                 />
               </div>
             </div>

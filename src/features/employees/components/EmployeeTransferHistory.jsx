@@ -8,7 +8,7 @@ import {
   Clock, 
   Trash2 
 } from 'lucide-react';
-import { calculatePositionTenure } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { deleteWorkHistory } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
@@ -71,6 +71,16 @@ const EmployeeTransferHistory = ({
   const percent = Math.min(100, Math.round((tenureMonths / maxMonths) * 100));
   const isDue = requiresTransfer && tenureMonths >= maxMonths;
   const isNear = requiresTransfer && tenureMonths >= (maxMonths - warningMonths) && tenureMonths < maxMonths;
+
+  // Theo dõi tiến độ quản lý địa bàn dành riêng cho Cán bộ Tín dụng
+  const isCreditOfficer = (emp?.department || '').includes('Tín dụng') || 
+    (emp?.position || '').toLowerCase().includes('tín dụng') || 
+    Boolean(emp?.assignedArea);
+
+  const areaInfo = isCreditOfficer 
+    ? calculateAreaTenureAndDueDate(emp?.areaStartDate || effectiveStart, maxMonths, warningMonths) 
+    : null;
+  const areaPercent = areaInfo ? Math.min(100, Math.round((areaInfo.tenureMonths / maxMonths) * 100)) : 0;
 
   // Lọc lịch sử luân chuyển của cán bộ đang chọn
   const empHistory = useMemo(() => {
@@ -204,6 +214,65 @@ const EmployeeTransferHistory = ({
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Chức danh này không thuộc diện bắt buộc luân chuyển định kỳ theo cấu hình hệ thống hiện tại của Quỹ.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Khung Tiến Độ Luân Chuyển Địa Bàn Dành Cho Cán Bộ Tín Dụng */}
+        {isCreditOfficer && areaInfo && (
+          <div className={`p-4 rounded-xl border ${
+            areaInfo.isDue 
+              ? 'bg-rose-50/70 border-rose-200' 
+              : areaInfo.isNear 
+              ? 'bg-amber-50/70 border-amber-200' 
+              : 'bg-emerald-50/60 border-emerald-200'
+          }`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-emerald-700" />
+                <span>Tiến Độ Quản Lý Địa Bàn & Luân Chuyển Định Kỳ:</span>
+                <span className="font-bold text-emerald-950 underline">{emp.assignedArea || 'Chưa phân công địa bàn'}</span>
+              </span>
+              <span className={`font-black tabular-nums ${
+                areaInfo.isDue ? 'text-rose-700' : areaInfo.isNear ? 'text-amber-700' : 'text-emerald-900'
+              }`}>
+                {areaInfo.tenureText} / {maxMonths} tháng
+              </span>
+            </div>
+
+            {/* Thanh Progress bar */}
+            <div className="w-full bg-slate-200 rounded-full h-2.5 mt-2.5 overflow-hidden">
+              <div
+                className={`h-2.5 rounded-full transition-all duration-300 ${
+                  areaInfo.isDue 
+                    ? 'bg-rose-600' 
+                    : areaInfo.isNear 
+                    ? 'bg-amber-500' 
+                    : 'bg-emerald-700'
+                }`}
+                style={{ width: `${areaPercent}%` }}
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2.5 text-[11px]">
+              <span className="text-slate-600">
+                Ngày nhận địa bàn: <strong className="text-slate-800">{emp.areaStartDate ? formatDateVN(emp.areaStartDate) : (effectiveStart ? formatDateVN(effectiveStart) : 'Chưa cập nhật')}</strong>
+                {areaInfo.dueDateText && (
+                  <>
+                    <span className="mx-1 text-slate-400">•</span>
+                    <span>Hạn luân chuyển: <strong className="text-slate-900">{areaInfo.dueDateText}</strong></span>
+                  </>
+                )}
+              </span>
+              <span className={`font-bold ${
+                areaInfo.isDue 
+                  ? 'text-rose-700' 
+                  : areaInfo.isNear 
+                  ? 'text-amber-700' 
+                  : 'text-emerald-800'
+              }`}>
+                {areaInfo.statusText}
+              </span>
             </div>
           </div>
         )}

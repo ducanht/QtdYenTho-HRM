@@ -461,8 +461,20 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
   - **Cấu Hình & Phân Quyền Phân Hệ Nhân Sự (`system_settings/module_hr`)**:
     - Quản lý cấu hình tập trung trên Cloud Firestore với listener realtime `subscribeSubsystemConfig('hr')`.
     - `allowStaffViewDirectory`: Phân quyền xem danh bạ toàn Quỹ vs Chế độ bảo mật cá nhân (cán bộ thường chỉ xem hồ sơ của mình; Lãnh đạo xem toàn bộ 13 cán bộ).
-    - `transferMaxMonths` (36 tháng) & `transferWarningMonths` (6 tháng): Chu kỳ luân chuyển và cảnh báo theo chuẩn NHNN.
-    - `canStaffUploadTraining`: Quyền tự tải lên văn bằng chứng chỉ của cán bộ nhân viên.
+- **`2026.10.12_v5.5_period_hours_and_credit_officer_area_tenure`**:
+  - **Kiểm Soát Khung Giờ Đánh Giá Tín Nhiệm (`startTime`, `endTime`) & Chặn Đánh Giá Khi Chưa Mở**:
+    - Bổ sung cấu hình giờ và phút mở cổng (`startTime`, mặc định `08:00`) và giờ đóng cổng (`endTime`, mặc định `17:30`) vào từng đợt đánh giá (`evaluation_periods` và `period_configs`).
+    - Tích hợp bộ kiểm soát trạng thái tự động `checkPeriodActiveStatus(period)`: So sánh thời gian thực với mốc Ngày + Giờ:Phút mở/đóng đợt.
+    - Khóa toàn bộ thao tác chấm điểm, nhập ghi chú và nộp phiếu khi đợt chưa mở hoặc đã kết thúc (`disabled={!periodStatusInfo.isOpen}`).
+    - Hiển thị banner cảnh báo và đếm ngược thời gian trực quan, chính xác đến từng phút trên cả Desktop và thiết bị di động.
+  - **Chuẩn Hóa Phòng Ban HĐQT & Ban Điều Hành Kiêm Nhiệm**:
+    - Bổ sung phòng ban `"Hội đồng Quản trị & Ban Điều hành"` (`dept-03b` / `HDQT_BDH`) phản ánh đúng thực tế nhân sự: Thành viên HĐQT kiêm Giám đốc điều hành Quỹ (Đ/c Nguyễn Văn Sơn `CB03`), thuộc cả Ban Quản trị HĐQT và Ban Điều hành kinh doanh.
+  - **Quản Lý Luân Chuyển Địa Bàn Định Kỳ Dành Riêng Cho Cán Bộ Tín Dụng**:
+    - Bổ sung trường `areaStartDate` (Ngày bắt đầu nhận quản lý địa bàn) vào hồ sơ cán bộ (`employees` và `users`).
+    - Tích hợp hàm `calculateAreaTenureAndDueDate(areaStartDate, cycleMonths = 36, warningMonths = 6)`: Tính toán chính xác thâm niên quản lý địa bàn hiện tại, ngày đến hạn luân chuyển địa bàn tiếp theo, số tháng còn lại và trạng thái cảnh báo (An toàn / Sắp đến hạn / Đến hạn luân chuyển địa bàn).
+    - Hiển thị thẻ chuyên biệt theo dõi quản lý địa bàn trong Hồ sơ chi tiết (`EmployeeProfileDetail`), Lịch sử luân chuyển (`EmployeeTransferHistory`) và Bảng giám sát toàn Quỹ (`EmployeeAnalyticsTab`).
+  - **Tinh Gọn Giao Diện Báo Cáo Phân Tích**:
+    - Xóa bỏ hoàn toàn khối thống kê phân bổ nhân sự theo phòng ban (`deptStats`) trong Tab Cơ cấu & Thống kê để loại bỏ nội dung dư thừa, tập trung vào các chỉ số nhân lực cốt lõi và tiến độ luân chuyển định kỳ.
 
 ---
 

@@ -22,6 +22,8 @@ const CriteriaScoringTable = ({
   onSearchChange,
   showTitle = true,
   currentUser = null,
+  disabled = false,
+  disabledMessage = '',
 }) => {
   // Sắp xếp mặc định: Phòng ban -> Tên cán bộ (theo vần ABC tiếng Việt)
   const sortedEmployees = useMemo(() => {
@@ -107,6 +109,14 @@ const CriteriaScoringTable = ({
         </div>
       )}
 
+      {/* Thông báo nếu cổng lấy phiếu đang đóng */}
+      {disabled && (
+        <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+          <span>{disabledMessage || 'Cổng lấy phiếu hiện đang đóng. Không thể chấm điểm hoặc chỉnh sửa phiếu trong thời gian này.'}</span>
+        </div>
+      )}
+
       {/* 2. Giao diện Desktop / Tablet: Bảng Table 4 cột tinh gọn */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
@@ -144,7 +154,7 @@ const CriteriaScoringTable = ({
                     key={emp.id}
                     className={`transition-colors hover:bg-teal-50/30 ${
                       hasScore ? 'bg-white' : 'bg-amber-50/15'
-                    }`}
+                    } ${disabled ? 'opacity-80' : ''}`}
                   >
                     {/* 1. TT */}
                     <td className="py-3 px-3 text-center font-bold text-slate-500">
@@ -185,10 +195,11 @@ const CriteriaScoringTable = ({
                       <div className="flex items-center gap-3">
                         <ScorePicker
                           value={currentScore}
-                          onChange={(score) => onSetScore(emp.id, criterion.id, score)}
+                          onChange={(score) => !disabled && onSetScore(emp.id, criterion.id, score)}
                           min={1}
                           max={10}
                           size="md"
+                          disabled={disabled}
                         />
                         {hasScore ? (
                           <span className="text-xs font-black text-[#0f766e] bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200 shrink-0">
@@ -206,10 +217,13 @@ const CriteriaScoringTable = ({
                     <td className="py-3 px-4">
                       <input
                         type="text"
-                        placeholder="Ghi chú thêm..."
+                        placeholder={disabled ? 'Đang khóa cổng...' : 'Ghi chú thêm...'}
                         value={empNote}
-                        onChange={(e) => onSetNote(emp.id, e.target.value)}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0f766e] bg-slate-50/50 hover:bg-white"
+                        disabled={disabled}
+                        onChange={(e) => !disabled && onSetNote(emp.id, e.target.value)}
+                        className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0f766e] bg-slate-50/50 hover:bg-white ${
+                          disabled ? 'cursor-not-allowed opacity-60 bg-slate-100' : ''
+                        }`}
                       />
                     </td>
                   </tr>
@@ -293,10 +307,11 @@ const CriteriaScoringTable = ({
                 <div className="pt-1 overflow-x-auto pb-0.5 scrollbar-none">
                   <ScorePicker
                     value={currentScore}
-                    onChange={(score) => onSetScore(emp.id, criterion.id, score)}
+                    onChange={(score) => !disabled && onSetScore(emp.id, criterion.id, score)}
                     min={1}
                     max={10}
                     size="sm"
+                    disabled={disabled}
                     className="w-full justify-between sm:justify-start"
                   />
                 </div>
@@ -305,10 +320,13 @@ const CriteriaScoringTable = ({
                 <div className="pt-0.5">
                   <input
                     type="text"
-                    placeholder="Ghi chú (tùy chọn)..."
+                    placeholder={disabled ? 'Đang khóa cổng lấy phiếu...' : 'Ghi chú (tùy chọn)...'}
                     value={empNote}
-                    onChange={(e) => onSetNote(emp.id, e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0f766e] bg-slate-50/50 hover:bg-white"
+                    disabled={disabled}
+                    onChange={(e) => !disabled && onSetNote(emp.id, e.target.value)}
+                    className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0f766e] bg-slate-50/50 hover:bg-white ${
+                      disabled ? 'cursor-not-allowed opacity-60 bg-slate-100' : ''
+                    }`}
                   />
                 </div>
               </div>

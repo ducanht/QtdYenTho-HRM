@@ -23,7 +23,8 @@ import {
   getEligibleVoterEmployees, 
   getOfficialStaff, 
   isSystemAdminAccount, 
-  generatePeriodId 
+  generatePeriodId,
+  checkPeriodActiveStatus
 } from '../../lib/evaluationUtils';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../lib/constants';
 import { DEFAULT_MODULE_TRUST_SETTINGS } from '../../lib/systemDefaults';
@@ -157,7 +158,9 @@ const TrustEvaluationContainer = () => {
     votingMode: 'ANONYMOUS',
     status: 'ACTIVE',
     startDate: '',
+    startTime: '08:00',
     endDate: '',
+    endTime: '17:30',
     description: '',
     targetEmployeeIds: [],
     customCriteria: DEFAULT_CRITERIA,
@@ -485,22 +488,23 @@ const TrustEvaluationContainer = () => {
   const hasSubmitted = Boolean(userSubmissionInfo?.hasSubmitted);
   const submittedAt = userSubmissionInfo?.lastSubmittedAt;
 
+  // Kiểm tra trạng thái đóng/mở đợt theo ngày, giờ, phút và status
+  const periodStatusInfo = useMemo(() => {
+    return checkPeriodActiveStatus(effectivePeriod || currentPeriod);
+  }, [effectivePeriod, currentPeriod]);
+
   // Đếm ngược thời gian kết thúc đợt
   const timeRemainingBadge = useMemo(() => {
     if (!currentPeriod?.endDate) return null;
-    const now = new Date();
-    const end = new Date(currentPeriod.endDate + 'T23:59:59');
-    const diffMs = end - now;
-    if (diffMs < 0) {
-      return { text: 'Đã hết hạn lấy phiếu', isExpired: true };
+    if (!periodStatusInfo.isOpen) {
+      return { text: periodStatusInfo.timeRemainingText, isExpired: periodStatusInfo.code === 'EXPIRED' };
     }
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    if (days > 0) {
-      return { text: `Còn ${days} ngày ${hours} giờ`, isExpired: false };
-    }
-    return { text: `Còn ${hours} giờ nữa`, isExpired: false, isUrgent: true };
-  }, [currentPeriod?.endDate]);
+    return { 
+      text: periodStatusInfo.timeRemainingText, 
+      isExpired: false, 
+      isUrgent: periodStatusInfo.isUrgent 
+    };
+  }, [currentPeriod?.endDate, periodStatusInfo]);
 
   // Tải dữ liệu nháp (Local Draft) hoặc dữ liệu đã nộp cho Ma trận điểm khi đổi đợt
   useEffect(() => {
@@ -553,6 +557,11 @@ const TrustEvaluationContainer = () => {
 
   // Cập nhật điểm cho 1 cán bộ ở 1 tiêu chí (Số nguyên 1..10) & TỰ ĐỘNG LƯU NGẦM
   const handleSetScore = useCallback((employeeId, criterionId, score) => {
+    if (!periodStatusInfo.isOpen) {
+      toast.warning(periodStatusInfo.message || 'Đợt đánh giá hiện không mở để tiếp nhận chấm điểm!');
+      return;
+    }
+
     const intScore = Math.round(Number(score));
     if (isNaN(intScore) || intScore < 1 || intScore > 10) return;
 
@@ -582,10 +591,15 @@ const TrustEvaluationContainer = () => {
 
       return updated;
     });
-  }, [currentPeriod?.id, currentUser]);
+  }, [currentPeriod?.id, currentUser, periodStatusInfo, toast]);
 
   // Cập nhật ghi chú cho 1 cán bộ & TỰ ĐỘNG LƯU NGẦM
   const handleSetNote = useCallback((employeeId, note) => {
+    if (!periodStatusInfo.isOpen) {
+      toast.warning(periodStatusInfo.message || 'Đợt đánh giá hiện không mở để tiếp nhận ghi chú!');
+      return;
+    }
+
     setMatrixNotes((prev) => {
       const updated = {
         ...prev,
@@ -609,7 +623,7 @@ const TrustEvaluationContainer = () => {
 
       return updated;
     });
-  }, [currentPeriod?.id, currentUser]);
+  }, [currentPeriod?.id, currentUser, periodStatusInfo, toast]);
 
   // Tính số lượng cán bộ đã chấm trên từng tiêu chí
   const completionByCriteria = useMemo(() => {
@@ -654,10 +668,10 @@ const TrustEvaluationContainer = () => {
     return Math.round((scoredTotal / totalRequired) * 100);
   }, [evaluatableEmployees, activeCriteria, matrixScores]);
 
-  // Đã sẵn sàng nộp phiếu chính thức chưa? (Phải chấm đủ 100%, thuộc danh sách cử tri và đợt đang ACTIVE)
+  // Đã sẵn sàng nộp phiếu chính thức chưa? (Phải chấm đủ 100%, thuộc danh sách cử tri và đợt đang mở)
   const isFullyReadyToSubmit = useMemo(() => {
-    return isEligibleVoter && currentPeriod?.status === 'ACTIVE' && overallPercent === 100 && evaluatableEmployees.length > 0;
-  }, [isEligibleVoter, currentPeriod?.status, overallPercent, evaluatableEmployees.length]);
+    return isEligibleVoter && periodStatusInfo.isOpen && overallPercent === 100 && evaluatableEmployees.length > 0;
+  }, [isEligibleVoter, periodStatusInfo.isOpen, overallPercent, evaluatableEmployees.length]);
 
   // Nộp phiếu chính thức cho tất cả cán bộ (Chặn hoàn toàn nếu chưa hoàn thành hoặc không phải cử tri)
   const handleSubmitOfficial = async () => {
@@ -668,13 +682,8 @@ const TrustEvaluationContainer = () => {
       return;
     }
 
-    if (currentPeriod.status === 'UPCOMING') {
-      toast.error(`Đợt đánh giá "${currentPeriod.name}" chưa mở cổng lấy phiếu (Dự kiến mở từ ${currentPeriod.startDate || '...'}).`);
-      return;
-    }
-
-    if (currentPeriod.status === 'CLOSED') {
-      toast.error(`Đợt đánh giá "${currentPeriod.name}" đã chính thức kết thúc/đóng cổng lấy phiếu.`);
+    if (!periodStatusInfo.isOpen) {
+      toast.error(periodStatusInfo.message || `Đợt đánh giá "${currentPeriod.name}" hiện không mở nhận phiếu.`);
       return;
     }
 
@@ -764,7 +773,9 @@ const TrustEvaluationContainer = () => {
       allowSelfEvaluation: false,
       status: 'ACTIVE',
       startDate: new Date().toISOString().split('T')[0],
+      startTime: '08:00',
       endDate: '',
+      endTime: '17:30',
       description: '',
       voterEmployeeIds: getOfficialStaff(employees).map((e) => e.id),
       targetEmployeeIds: getEligibleTargetEmployees(employees).map((e) => e.id),
@@ -784,7 +795,9 @@ const TrustEvaluationContainer = () => {
       allowSelfEvaluation: period.allowSelfEvaluation ?? false,
       status: period.status || 'ACTIVE',
       startDate: period.startDate || '',
+      startTime: period.startTime || '08:00',
       endDate: period.endDate || '',
+      endTime: period.endTime || '17:30',
       description: period.description || '',
       voterEmployeeIds: getEligibleVoterEmployees(employees, period.voterEmployeeIds).map((e) => e.id),
       targetEmployeeIds: getEligibleTargetEmployees(employees, period.targetEmployeeIds).map((e) => e.id),
@@ -815,7 +828,9 @@ const TrustEvaluationContainer = () => {
         allowSelfEvaluation: Boolean(periodFormData.allowSelfEvaluation),
         status: periodFormData.status || 'ACTIVE',
         startDate: periodFormData.startDate || new Date().toISOString().split('T')[0],
+        startTime: periodFormData.startTime || '08:00',
         endDate: periodFormData.endDate || '',
+        endTime: periodFormData.endTime || '17:30',
         description: periodFormData.description || '',
         voterEmployeeIds: Array.isArray(periodFormData.voterEmployeeIds) ? periodFormData.voterEmployeeIds : getOfficialStaff(employees).map((e) => e.id),
         targetEmployeeIds: Array.isArray(periodFormData.targetEmployeeIds) ? periodFormData.targetEmployeeIds : [],
@@ -1112,6 +1127,7 @@ const TrustEvaluationContainer = () => {
                 {/* Banner tiến độ chấm điểm (Ẩn hoàn toàn điểm tổng, Tự động lưu ngầm, Hiện rõ tên đợt) */}
                 <TrustProgressBanner
                   currentPeriod={effectivePeriod || currentPeriod}
+                  periodStatusInfo={periodStatusInfo}
                   totalEmployeesCount={evaluatableEmployees.length}
                   completedCriteriaCount={completedCriteriaCount}
                   totalCriteriaCount={activeCriteria.length}
@@ -1149,6 +1165,8 @@ const TrustEvaluationContainer = () => {
                     onSearchChange={setSearchTerm}
                     showTitle={true}
                     currentUser={currentUser}
+                    disabled={!periodStatusInfo.isOpen}
+                    disabledMessage={periodStatusInfo.message}
                   />
                 ) : (
                   <div className="space-y-8">
@@ -1166,6 +1184,8 @@ const TrustEvaluationContainer = () => {
                         onSearchChange={setSearchTerm}
                         showTitle={true}
                         currentUser={currentUser}
+                        disabled={!periodStatusInfo.isOpen}
+                        disabledMessage={periodStatusInfo.message}
                       />
                     ))}
                   </div>

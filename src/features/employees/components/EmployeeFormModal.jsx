@@ -37,6 +37,7 @@ const EmployeeFormModal = ({
   const [joinDate, setJoinDate] = useState('');
   const [contractType, setContractType] = useState('Không xác định thời hạn');
   const [assignedArea, setAssignedArea] = useState('');
+  const [areaStartDate, setAreaStartDate] = useState('');
   const [partyMember, setPartyMember] = useState(false);
   const [partyDate, setPartyDate] = useState('');
   const [partyOfficialDate, setPartyOfficialDate] = useState('');
@@ -60,6 +61,7 @@ const EmployeeFormModal = ({
       setJoinDate(initialData.joinDate || '');
       setContractType(initialData.contractType || 'Không xác định thời hạn');
       setAssignedArea(initialData.assignedArea || '');
+      setAreaStartDate(initialData.areaStartDate || '');
       setPartyMember(Boolean(initialData.partyMember));
       setPartyDate(initialData.partyDate || '');
       setPartyOfficialDate(initialData.partyOfficialDate || '');
@@ -91,6 +93,7 @@ const EmployeeFormModal = ({
       setJoinDate(today);
       setContractType('Không xác định thời hạn');
       setAssignedArea('');
+      setAreaStartDate(today);
       setPartyMember(false);
       setPartyDate('');
       setPartyOfficialDate('');
@@ -124,6 +127,7 @@ const EmployeeFormModal = ({
         joinDate,
         contractType,
         assignedArea: assignedArea.trim(),
+        areaStartDate: areaStartDate || '',
         partyMember,
         partyDate: partyMember ? partyDate : '',
         partyOfficialDate: partyMember ? partyOfficialDate : '',
@@ -298,13 +302,22 @@ const EmployeeFormModal = ({
                 <option value="Thử việc / Học việc">Thử việc / Tập sự</option>
               </select>
             </div>
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-2">
               <label className="block text-slate-700 font-bold mb-1">Địa bàn phụ trách tín dụng:</label>
               <input
                 type="text"
                 placeholder="VD: Phụ trách thành viên vay vốn xã Quý Lộc / Cụm 3 thôn xã Yên Thọ"
                 value={assignedArea}
                 onChange={(e) => setAssignedArea(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Ngày bắt đầu nhận địa bàn:</label>
+              <input
+                type="date"
+                value={areaStartDate}
+                onChange={(e) => setAreaStartDate(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>

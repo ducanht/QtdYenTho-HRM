@@ -22,6 +22,7 @@ import { formatDateTimeVN } from '../../../lib/evaluationUtils';
  */
 const TrustProgressBanner = ({
   currentPeriod = null,
+  periodStatusInfo = null,
   totalEmployeesCount = 0,
   completedCriteriaCount = 0,
   totalCriteriaCount = 10,
@@ -33,9 +34,15 @@ const TrustProgressBanner = ({
   submittedAt = null,
   onViewSubmittedVotes,
 }) => {
-  const isUpcoming = currentPeriod?.status === 'UPCOMING';
-  const isClosed = currentPeriod?.status === 'CLOSED';
-  const isActive = currentPeriod?.status === 'ACTIVE' || (!isUpcoming && !isClosed);
+  const isUpcoming = periodStatusInfo
+    ? (!periodStatusInfo.isOpen && (periodStatusInfo.code === 'NOT_STARTED' || periodStatusInfo.code === 'UPCOMING'))
+    : (currentPeriod?.status === 'UPCOMING');
+  const isClosed = periodStatusInfo
+    ? (!periodStatusInfo.isOpen && (periodStatusInfo.code === 'EXPIRED' || periodStatusInfo.code === 'CLOSED'))
+    : (currentPeriod?.status === 'CLOSED');
+  const isActive = periodStatusInfo
+    ? periodStatusInfo.isOpen
+    : (currentPeriod?.status === 'ACTIVE' || (!isUpcoming && !isClosed));
 
   return (
     <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-md border border-teal-800/40 space-y-4">
@@ -52,7 +59,7 @@ const TrustProgressBanner = ({
             {isUpcoming ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/20 border border-amber-400/40 px-2.5 py-0.5 rounded-full shadow-xs">
                 <Clock className="w-3 h-3 text-amber-400" />
-                <span>SẮP DIỄN RA</span>
+                <span>CHƯA MỞ CỔNG</span>
               </span>
             ) : isClosed ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-300 bg-slate-700/60 border border-slate-500/40 px-2.5 py-0.5 rounded-full shadow-xs">
@@ -86,7 +93,15 @@ const TrustProgressBanner = ({
               <>
                 <span className="text-slate-500">•</span>
                 <span>
-                  Thời gian: <strong className="text-slate-200">{currentPeriod.startDate}</strong> đến <strong className="text-slate-200">{currentPeriod.endDate || 'Chưa định'}</strong>
+                  Thời gian: <strong className="text-slate-200">{currentPeriod.startTime ? `${currentPeriod.startTime} ` : ''}{currentPeriod.startDate}</strong> đến <strong className="text-slate-200">{currentPeriod.endTime ? `${currentPeriod.endTime} ` : ''}{currentPeriod.endDate || 'Chưa định'}</strong>
+                </span>
+              </>
+            )}
+            {periodStatusInfo?.timeRemainingText && (
+              <>
+                <span className="text-slate-500">•</span>
+                <span className={`font-semibold ${periodStatusInfo.isUrgent ? 'text-amber-300' : 'text-teal-300'}`}>
+                  {periodStatusInfo.timeRemainingText}
                 </span>
               </>
             )}
@@ -111,7 +126,7 @@ const TrustProgressBanner = ({
         <div className="bg-amber-500/15 border border-amber-400/40 rounded-xl p-3 text-amber-200 text-xs flex items-center gap-2.5">
           <AlertCircle className="w-4 h-4 text-amber-300 shrink-0" />
           <div className="leading-relaxed">
-            <strong>Đợt đánh giá chưa đến thời gian mở cổng lấy phiếu:</strong> Dự kiến diễn ra từ ngày <strong className="text-white underline">{currentPeriod?.startDate}</strong> đến <strong className="text-white underline">{currentPeriod?.endDate || 'cuối kỳ'}</strong>. Cán bộ hiện có thể xem trước danh sách đối tượng và 10 tiêu chí đánh giá.
+            <strong>Đợt đánh giá chưa đến thời gian mở cổng lấy phiếu:</strong> {periodStatusInfo?.message || `Dự kiến diễn ra từ ${currentPeriod?.startTime ? currentPeriod.startTime + ' ' : ''}${currentPeriod?.startDate} đến ${currentPeriod?.endTime ? currentPeriod.endTime + ' ' : ''}${currentPeriod?.endDate || 'cuối kỳ'}. Cán bộ hiện có thể xem trước danh sách đối tượng và 10 tiêu chí đánh giá.`}
           </div>
         </div>
       )}
@@ -120,7 +135,7 @@ const TrustProgressBanner = ({
         <div className="bg-slate-800/80 border border-slate-600/50 rounded-xl p-3 text-slate-300 text-xs flex items-center gap-2.5">
           <Lock className="w-4 h-4 text-slate-400 shrink-0" />
           <div className="leading-relaxed">
-            <strong>Đợt đánh giá này đã chính thức kết thúc/đóng cổng lấy phiếu:</strong> Hạn chót lấy phiếu đã kết thúc vào ngày <strong className="text-white underline">{currentPeriod?.endDate || 'kỳ trước'}</strong>. Phiếu tín nhiệm đã được khóa an toàn vào CSDL.
+            <strong>Đợt đánh giá này đã chính thức kết thúc/đóng cổng lấy phiếu:</strong> {periodStatusInfo?.message || `Hạn chót lấy phiếu đã kết thúc vào ${currentPeriod?.endTime ? currentPeriod.endTime + ' ' : ''}${currentPeriod?.endDate || 'kỳ trước'}. Phiếu tín nhiệm đã được khóa an toàn vào CSDL.`}
           </div>
         </div>
       )}
@@ -218,7 +233,7 @@ const TrustProgressBanner = ({
               title="Đợt đánh giá chưa đến thời gian mở cổng lấy phiếu"
             >
               <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>Chờ mở cổng (từ {currentPeriod?.startDate || '...'})</span>
+              <span>Chờ mở cổng ({periodStatusInfo?.startDateTimeText ? `từ ${periodStatusInfo.startDateTimeText}` : (currentPeriod?.startDate || '...')})</span>
             </div>
           ) : isClosed ? (
             /* ĐỢT ĐÃ ĐÓNG: Nút thông báo đã kết thúc */

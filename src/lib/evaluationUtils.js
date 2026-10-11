@@ -303,4 +303,254 @@ export const calculatePositionTenure = (startDate) => {
   }
 };
 
+/**
+ * Kiểm tra trạng thái hoạt động của Đợt Đánh giá theo cấu hình giờ, phút và ngày tháng.
+ * Phục vụ quy định: Không cho phép đánh giá khi đợt chưa mở hoặc đã khóa sổ.
+ * Có những đợt đánh giá chỉ mở trong khoảng thời gian cụ thể (từ giờ này đến giờ kia).
+ * 
+ * @param {Object} period - Dữ liệu đợt đánh giá
+ * @returns {{
+ *   isOpen: boolean,
+ *   code: 'OPEN' | 'NOT_STARTED' | 'EXPIRED' | 'CLOSED' | 'UPCOMING',
+ *   message: string,
+ *   startDateTimeText: string,
+ *   endDateTimeText: string,
+ *   timeRemainingText: string,
+ *   isUrgent: boolean
+ * }}
+ */
+export const checkPeriodActiveStatus = (period) => {
+  if (!period) {
+    return {
+      isOpen: false,
+      code: 'CLOSED',
+      message: 'Không tìm thấy thông tin đợt đánh giá.',
+      startDateTimeText: '',
+      endDateTimeText: '',
+      timeRemainingText: 'Đã đóng',
+      isUrgent: false,
+    };
+  }
+
+  // 1. Kiểm tra trạng thái tường minh
+  if (period.status === 'CLOSED') {
+    return {
+      isOpen: false,
+      code: 'CLOSED',
+      message: 'Đợt đánh giá đã chính thức đóng cổng lấy phiếu và khóa sổ dữ liệu.',
+      startDateTimeText: '',
+      endDateTimeText: '',
+      timeRemainingText: 'Đã khóa sổ',
+      isUrgent: false,
+    };
+  }
+
+  if (period.status === 'UPCOMING') {
+    return {
+      isOpen: false,
+      code: 'UPCOMING',
+      message: 'Đợt đánh giá chưa đến thời điểm mở cổng lấy phiếu.',
+      startDateTimeText: '',
+      endDateTimeText: '',
+      timeRemainingText: 'Sắp diễn ra',
+      isUrgent: false,
+    };
+  }
+
+  const now = new Date();
+
+  // 2. Phân tích thời điểm bắt đầu (Ngày + Giờ:Phút)
+  let startDateTime = null;
+  let startDateTimeText = '';
+  if (period.startDate) {
+    const sTime = (period.startTime || '00:00').trim();
+    const timeFormatted = sTime.length === 5 ? sTime + ':00' : sTime;
+    startDateTime = new Date(`${period.startDate}T${timeFormatted}`);
+    if (!isNaN(startDateTime.getTime())) {
+      startDateTimeText = `${sTime} ngày ${formatDateTimeVN(startDateTime).split(' ')[0] || period.startDate}`;
+    }
+  }
+
+  // 3. Phân tích thời điểm kết thúc (Ngày + Giờ:Phút)
+  let endDateTime = null;
+  let endDateTimeText = '';
+  if (period.endDate) {
+    const eTime = (period.endTime || '23:59').trim();
+    const timeFormatted = eTime.length === 5 ? eTime + ':59' : eTime;
+    endDateTime = new Date(`${period.endDate}T${timeFormatted}`);
+    if (!isNaN(endDateTime.getTime())) {
+      endDateTimeText = `${eTime} ngày ${formatDateTimeVN(endDateTime).split(' ')[0] || period.endDate}`;
+    }
+  }
+
+  // 4. So sánh với thời gian thực
+  if (startDateTime && !isNaN(startDateTime.getTime()) && now < startDateTime) {
+    return {
+      isOpen: false,
+      code: 'NOT_STARTED',
+      message: `Chưa đến thời gian mở lấy phiếu. Thời gian mở cổng: ${startDateTimeText || period.startDate}.`,
+      startDateTimeText,
+      endDateTimeText,
+      timeRemainingText: 'Chưa mở',
+      isUrgent: false,
+    };
+  }
+
+  if (endDateTime && !isNaN(endDateTime.getTime()) && now > endDateTime) {
+    return {
+      isOpen: false,
+      code: 'EXPIRED',
+      message: `Đã hết thời hạn lấy phiếu tín nhiệm. Cổng lấy phiếu đã đóng vào lúc: ${endDateTimeText || period.endDate}.`,
+      startDateTimeText,
+      endDateTimeText,
+      timeRemainingText: 'Đã hết hạn',
+      isUrgent: false,
+    };
+  }
+
+  // 5. Tính thời gian còn lại nếu đang mở
+  let timeRemainingText = 'Đang diễn ra';
+  let isUrgent = false;
+  if (endDateTime && !isNaN(endDateTime.getTime())) {
+    const diffMs = endDateTime - now;
+    if (diffMs > 0) {
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        timeRemainingText = `Còn ${days} ngày ${hours} giờ`;
+      } else if (hours > 0) {
+        timeRemainingText = `Còn ${hours} giờ ${minutes} phút`;
+        isUrgent = hours < 4;
+      } else {
+        timeRemainingText = `Còn ${minutes} phút nữa`;
+        isUrgent = true;
+      }
+    }
+  }
+
+  return {
+    isOpen: true,
+    code: 'OPEN',
+    message: 'Cổng lấy phiếu tín nhiệm đang mở.',
+    startDateTimeText,
+    endDateTimeText,
+    timeRemainingText,
+    isUrgent,
+  };
+};
+
+/**
+ * Tính thâm niên quản lý địa bàn và thời điểm đến hạn luân chuyển địa bàn (Dành riêng cho Cán bộ Tín dụng)
+ * Theo quy định: Cán bộ tín dụng thực hiện luân chuyển địa bàn định kỳ (chu kỳ 36 tháng).
+ * 
+ * @param {string} areaStartDate - Ngày bắt đầu nhận quản lý địa bàn (YYYY-MM-DD)
+ * @param {number} cycleMonths - Chu kỳ luân chuyển địa bàn (mặc định 36 tháng)
+ * @param {number} warningMonths - Số tháng cảnh báo trước (mặc định 6 tháng)
+ * @returns {{
+ *   tenureText: string,
+ *   tenureMonths: number,
+ *   dueDateText: string,
+ *   dueDateIso: string,
+ *   remainingMonths: number,
+ *   isDue: boolean,
+ *   isNear: boolean,
+ *   statusText: string,
+ *   statusVariant: 'success' | 'warning' | 'danger'
+ * }}
+ */
+export const calculateAreaTenureAndDueDate = (areaStartDate, cycleMonths = 36, warningMonths = 6) => {
+  if (!areaStartDate) {
+    return {
+      tenureText: 'Chưa cập nhật',
+      tenureMonths: 0,
+      dueDateText: '—',
+      dueDateIso: '',
+      remainingMonths: cycleMonths,
+      isDue: false,
+      isNear: false,
+      statusText: 'Chưa cập nhật ngày nhận địa bàn',
+      statusVariant: 'warning',
+    };
+  }
+
+  try {
+    const start = new Date(areaStartDate);
+    if (isNaN(start.getTime())) {
+      return {
+        tenureText: '—',
+        tenureMonths: 0,
+        dueDateText: '—',
+        dueDateIso: '',
+        remainingMonths: cycleMonths,
+        isDue: false,
+        isNear: false,
+        statusText: 'Ngày không hợp lệ',
+        statusVariant: 'warning',
+      };
+    }
+
+    const now = new Date();
+    const tenureMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    const tenureText = calculatePositionTenure(areaStartDate);
+
+    // Tính ngày đến hạn luân chuyển (cộng cycleMonths)
+    const dueDate = new Date(start);
+    dueDate.setMonth(dueDate.getMonth() + cycleMonths);
+    const dueDateIso = dueDate.toISOString().slice(0, 10);
+    const dueDateText = dueDate.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    const remainingMonths = cycleMonths - tenureMonths;
+    const isDue = tenureMonths >= cycleMonths;
+    const isNear = tenureMonths >= (cycleMonths - warningMonths) && tenureMonths < cycleMonths;
+
+    let statusText = 'Trong hạn quản lý an toàn';
+    let statusVariant = 'success';
+
+    if (isDue) {
+      const overdueMonths = tenureMonths - cycleMonths;
+      statusText = overdueMonths > 0 
+        ? `Đã quá hạn luân chuyển địa bàn (${overdueMonths} tháng)` 
+        : 'Đến hạn luân chuyển địa bàn';
+      statusVariant = 'danger';
+    } else if (isNear) {
+      statusText = `Sắp đến hạn luân chuyển địa bàn (còn ${remainingMonths} tháng)`;
+      statusVariant = 'warning';
+    } else {
+      statusText = `Trong hạn an toàn (còn ${remainingMonths} tháng)`;
+      statusVariant = 'success';
+    }
+
+    return {
+      tenureText,
+      tenureMonths,
+      dueDateText,
+      dueDateIso,
+      remainingMonths,
+      isDue,
+      isNear,
+      statusText,
+      statusVariant,
+    };
+  } catch {
+    return {
+      tenureText: '—',
+      tenureMonths: 0,
+      dueDateText: '—',
+      dueDateIso: '',
+      remainingMonths: cycleMonths,
+      isDue: false,
+      isNear: false,
+      statusText: '—',
+      statusVariant: 'warning',
+    };
+  }
+};
+
+
 

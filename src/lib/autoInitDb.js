@@ -95,7 +95,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.4_clean_sidebar_and_board_director_position';
+export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.5_period_hours_and_credit_officer_area_tenure';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (18 Collections chuẩn hóa)
@@ -281,6 +281,8 @@ export const autoSyncDatabaseSchema = async (force = false) => {
 
         await setDoc(doc(db, 'evaluation_periods', pDoc.id), {
           allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
+          startTime: pData.startTime || '08:00',
+          endTime: pData.endTime || '17:30',
           voterEmployeeIds: finalVoters,
           targetEmployeeIds: finalTargets,
           updatedAt: serverTimestamp(),
@@ -289,6 +291,8 @@ export const autoSyncDatabaseSchema = async (force = false) => {
         // Cập nhật bảng cấu hình riêng biệt period_configs tương ứng
         await setDoc(doc(db, 'period_configs', pDoc.id), {
           allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
+          startTime: pData.startTime || '08:00',
+          endTime: pData.endTime || '17:30',
           voterEmployeeIds: finalVoters,
           targetEmployeeIds: finalTargets,
           updatedAt: serverTimestamp(),

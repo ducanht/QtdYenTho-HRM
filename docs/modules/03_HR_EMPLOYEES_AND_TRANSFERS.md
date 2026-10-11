@@ -109,10 +109,11 @@ interface Employee {
   cccd: string;             // Số CCCD (12 số)
   phone: string;            // SĐT di động
   email: string;            // Email công vụ
-  department: string;       // Phòng Tín dụng, Phòng Kế toán - Ngân quỹ, Ban Kiểm soát, HĐQT, BĐH
+  department: string;       // Phòng Tín dụng, Phòng Kế toán - Ngân quỹ, Ban Kiểm soát, Hội đồng Quản trị, Ban Điều hành, Hội đồng Quản trị & Ban Điều hành
   position: string;         // Chức vụ chính quyền
   positionStartDate: string;// Ngày bắt đầu giữ chức vụ hiện tại (YYYY-MM-DD)
-  assignedArea?: string;    // Địa bàn phụ trách (Xã Quý Lộc, Yên Thọ...)
+  assignedArea?: string;    // Địa bàn phụ trách (Xã Quý Lộc, Thôn Tân Lộc...)
+  areaStartDate?: string;   // Ngày bắt đầu nhận địa bàn hiện tại (YYYY-MM-DD - chu kỳ luân chuyển 36 tháng cho CBTD)
   politicalRole?: string;   // Bí thư Chi bộ, Đảng viên...
   partyMember: boolean;     // Đảng viên ĐCSVN
   education: string;        // Trình độ chuyên môn (Đại học Ngân hàng...)
@@ -242,7 +243,10 @@ Hệ thống giao diện Phân hệ Quản trị Nhân sự kế thừa trọn v
    - **Khối định danh cán bộ (Header Card)**:
      - Avatar chân dung $16 \times 16$ / $18 \times 18$ rounded-2xl kèm tính năng cập nhật ảnh.
      - Họ tên cán bộ nổi bật (`text-xl font-black`), bên cạnh là 2 badge nhỏ gọn gàng: `[● Đang công tác]` (xanh lá) và `[Đảng viên]` (vàng hổ phách), loại bỏ hoàn toàn các huy hiệu to cồng kềnh.
-     - Dòng thông tin chức danh & phòng ban chuẩn mực: `Thành viên HĐQT - Giám đốc • Ban Điều hành`.
+     - Dòng thông tin chức danh & phòng ban chuẩn mực: `Thành viên HĐQT - Giám đốc • Hội đồng Quản trị & Ban Điều hành` (hỗ trợ cán bộ kiêm nhiệm HĐQT & BĐH).
+    - **Thẻ Giám Sát Chuyên Biệt Cho Cán Bộ Tín Dụng**:
+      - Tự động hiển thị khối *"Theo Dõi Quản Lý Địa Bàn & Luân Chuyển Định Kỳ"* khi chức vụ là Cán bộ Tín dụng.
+      - Hiển thị Địa bàn quản lý, Ngày nhận địa bàn (`areaStartDate`), Thâm niên quản lý địa bàn, Thời điểm luân chuyển định kỳ tiếp theo (chu kỳ 36 tháng theo quy định NHNN), số tháng còn lại và huy hiệu cảnh báo màu sắc trực quan.
    - **Hàng nút chức năng riêng biệt (Action Bar)**:
      - Tách xuống một hàng toolbar riêng biệt có đường phân cách viền mờ `border-t border-slate-100`, không bị chèn ép ở góc phải.
      - Nhóm Xuất tài liệu: **Xuất Word** (`.docx`), **Xuất Excel** (`.xlsx`), **In trích ngang A4** (xem trước).
@@ -255,6 +259,7 @@ Hệ thống giao diện Phân hệ Quản trị Nhân sự kế thừa trọn v
 2. `EmployeeTransferHistory.jsx` (Tab Luân chuyển công tác):
    - Phân hệ thuần túy phục vụ **theo dõi thâm niên, chu kỳ và tiến độ luân chuyển**; không dùng để lập quyết định.
    - Hiển thị thanh tiến độ thời gian công tác theo cấu hình động `transferRules` của từng chức danh.
+   - **Thẻ Tiến độ Quản lý Địa bàn & Luân chuyển Định kỳ cho CBTD**: Hiển thị thanh tiến độ % thâm niên địa bàn hiện tại, ngày mốc luân chuyển tiếp theo và trạng thái an toàn/cảnh báo.
    - Timeline trực quan hiển thị toàn bộ các quyết định điều động, bổ nhiệm, luân chuyển địa bàn trong quá khứ.
 3. `EmployeeTrainingTab.jsx` (Tab Đào tạo & Chứng chỉ):
    - Quản lý chi tiết từng khóa học: Đơn vị tổ chức (NHNN, Hiệp hội QTDND, Học viện Ngân hàng...), Quyết định/Kế hoạch, Thời gian, Địa điểm, Nội dung bồi dưỡng, Số hiệu chứng chỉ, Ngày cấp, Ngày hết hạn, Xếp loại và Xem ảnh scan.
@@ -262,16 +267,17 @@ Hệ thống giao diện Phân hệ Quản trị Nhân sự kế thừa trọn v
 4. `EmployeeAnalyticsTab.jsx` (Tab Cơ cấu & Thống kê):
    - 4 thẻ chỉ số tổng quan: Tổng nhân sự, Tỷ lệ Đảng viên, Cơ cấu Giới tính (Nam/Nữ), Số cán bộ đến hạn luân chuyển.
    - Thống kê Cơ cấu Trình độ Chuyên môn / Học vấn toàn Quỹ (Thạc sĩ, Đại học, Cao đẳng, Trung cấp...).
-   - Bảng Giám sát luân chuyển định kỳ toàn Quỹ theo cấu hình linh hoạt `transferRules`.
+   - **Bảng Giám sát luân chuyển định kỳ toàn Quỹ**: Đã loại bỏ hoàn toàn khối phân bổ phòng ban không cần thiết; bổ sung cột Địa bàn quản lý, Ngày nhận địa bàn, Thâm niên theo dõi và Hạn luân chuyển cho Cán bộ Tín dụng.
 5. `EmployeeSettingsTab.jsx` (Tab Danh mục & Cấu hình):
    - Cấu hình Quy tắc Luân chuyển theo từng Chức danh (`transferRules`): Vị trí nào phải luân chuyển, Thời hạn tối đa (tháng), Thời gian cảnh báo trước (tháng).
    - Cấu hình Phân quyền Phân hệ: Quyền xem danh bạ toàn Quỹ (`allowStaffViewDirectory`), Quyền tải lên chứng chỉ (`canStaffUploadTraining`).
-   - Quản lý danh mục Phòng ban và Chức vụ chính quyền chuẩn mực.
+   - Quản lý danh mục Phòng ban (bao gồm `Hội đồng Quản trị & Ban Điều hành`) và Chức vụ chính quyền chuẩn mực.
 
 ### 5.4. Các Modal Nghiệp Vụ & In Ấn A4:
 1. `EmployeeFormModal.jsx`: Modal thêm mới / chỉnh sửa hồ sơ cán bộ:
    - Tự động sinh mã `uuid` chuẩn RFC 4122 v4 không trùng lặp khi thêm mới.
    - Đầy đủ các trường nghiệp vụ: CCCD 12 số, ngày cấp, ngày vào Đảng, ngày chính thức, trình độ học vấn, thâm niên chức vụ.
+   - Bổ sung trường nhập liệu **Ngày bắt đầu nhận địa bàn (`areaStartDate`)** bên cạnh Địa bàn phụ trách (`assignedArea`) cho Cán bộ Tín dụng để tính toán chu kỳ luân chuyển 36 tháng.
 2. `TransferDecisionModal.jsx`: Modal lập quyết định điều động / luân chuyển:
    - Nhập số quyết định, ngày ký, ngày hiệu lực, hình thức luân chuyển, người ký, lý do và tài liệu đính kèm.
    - Cờ tích chọn *"Đồng bộ chức vụ và địa bàn mới vào hồ sơ cán bộ hiện tại"*.

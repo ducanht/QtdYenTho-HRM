@@ -148,25 +148,75 @@ const TrustPeriodModal = ({
           </div>
         </div>
 
-        {/* Thời gian bắt đầu và kết thúc */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Thời gian bắt đầu lấy phiếu</label>
-            <input
-              type="date"
-              value={formData.startDate || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
-              className="w-full p-2 bg-white rounded-xl border border-slate-300 text-xs"
-            />
+        {/* Thời gian bắt đầu và kết thúc (Cấu hình chính xác theo ngày, giờ, phút) */}
+        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="block font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+              Khung thời gian lấy phiếu tín nhiệm (Giờ, Phút & Ngày):
+            </label>
+            <span className="text-[10px] text-slate-500 italic">
+              Chỉ cho phép chấm điểm & nộp phiếu trong khung giờ quy định
+            </span>
           </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Thời gian kết thúc (Khóa sổ)</label>
-            <input
-              type="date"
-              value={formData.endDate || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
-              className="w-full p-2 bg-white rounded-xl border border-slate-300 text-xs"
-            />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Mở cổng lấy phiếu */}
+            <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+              <label className="block font-bold text-emerald-900 text-xs">
+                Thời gian mở cổng lấy phiếu:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">Ngày mở:</span>
+                  <input
+                    type="date"
+                    value={formData.startDate || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full p-2 bg-white rounded-lg border border-slate-300 text-xs font-semibold"
+                    required
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">Giờ mở (HH:mm):</span>
+                  <input
+                    type="time"
+                    value={formData.startTime || '08:00'}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))}
+                    className="w-full p-2 bg-white rounded-lg border border-slate-300 text-xs font-bold text-emerald-800"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Đóng cổng lấy phiếu */}
+            <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+              <label className="block font-bold text-rose-900 text-xs">
+                Thời gian đóng cổng (Khóa sổ):
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">Ngày đóng:</span>
+                  <input
+                    type="date"
+                    value={formData.endDate || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full p-2 bg-white rounded-lg border border-slate-300 text-xs font-semibold"
+                    required
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">Giờ đóng (HH:mm):</span>
+                  <input
+                    type="time"
+                    value={formData.endTime || '17:30'}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))}
+                    className="w-full p-2 bg-white rounded-lg border border-slate-300 text-xs font-bold text-rose-800"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

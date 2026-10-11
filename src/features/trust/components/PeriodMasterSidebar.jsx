@@ -145,12 +145,12 @@ const PeriodMasterSidebar = ({
                     <h4 className={`text-xs font-bold line-clamp-2 ${isSelected ? 'text-teal-950' : 'text-slate-800'}`}>
                       {p.name}
                     </h4>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
-                      <span>Quý {p.quarter || 4}/{p.year || 2026}</span>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                      <span className="font-semibold">Quý {p.quarter || 4}/{p.year || 2026}</span>
                       {p.startDate && (
                         <>
                           <span>•</span>
-                          <span>{p.startDate}</span>
+                          <span>{p.startTime ? `${p.startTime} ` : ''}{p.startDate}</span>
                         </>
                       )}
                     </div>
@@ -197,7 +197,7 @@ const PeriodMasterSidebar = ({
                   {badgeRenderer ? (
                     badgeRenderer(p)
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-500 font-medium">
                       {p.votingMode === 'ANONYMOUS' ? 'Bỏ phiếu kín' : 'Công khai'}
                     </span>
                   )}

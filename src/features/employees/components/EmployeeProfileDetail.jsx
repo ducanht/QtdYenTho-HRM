@@ -10,9 +10,10 @@ import {
   FileSpreadsheet,
   FileText,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  MapPin
 } from 'lucide-react';
-import { calculatePositionTenure } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { compressImage } from '../../../lib/imageUtils';
 import { updateEmployeeProfile, deleteEmployeeProfile } from '../../../lib/services';
@@ -53,6 +54,12 @@ const EmployeeProfileDetail = ({
   const effectiveStart = emp.positionStartDate || emp.joinDate;
   const tenureText = calculatePositionTenure(effectiveStart);
   const totalTenureText = calculatePositionTenure(emp.joinDate);
+
+  const isCreditOfficer = (emp.department || '').includes('Tín dụng') || 
+    (emp.position || '').toLowerCase().includes('tín dụng') || 
+    Boolean(emp.assignedArea);
+
+  const areaInfo = isCreditOfficer ? calculateAreaTenureAndDueDate(emp.areaStartDate || effectiveStart) : null;
 
   // Xử lý cập nhật ảnh đại diện
   const handleAvatarChange = async (e) => {
@@ -318,12 +325,55 @@ const EmployeeProfileDetail = ({
               <span className="text-slate-400 block text-[11px] mb-0.5">Loại hợp đồng lao động:</span>
               <span className="font-medium text-slate-800">{emp.contractType || 'Không xác định thời hạn'}</span>
             </div>
-            <div className="col-span-2">
-              <span className="text-slate-400 block text-[11px] mb-0.5">Địa bàn phụ trách tín dụng:</span>
-              <span className="font-medium text-slate-800 bg-slate-50 p-2.5 rounded-lg block border border-slate-100">
-                {emp.assignedArea || 'Chưa phân công địa bàn'}
-              </span>
-            </div>
+
+            {isCreditOfficer && areaInfo ? (
+              <div className="col-span-2 p-3.5 bg-emerald-50/70 border border-emerald-200/90 rounded-xl space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <span className="font-extrabold text-emerald-950 flex items-center gap-1.5 text-xs">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Theo Dõi Quản Lý Địa Bàn & Luân Chuyển Định Kỳ</span>
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    areaInfo.statusVariant === 'danger'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : areaInfo.statusVariant === 'warning'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                  }`}>
+                    {areaInfo.statusText}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 border-t border-emerald-200/60">
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Địa bàn đang quản lý:</span>
+                    <strong className="text-emerald-950 font-bold">{emp.assignedArea || 'Chưa phân công địa bàn'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Ngày bắt đầu nhận địa bàn:</span>
+                    <strong className="text-slate-800 tabular-nums">
+                      {emp.areaStartDate ? formatDateVN(emp.areaStartDate) : (effectiveStart ? formatDateVN(effectiveStart) : 'Chưa cập nhật')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Thâm niên quản lý địa bàn:</span>
+                    <strong className="text-emerald-900 font-black">{areaInfo.tenureText}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Thời điểm luân chuyển định kỳ:</span>
+                    <strong className={`tabular-nums ${areaInfo.isDue ? 'text-rose-700 font-black' : areaInfo.isNear ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
+                      {areaInfo.dueDateText} (Chu kỳ 36 tháng)
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="col-span-2">
+                <span className="text-slate-400 block text-[11px] mb-0.5">Địa bàn phụ trách:</span>
+                <span className="font-medium text-slate-800 bg-slate-50 p-2.5 rounded-lg block border border-slate-100">
+                  {emp.assignedArea || 'Chưa phân công địa bàn'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
