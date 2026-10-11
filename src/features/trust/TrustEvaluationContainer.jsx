@@ -18,7 +18,13 @@ import {
   savePeriodConfig
 } from '../../lib/services';
 import { classifyTrustScore } from '../../lib/schema';
-import { getEligibleTargetEmployees, isSystemAdminAccount, generatePeriodId } from '../../lib/evaluationUtils';
+import { 
+  getEligibleTargetEmployees, 
+  getEligibleVoterEmployees, 
+  getOfficialStaff, 
+  isSystemAdminAccount, 
+  generatePeriodId 
+} from '../../lib/evaluationUtils';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../lib/constants';
 import { DEFAULT_MODULE_TRUST_SETTINGS } from '../../lib/systemDefaults';
 import { 
@@ -760,7 +766,7 @@ const TrustEvaluationContainer = () => {
       startDate: new Date().toISOString().split('T')[0],
       endDate: '',
       description: '',
-      voterEmployeeIds: employees.map((e) => e.id),
+      voterEmployeeIds: getOfficialStaff(employees).map((e) => e.id),
       targetEmployeeIds: getEligibleTargetEmployees(employees).map((e) => e.id),
       customCriteria: [...DEFAULT_CRITERIA],
     });
@@ -780,7 +786,7 @@ const TrustEvaluationContainer = () => {
       startDate: period.startDate || '',
       endDate: period.endDate || '',
       description: period.description || '',
-      voterEmployeeIds: period.voterEmployeeIds || employees.map((e) => e.id),
+      voterEmployeeIds: getEligibleVoterEmployees(employees, period.voterEmployeeIds).map((e) => e.id),
       targetEmployeeIds: getEligibleTargetEmployees(employees, period.targetEmployeeIds).map((e) => e.id),
       customCriteria: period.customCriteria || [...DEFAULT_CRITERIA],
     });
@@ -811,7 +817,7 @@ const TrustEvaluationContainer = () => {
         startDate: periodFormData.startDate || new Date().toISOString().split('T')[0],
         endDate: periodFormData.endDate || '',
         description: periodFormData.description || '',
-        voterEmployeeIds: Array.isArray(periodFormData.voterEmployeeIds) ? periodFormData.voterEmployeeIds : employees.map((e) => e.id),
+        voterEmployeeIds: Array.isArray(periodFormData.voterEmployeeIds) ? periodFormData.voterEmployeeIds : getOfficialStaff(employees).map((e) => e.id),
         targetEmployeeIds: Array.isArray(periodFormData.targetEmployeeIds) ? periodFormData.targetEmployeeIds : [],
         customCriteria: Array.isArray(periodFormData.customCriteria) ? periodFormData.customCriteria : [],
         updatedAt: new Date().toISOString(),

@@ -3,7 +3,7 @@
 // Áp dụng Chính sách Triệt tiêu 100% Mock Data (Zero Mock Data Policy)
 // Toàn bộ dữ liệu nghiệp vụ sau khởi tạo đều được quản lý thời gian thực qua Cloud Firestore
 
-import { ROLES } from './constants';
+import { ROLES } from './constants.js';
 
 // ============================================================================
 // 1. DANH MỤC PHÒNG BAN CHUẨN CỦA QUỸ

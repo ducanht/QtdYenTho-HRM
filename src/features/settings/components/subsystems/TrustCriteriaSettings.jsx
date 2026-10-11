@@ -16,7 +16,12 @@ import StatusBadge from '../../../../components/common/StatusBadge';
 import PeriodMasterSidebar from '../../../trust/components/PeriodMasterSidebar';
 import DeletePeriodConfirmModal from '../../../trust/components/DeletePeriodConfirmModal';
 import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../../../lib/constants';
-import { getEligibleTargetEmployees, isSystemAdminAccount } from '../../../../lib/evaluationUtils';
+import { 
+  getEligibleTargetEmployees, 
+  getEligibleVoterEmployees, 
+  getOfficialStaff, 
+  isSystemAdminAccount 
+} from '../../../../lib/evaluationUtils';
 
 // Helper phân loại màu sắc badge cho từng nhóm tiêu chí chuẩn mực
 const getGroupBadgeStyle = (group) => {
@@ -76,9 +81,9 @@ const TrustCriteriaSettings = ({
     criteria: [...DEFAULT_CRITERIA],
   });
 
-  // Danh sách cán bộ nhân viên nghiệp vụ chính thức (Loại trừ tài khoản kỹ thuật / Quản trị hệ thống)
+  // Danh sách cán bộ nhân viên nghiệp vụ chính thức (Loại trừ tài khoản kỹ thuật / Quản trị hệ thống và khử trùng lặp)
   const officialStaff = React.useMemo(() => {
-    return employees.filter((e) => !isSystemAdminAccount(e));
+    return getOfficialStaff(employees);
   }, [employees]);
 
   // Modal Thêm/Sửa Tiêu chí của riêng đợt này
@@ -119,7 +124,7 @@ const TrustCriteriaSettings = ({
       : (currentPeriod?.voterEmployeeIds && currentPeriod.voterEmployeeIds.length > 0)
       ? currentPeriod.voterEmployeeIds
       : officialStaff.map((e) => e.id);
-    const cleanVoterIds = rawVoterIds.filter((id) => !isSystemAdminAccount({ id, code: id }));
+    const cleanVoterIds = getEligibleVoterEmployees(employees, rawVoterIds).map((e) => e.id);
 
     const excThresh = src.excellentThreshold ?? src.thresholds?.excellent ?? 90;
     const excMin = src.excellentMinCrit ?? src.thresholds?.excellentMinCrit ?? 7;

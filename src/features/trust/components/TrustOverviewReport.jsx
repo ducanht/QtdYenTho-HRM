@@ -19,7 +19,12 @@ import Card from '../../../components/common/Card';
 import Badge from '../../../components/common/Badge';
 import Button from '../../../components/common/Button';
 import { classifyTrustScore } from '../../../lib/schema';
-import { getClassificationBadgeVariant, getEligibleTargetEmployees, isSystemAdminAccount } from '../../../lib/evaluationUtils';
+import { 
+  getClassificationBadgeVariant, 
+  getEligibleTargetEmployees, 
+  getEligibleVoterEmployees,
+  isSystemAdminAccount 
+} from '../../../lib/evaluationUtils';
 import { exportToExcel, exportToWord } from '../../../lib/exportUtils';
 import EmployeeTrustDetailModal from './EmployeeTrustDetailModal';
 
@@ -86,11 +91,9 @@ const TrustOverviewReport = ({
     const submittedVoters = Array.from(submittedVoterMap.values());
     const submittedVoterIds = new Set(submittedVoters.map((v) => v.id));
 
-    // Lọc danh sách cử tri hợp lệ theo cấu hình đợt (voterEmployeeIds)
+    // Lọc danh sách cử tri hợp lệ theo cấu hình đợt (voterEmployeeIds) - tự động khử trùng lặp và loại trừ tài khoản admin hệ thống
     const voterIds = periodConfig?.voterEmployeeIds || currentPeriod.voterEmployeeIds;
-    const eligibleVoters = Array.isArray(voterIds) && voterIds.length > 0
-      ? employees.filter((e) => voterIds.includes(e.id))
-      : employees.filter((e) => !isSystemAdminAccount(e));
+    const eligibleVoters = getEligibleVoterEmployees(employees, voterIds);
 
     const pendingVoters = eligibleVoters.filter((e) => !submittedVoterIds.has(e.id) && !submittedVoterIds.has(e.uid));
 

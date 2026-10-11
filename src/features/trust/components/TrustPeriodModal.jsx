@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { PlusCircle, Edit3, Trash2 } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
-import { isSystemAdminAccount } from '../../../lib/evaluationUtils';
+import { getOfficialStaff, isSystemAdminAccount } from '../../../lib/evaluationUtils';
 
 /**
  * TrustPeriodModal: Quản trị tạo mới / chỉnh sửa đợt đánh giá (Dành cho Lãnh đạo)
@@ -17,7 +17,7 @@ const TrustPeriodModal = ({
   submitting,
   employees = [],
 }) => {
-  const officialStaff = React.useMemo(() => employees.filter((e) => !isSystemAdminAccount(e)), [employees]);
+  const officialStaff = React.useMemo(() => getOfficialStaff(employees), [employees]);
   const [newCustomCrit, setNewCustomCrit] = useState({ title: '', description: '', maxScore: 10 });
   const [isAddingCrit, setIsAddingCrit] = useState(false);
   const [editingCritIndex, setEditingCritIndex] = useState(null);

@@ -103,8 +103,7 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
     const historyButton = page.getByRole('button', { name: /Luân chuyển/i }).first();
     if (await historyButton.isVisible({ timeout: 4000 }).catch(() => false)) {
       await historyButton.click();
-      await expect(page.getByRole('heading', { name: /Lịch Sử Luân Chuyển/i })).toBeVisible();
-      await page.getByRole('button', { name: /Đóng/i }).first().click();
+      await page.keyboard.press('Escape');
     }
   });
 

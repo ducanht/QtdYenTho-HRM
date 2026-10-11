@@ -95,7 +95,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.10_v5.0_personnel_training_certifications_and_ksnb_position';
+export const CURRENT_SCHEMA_VERSION = '2026.10.11_v5.1_deduplicate_employees_and_periods_cleanup';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (18 Collections chuẩn hóa)
@@ -272,24 +272,25 @@ export const autoSyncDatabaseSchema = async (force = false) => {
         const existingVoters = Array.isArray(pData.voterEmployeeIds) ? pData.voterEmployeeIds : [];
         const existingTargets = Array.isArray(pData.targetEmployeeIds) ? pData.targetEmployeeIds : [];
 
-        // Đảm bảo emp-007 (Trịnh Đức Anh) có mặt, nhưng LOẠI BỎ emp-root
-        const mergedVoters = Array.from(new Set([...existingVoters, 'emp-007']))
-          .filter((id) => id !== 'emp-root' && id !== 'ROOT');
-        const mergedTargets = (existingTargets.length > 0 ? Array.from(new Set([...existingTargets, 'emp-007'])) : validStaffIds)
-          .filter((id) => id !== 'emp-root' && id !== 'ROOT');
+        // Chỉ giữ các ID cán bộ hợp lệ chuẩn ('emp-xxx' thuộc validStaffIds), triệt tiêu hoàn toàn legacy UUID và trùng lặp
+        const cleanVoters = Array.from(new Set(existingVoters.filter((id) => validStaffIds.includes(id))));
+        const cleanTargets = Array.from(new Set(existingTargets.filter((id) => validStaffIds.includes(id))));
+
+        const finalVoters = cleanVoters.length > 0 ? cleanVoters : validStaffIds;
+        const finalTargets = cleanTargets.length > 0 ? cleanTargets : validStaffIds;
 
         await setDoc(doc(db, 'evaluation_periods', pDoc.id), {
           allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
-          voterEmployeeIds: mergedVoters.length > 0 ? mergedVoters : validStaffIds,
-          targetEmployeeIds: mergedTargets.length > 0 ? mergedTargets : validStaffIds,
+          voterEmployeeIds: finalVoters,
+          targetEmployeeIds: finalTargets,
           updatedAt: serverTimestamp(),
         }, { merge: true });
 
         // Cập nhật bảng cấu hình riêng biệt period_configs tương ứng
         await setDoc(doc(db, 'period_configs', pDoc.id), {
           allowSelfEvaluation: pData.allowSelfEvaluation ?? false,
-          voterEmployeeIds: mergedVoters.length > 0 ? mergedVoters : validStaffIds,
-          targetEmployeeIds: mergedTargets.length > 0 ? mergedTargets : validStaffIds,
+          voterEmployeeIds: finalVoters,
+          targetEmployeeIds: finalTargets,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -341,23 +342,11 @@ export const autoSyncDatabaseSchema = async (force = false) => {
     }
 
     // 10. ĐỒNG BỘ BẢNG users (GƯƠNG CHIẾU TƯƠNG THÍCH NGƯỢC - BACKWARD COMPATIBILITY MIRROR)
-    const usersSnap = await getDocs(collection(db, 'users')).catch(() => null);
-    if (!usersSnap || usersSnap.size < 5) {
-      for (const emp of OFFICIAL_EMPLOYEES) {
-        await setDoc(doc(db, 'users', emp.id), {
-          ...emp,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-      }
-    } else {
-      // Đảm bảo cán bộ Trịnh Đức Anh (emp-007) luôn chuẩn xác trong users
-      const ducAnhEmp = OFFICIAL_EMPLOYEES.find((e) => e.id === 'emp-007');
-      if (ducAnhEmp) {
-        await setDoc(doc(db, 'users', 'emp-007'), {
-          ...ducAnhEmp,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-      }
+    for (const emp of OFFICIAL_EMPLOYEES) {
+      await setDoc(doc(db, 'users', emp.id), {
+        ...emp,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
     }
 
     // 9. Lịch sử luân chuyển công tác (work_history)

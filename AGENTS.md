@@ -57,12 +57,12 @@ Khi cần mở rộng CSDL cho các phân hệ mới:
 
 ---
 
-## 🏛️ 5. BẢN ĐỒ 16 COLLECTIONS NÒNG CỐT HIỆN TẠI (SCHEMA V4.0)
+## 🏛️ 5. BẢN ĐỒ 18 COLLECTIONS NÒNG CỐT HIỆN TẠI (SCHEMA V5.1)
 
-Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 16 Collections nòng cốt:
+Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 Collections nòng cốt:
 1. `accounts`: Danh sách tài khoản đăng nhập, xác thực và phân quyền.
-2. `employees`: Danh bạ Cán bộ Nhân viên chính thức của Quỹ.
-3. `system_metadata`: Siêu dữ liệu phiên bản CSDL và lịch sử đồng bộ (`schema`).
+2. `employees`: Danh bạ Cán bộ Nhân viên chính thức của Quỹ (`emp-001` .. `emp-013`).
+3. `system_metadata`: Siêu dữ liệu phiên bản CSDL và lịch sử đồng bộ (`schema_status`).
 4. `system_modules`: Danh mục 8 phân hệ chức năng hệ thống.
 5. `system_settings`: Cấu hình thông tin pháp nhân, tham số chung và phân hệ.
 6. `roles_permissions`: Ma trận phân quyền RBAC toàn hệ thống.
@@ -71,25 +71,47 @@ Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 16 
 9. `trust_criteria`: 10 tiêu chí đánh giá tín nhiệm chuẩn mực NHNN.
 10. `evaluation_periods`: Danh mục các đợt đánh giá & lấy phiếu tín nhiệm.
 11. `period_configs`: Bảng cấu hình độc lập cho từng đợt đánh giá.
-12. `users`: Hồ sơ cán bộ nhân viên (tương thích ngược).
-13. `work_history`: Quá trình luân chuyển điều động & bổ nhiệm cán bộ.
+12. `users`: Hồ sơ cán bộ nhân viên và tài khoản quản trị (`emp-root`, `emp-001` .. `emp-013`).
+13. `work_history`: Quá trình luân chuyển điều động & bổ nhiệm cán bộ (`trans-001` .. `trans-005`).
 14. `evaluations_trust`: Phiếu đánh giá tín nhiệm chi tiết.
 15. `evaluations_kpi`: Dữ liệu đánh giá hiệu quả KPI 3 cấp.
 16. `evaluations_planning`: Dữ liệu bỏ phiếu quy hoạch cán bộ nguồn.
+17. `employee_training`: Hồ sơ văn bằng, chứng chỉ và khóa đào tạo chuyên sâu.
+18. `employee_kpi_history`: Lịch sử diễn biến kết quả xếp loại KPI nhiều năm.
 
 ---
 
-## 🚀 6. QUY TRÌNH NGHIỆM THU & DEPLOY 4 TẦNG BẮT BUỘC
+## 👥 6. CHUẨN HÓA ĐỊNH DANH CÁN BỘ & TRIỆT TIÊU TRÙNG LẶP (ZERO DUPLICATE POLICY)
+
+> **QUY TẮC CỐT LÕI (BẮT BUỘC TUÂN THỦ 100%)**:
+> Tuyệt đối không để xảy ra hiện tượng trùng lặp danh bạ CBNV, lặp đôi tên cán bộ trong danh sách cử tri ("Chưa nộp phiếu", "Đã nộp phiếu") hay danh mục đối tượng được đánh giá.
+
+1. **Chuẩn Hóa ID Cán Bộ**:
+   - Sử dụng định danh duy nhất chuẩn: `emp-001` đến `emp-013` (13 Cán bộ Nhân viên chính thức của Quỹ).
+   - Tài khoản Quản trị Cấp cao hệ thống: `emp-root` (code: `ROOT`, email: `qtdyentho@gmail.com`).
+   - Tuyệt đối không lưu hành song song ID dạng UUID legacy (`e0a80101-...`) hoặc các bản ghi rác.
+2. **Cấu Hình Đợt Đánh Giá (`voterEmployeeIds`, `targetEmployeeIds`)**:
+   - Chỉ lưu trữ mảng ID cán bộ hợp lệ chuẩn (`validStaffIds`: `['emp-001', ..., 'emp-013']`).
+   - Hàm `autoSyncDatabaseSchema` phải tự động lọc bỏ các ID không thuộc `validStaffIds` trước khi lưu vào `evaluation_periods` và `period_configs`.
+3. **Cơ Chế Khử Trùng Lặp Đa Tầng (Defense-in-depth)**:
+   - `subscribeEmployees`: Tự động khử trùng lặp qua `Map` theo `code` (CB01..CB13) hoặc `email`, ưu tiên giữ bản ghi có ID `emp-xxx` và sắp xếp theo `order`.
+   - `getOfficialStaff`, `getEligibleTargetEmployees`, `getEligibleVoterEmployees`: Luôn lọc qua bộ khử trùng lặp `Map` và loại trừ tài khoản kỹ thuật quản trị webapp (`isSystemAdminAccount`).
+   - Bảng tổng quan `TrustOverviewReport`: Khử trùng lặp danh sách cử tri hợp lệ qua `getEligibleVoterEmployees`.
+
+---
+
+## 🚀 7. QUY TRÌNH NGHIỆM THU & DEPLOY 4 TẦNG BẮT BUỘC
 Sau mọi thay đổi mã nguồn hoặc cấu hình:
 1. **Kiểm tra linter**: `npm run lint` $\rightarrow$ Đảm bảo **0 errors**.
 2. **Kiểm tra build**: `npm run build` $\rightarrow$ Đảm bảo **Exit Code 0**.
-3. **Commit & Push Git**: Commit tường minh và push lên nhánh `master` (`git push origin master`).
-4. **Deploy Firebase**: Deploy Hosting và Firestore Rules (`npm run ship "<thông điệp>"`, hoặc `npm run ship:all "<thông điệp>"`).
-5. **Kiểm tra URL trực tiếp**: [https://qtdyentho-hrm.web.app](https://qtdyentho-hrm.web.app).
+3. **Kiểm thử tự động**: `npx playwright test` $\rightarrow$ Đảm bảo **11/11 tests PASS 100%**.
+4. **Commit & Push Git**: Commit tường minh và push lên nhánh `master` (`git push origin master`).
+5. **Deploy Firebase**: Deploy Hosting và Firestore Rules (`npm run ship "<thông điệp>"`, hoặc `npm run ship:all "<thông điệp>"`).
+6. **Kiểm tra URL trực tiếp**: [https://qtdyentho-hrm.web.app](https://qtdyentho-hrm.web.app).
 
 ---
 
-## 🛡️ 7. CHUẨN MỰC NGÔN NGỮ & VĂN PHONG HÀNH CHÍNH
+## 🛡️ 8. CHUẨN MỰC NGÔN NGỮ & VĂN PHONG HÀNH CHÍNH
 - 100% tiếng Việt chuẩn mực theo ngôn ngữ quản trị điều hành của Quỹ tín dụng nhân dân Việt Nam.
 - **TUYỆT ĐỐI KHÔNG DÙNG TỪ NGỮ AI, CHATBOT HAY THUẬT NGỮ KỸ THUẬT RƯỜM RÀ** trên giao diện người dùng.
 - Định danh chuẩn mực:

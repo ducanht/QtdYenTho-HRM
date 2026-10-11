@@ -89,7 +89,30 @@ export const subscribeEmployees = (callback) => {
     return onSnapshot(
       q,
       (snapshot) => {
-        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const rawList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+        // Khử trùng lặp đa tầng chuẩn mực:
+        // 1. Nhóm theo mã cán bộ (code) hoặc email
+        // 2. Ưu tiên giữ lại bản ghi có ID chuẩn 'emp-xxx'
+        const deduplicatedMap = new Map();
+        rawList.forEach((emp) => {
+          const key = (emp.code && emp.code.trim().toUpperCase()) || (emp.email && emp.email.trim().toLowerCase()) || emp.id;
+          if (!deduplicatedMap.has(key)) {
+            deduplicatedMap.set(key, emp);
+          } else {
+            const existing = deduplicatedMap.get(key);
+            if (emp.id.startsWith('emp-') && !existing.id.startsWith('emp-')) {
+              deduplicatedMap.set(key, { ...existing, ...emp });
+            }
+          }
+        });
+
+        const list = Array.from(deduplicatedMap.values());
+        list.sort((a, b) => {
+          if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+          return String(a.code || '').localeCompare(String(b.code || ''));
+        });
+
         callback(list);
       },
       (error) => {

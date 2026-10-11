@@ -91,7 +91,7 @@ const FloatingTrustEvaluationReminder = () => {
   const percent = Math.round((myEvaluatedCount / totalRequired) * 100);
 
   return (
-    <div className="fixed bottom-5 right-4 sm:right-6 z-50 max-w-md w-[calc(100vw-2rem)] sm:w-auto animate-in slide-in-from-bottom-5 fade-in duration-300">
+    <div className="fixed bottom-5 right-4 sm:right-6 z-40 max-w-md w-[calc(100vw-2rem)] sm:w-auto animate-in slide-in-from-bottom-5 fade-in duration-300">
       <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white rounded-2xl p-4 shadow-2xl border border-amber-400/60 ring-4 ring-emerald-500/20 backdrop-blur-md">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">

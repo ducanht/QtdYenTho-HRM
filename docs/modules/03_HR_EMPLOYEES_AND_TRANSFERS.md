@@ -14,7 +14,7 @@
 
 ## 🏛️ 1. MỤC TIÊU NGHIỆP VỤ
 
-1. **Quản trị danh bạ trích ngang 12 Cán bộ Nhân viên chính thức** (không dùng dữ liệu giả/mock):
+1. **Quản trị danh bạ trích ngang 13 Cán bộ Nhân viên chính thức** (không dùng dữ liệu giả/mock, chuẩn hóa ID `emp-001` đến `emp-013`, Zero Duplicate Policy):
    - Quản lý đầy đủ thông tin: Họ và tên, mã cán bộ (`CB01` đến `CB13`), số CCCD (12 chữ số), ngày sinh, giới tính, chức danh chính quyền, chức vụ Đảng - Đoàn thể, địa bàn phụ trách, trình độ chuyên môn, loại hợp đồng, số điện thoại và email công vụ.
 2. **Theo dõi Quá trình Luân chuyển công tác & Điều động địa bàn (`work_history`)**:
    - Theo quy định của Ngân hàng Nhà nước, các vị trí nhạy cảm tại Quỹ tín dụng nhân dân (CBTD, Kế toán, Thủ quỹ, BKS) **bắt buộc phải thực hiện luân chuyển định kỳ** từ 2 đến 3 năm một lần để phòng ngừa rủi ro câu kết và tiêu cực tín dụng.
@@ -53,7 +53,7 @@
 ### 2.3. Bảng phân tích hạn mức Firebase Spark Plan:
 | Tài nguyên Firebase Spark | Giới hạn Free Tier | Mức tiêu thụ thực tế của QTDND Yên Thọ | Đánh giá độ an toàn |
 | :--- | :--- | :--- | :--- |
-| **Firestore Storage** | 1 GiB (~1.024 MB) | 12 cán bộ $\times$ 20 chứng chỉ $\approx 240$ ảnh $\times 40 \text{ KB} \approx \mathbf{9.6 \text{ MB}}$ | **Chiếm < 1% dung lượng Free**. Đủ lưu hơn 25.000 ảnh/chứng chỉ. |
+| **Firestore Storage** | 1 GiB (~1.024 MB) | 13 cán bộ $\times$ 20 chứng chỉ $\approx 260$ ảnh $\times 40 \text{ KB} \approx \mathbf{10.4 \text{ MB}}$ | **Chiếm ~1% dung lượng Free**. Đủ lưu hơn 25.000 ảnh/chứng chỉ. |
 | **Firestore Reads** | 50.000 lượt/ngày | Tải danh bạ + chứng chỉ $\approx 50 - 100$ reads/lần truy cập | **Dưới 2% hạn mức ngày**, an toàn tuyệt đối. |
 | **Firestore Writes** | 20.000 lượt/ngày | Cập nhật hồ sơ/chứng chỉ $\approx 5 - 10$ writes/ngày | **Dưới 0.1% hạn mức ngày**. |
 | **Firebase Hosting** | 10 GB/tháng | Production bundle chỉ ~350 KB | Phục vụ hàng chục ngàn lượt xem/tháng hoàn toàn miễn phí. |

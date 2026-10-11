@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DEPARTMENTS as FALLBACK_DEPARTMENTS } from '../../lib/constants';
 import { subscribeEmployees, subscribeWorkHistory, subscribeDepartments } from '../../lib/services';
+import { getOfficialStaff } from '../../lib/evaluationUtils';
 import Card from '../../components/common/Card';
 import Spinner from '../../components/common/Spinner';
 import EmployeeFilterToolbar from './components/EmployeeFilterToolbar';
@@ -65,8 +66,12 @@ const EmployeesContainer = () => {
     setSelectedEmpTraining(null);
   }, []);
 
+  const officialEmployees = useMemo(() => {
+    return getOfficialStaff(employees);
+  }, [employees]);
+
   const filteredEmployees = useMemo(() => {
-    return employees.filter((emp) => {
+    return officialEmployees.filter((emp) => {
       const matchDept = selectedDept === 'ALL' || emp.department === selectedDept;
       const matchSearch =
         !searchTerm.trim() ||
@@ -75,7 +80,7 @@ const EmployeesContainer = () => {
         emp.position?.toLowerCase().includes(searchTerm.toLowerCase());
       return matchDept && matchSearch;
     });
-  }, [employees, selectedDept, searchTerm]);
+  }, [officialEmployees, selectedDept, searchTerm]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -86,7 +91,7 @@ const EmployeesContainer = () => {
         selectedDept={selectedDept}
         setSelectedDept={setSelectedDept}
         departments={departments}
-        totalEmployees={employees.length}
+        totalEmployees={officialEmployees.length}
       />
 
       {/* Loading & Grid of Employee Cards */}

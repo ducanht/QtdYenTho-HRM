@@ -135,32 +135,100 @@ export const isSystemAdminAccount = (emp) => {
   const dept = String(emp.department || '').toLowerCase();
   const email = String(emp.email || '').toLowerCase();
 
-  // CHỈ loại trừ tài khoản kỹ thuật ảo của Webapp (ROOT / Quản trị viên cấp cao Webapp)
+  // CHỈ loại trừ tài khoản kỹ thuật ảo của Webapp (ROOT / Quản trị viên cấp cao Webapp / admin)
   // Tuyệt đối KHÔNG loại trừ cán bộ thực tế của Quỹ (như Trịnh Đức Anh ducanht@gmail.com, Nguyễn Văn Sơn...)
   return (
     id === 'emp-root' ||
+    id === 'admin' ||
+    id.startsWith('00000000-') ||
     code === 'ROOT' ||
+    code === 'ADMIN' ||
     email === 'qtdyentho@gmail.com' ||
+    email === 'admin@qtdyentho.vn' ||
     (name.includes('quản trị viên cấp cao') && dept.includes('cổng quản trị'))
   );
 };
 
 /**
- * Lấy danh sách cán bộ thuộc diện lấy phiếu tín nhiệm theo đúng cấu hình đợt (Zero Mock, Zero Leakage)
+ * Lấy danh sách CBNV chính thức của Quỹ (loại bỏ hoàn toàn tài khoản kỹ thuật root/system và khử trùng lặp)
+ */
+export const getOfficialStaff = (employees = []) => {
+  if (!Array.isArray(employees)) return [];
+  const staff = employees.filter((e) => !isSystemAdminAccount(e));
+
+  // Khử trùng lặp triệt để theo mã cán bộ (code) hoặc email
+  const uniqueMap = new Map();
+  staff.forEach((emp) => {
+    const key = (emp.code && emp.code.trim().toUpperCase()) || (emp.email && emp.email.trim().toLowerCase()) || emp.id;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, emp);
+    } else {
+      const existing = uniqueMap.get(key);
+      if (emp.id.startsWith('emp-') && !existing.id.startsWith('emp-')) {
+        uniqueMap.set(key, emp);
+      }
+    }
+  });
+
+  return Array.from(uniqueMap.values());
+};
+
+/**
+ * Lấy danh sách cán bộ thuộc diện lấy phiếu tín nhiệm theo đúng cấu hình đợt (Zero Mock, Zero Leakage, Zero Duplicate)
  */
 export const getEligibleTargetEmployees = (employees = [], targetEmployeeIds = null) => {
-  if (!Array.isArray(employees) || employees.length === 0) return [];
+  const officialStaff = getOfficialStaff(employees);
 
-  // Lọc danh sách ứng viên chuyên môn (luôn loại trừ tài khoản quản trị hệ thống webapp)
-  const officialStaff = employees.filter((e) => !isSystemAdminAccount(e));
-
+  let pool = officialStaff;
   if (Array.isArray(targetEmployeeIds) && targetEmployeeIds.length > 0) {
     const targetSet = new Set(targetEmployeeIds);
-    return officialStaff.filter((e) => targetSet.has(e.id));
+    pool = officialStaff.filter((e) => targetSet.has(e.id));
   }
 
-  // Mặc định: Toàn bộ cán bộ nhân viên công tác chính thức của đơn vị
-  return officialStaff;
+  // Khử trùng lặp triệt để
+  const uniqueMap = new Map();
+  pool.forEach((emp) => {
+    const key = (emp.code && emp.code.trim().toUpperCase()) || (emp.email && emp.email.trim().toLowerCase()) || emp.id;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, emp);
+    } else {
+      const existing = uniqueMap.get(key);
+      if (emp.id.startsWith('emp-') && !existing.id.startsWith('emp-')) {
+        uniqueMap.set(key, emp);
+      }
+    }
+  });
+
+  return Array.from(uniqueMap.values());
+};
+
+/**
+ * Lấy danh sách cử tri hợp lệ tham gia bỏ phiếu theo cấu hình đợt (Zero Duplicate)
+ */
+export const getEligibleVoterEmployees = (employees = [], voterEmployeeIds = null) => {
+  const officialStaff = getOfficialStaff(employees);
+
+  let pool = officialStaff;
+  if (Array.isArray(voterEmployeeIds) && voterEmployeeIds.length > 0) {
+    const voterSet = new Set(voterEmployeeIds);
+    pool = officialStaff.filter((e) => voterSet.has(e.id));
+  }
+
+  // Khử trùng lặp triệt để
+  const uniqueMap = new Map();
+  pool.forEach((emp) => {
+    const key = (emp.code && emp.code.trim().toUpperCase()) || (emp.email && emp.email.trim().toLowerCase()) || emp.id;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, emp);
+    } else {
+      const existing = uniqueMap.get(key);
+      if (emp.id.startsWith('emp-') && !existing.id.startsWith('emp-')) {
+        uniqueMap.set(key, emp);
+      }
+    }
+  });
+
+  return Array.from(uniqueMap.values());
 };
 
 /**
@@ -182,26 +250,6 @@ export const formatDateTimeVN = (isoString) => {
   } catch {
     return isoString;
   }
-};
-
-/**
- * Lấy danh sách CBNV chính thức của Quỹ (loại bỏ hoàn toàn tài khoản kỹ thuật root/system)
- */
-export const getOfficialStaff = (employees = []) => {
-  if (!Array.isArray(employees)) return [];
-  return employees.filter((e) => !isSystemAdminAccount(e));
-};
-
-/**
- * Lấy danh sách cử tri hợp lệ tham gia bỏ phiếu theo cấu hình đợt
- */
-export const getEligibleVoterEmployees = (employees = [], voterEmployeeIds = null) => {
-  const officialStaff = getOfficialStaff(employees);
-  if (Array.isArray(voterEmployeeIds) && voterEmployeeIds.length > 0) {
-    const voterSet = new Set(voterEmployeeIds);
-    return officialStaff.filter((e) => voterSet.has(e.id));
-  }
-  return officialStaff;
 };
 
 /**
