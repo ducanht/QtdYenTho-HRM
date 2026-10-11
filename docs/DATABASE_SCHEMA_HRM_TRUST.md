@@ -433,11 +433,19 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
     - `departments` & `positions`: Quản lý danh mục 5 phòng ban và 11 chức vụ chuẩn hoá (bao gồm KSNB).
   - **Kiến Trúc Giao Diện Master - Detail 2 Phần Kế Thừa Phân Hệ Đánh Giá**:
     - **Cột Trái (Master Sidebar, 3-4/12 cột)**: Danh sách cán bộ thẻ mini, tìm kiếm nhanh, lọc theo phòng ban, huy hiệu thâm niên, chỉ báo cảnh báo luân chuyển NHNN (màu vàng $\ge 2.5$ năm, màu đỏ $\ge 3$ năm), nút Thêm cán bộ mới.
-    - **Cột Phải (Detail Panel, 8-9/12 cột)**: 5 Tab chức năng chuyên sâu gồm *Hồ sơ trích ngang* (Mẫu 2C/TCTD, in A4), *Luân chuyển công tác*, *Đào tạo & Chứng chỉ*, *Cơ cấu & Thống kê* (analytics Quỹ), *Danh mục & Chức danh*.
-    - **Thanh Bottom Navigation Di Động**: 5 icon thao tác nhanh trên mobile/tablet với touch target $\ge 48$px.
-    - **100% Ngôn Ngữ Nghiệp Vụ Chuẩn Mực**: Triệt tiêu toàn bộ từ ngữ kiểu AI hoặc giải thích rườm rà.
-
-
+- **`2026.10.11_v5.2_enterprise_export_suite_zero_ai_jargon_and_subsystem_rbac`**:
+  - **Loại Bỏ 100% Ngôn Từ / Nhãn AI (Zero AI/Tech Jargon Policy)**: Rà soát toàn bộ hệ thống, xóa bỏ hoàn toàn các từ ngữ kỹ thuật hoặc thuật ngữ công nghệ dư thừa ("Canvas", "WebP", "Free tier", "AI", "thuật toán", "bất biến"). Thay thế bằng văn phong nghiệp vụ tài chính - ngân hàng hợp tác chuẩn mực, ngắn gọn, trang trọng.
+  - **Ẩn Toàn Bộ Mã Kỹ Thuật Khỏi Giao Diện (Zero Technical ID Exposure)**: Ẩn hoàn toàn chuỗi UUID v4 RFC 4122, mã chức vụ (`pos-01`, `pos-02`), mã cán bộ (`CB01`..), và vai trò hệ thống (`staff`/`admin`) khỏi giao diện người dùng. Chỉ hiển thị thông tin nghiệp vụ cơ bản (Họ tên, Chức vụ, Phòng ban, Thâm niên, Ngày sinh, CCCD, Điện thoại, Email, Địa bàn phụ trách). Mã UUID và mã CB được bảo toàn ngầm định trong CSDL làm khóa liên kết bất biến.
+  - **Chuẩn Mực Typography - Tuyệt Đối Cấm Font Mono**: Loại bỏ 100% class `font-mono` khỏi toàn bộ hệ thống giao diện và bản in; chuẩn hóa font sans-serif hệ thống (`Be Vietnam Pro` / `Inter`) với số liệu dùng `tabular-nums` thẳng hàng chuyên nghiệp.
+  - **Bộ Công Cụ Xuất Báo Cáo Doanh Nghiệp (Enterprise Export Suite)**:
+    - Bản in Sơ yếu lý lịch trích ngang A4 chuẩn mẫu 2C/TCTD Ngân hàng Nhà nước.
+    - Xuất file Word (`.docx`) chuẩn thể thức văn bản hành chính Việt Nam với đầy đủ bảng biểu thâm niên, quá trình công tác và hồ sơ đào tạo.
+    - Xuất file Excel (`.xlsx`) đa năng: Xuất Danh bạ toàn Quỹ (13 cán bộ) và Sơ yếu lý lịch trích ngang cá nhân 2C/TCTD.
+  - **Cấu Hình & Phân Quyền Phân Hệ Nhân Sự (`system_settings/module_hr`)**:
+    - Quản lý cấu hình tập trung trên Cloud Firestore với listener realtime `subscribeSubsystemConfig('hr')`.
+    - `allowStaffViewDirectory`: Phân quyền xem danh bạ toàn Quỹ vs Chế độ bảo mật cá nhân (cán bộ thường chỉ xem hồ sơ của mình; Lãnh đạo xem toàn bộ 13 cán bộ).
+    - `transferMaxMonths` (36 tháng) & `transferWarningMonths` (6 tháng): Chu kỳ luân chuyển và cảnh báo theo chuẩn NHNN.
+    - `canStaffUploadTraining`: Quyền tự tải lên văn bằng chứng chỉ của cán bộ nhân viên.
 
 ---
 

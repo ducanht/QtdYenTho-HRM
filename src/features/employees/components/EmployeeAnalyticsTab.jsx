@@ -171,7 +171,7 @@ const EmployeeAnalyticsTab = ({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
-                <th className="py-2.5 px-3">Mã CB</th>
+                <th className="py-2.5 px-3 text-center w-12">STT</th>
                 <th className="py-2.5 px-3">Họ và tên</th>
                 <th className="py-2.5 px-3">Chức vụ & Phòng ban</th>
                 <th className="py-2.5 px-3">Ngày bắt đầu</th>
@@ -180,14 +180,14 @@ const EmployeeAnalyticsTab = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {transferMonitoringList.map((row) => (
+              {transferMonitoringList.map((row, idx) => (
                 <tr 
                   key={row.id}
                   onClick={() => onSelectEmployeeForTransfer?.(row.id)}
                   className="hover:bg-slate-50/80 transition-colors cursor-pointer"
                 >
-                  <td className="py-2.5 px-3 font-mono font-bold text-emerald-900">
-                    {row.code}
+                  <td className="py-2.5 px-3 text-center font-bold text-slate-500 tabular-nums">
+                    {idx + 1}
                   </td>
                   <td className="py-2.5 px-3 font-bold text-slate-900">
                     {row.name}

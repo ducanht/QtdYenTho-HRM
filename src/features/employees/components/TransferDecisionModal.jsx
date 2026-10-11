@@ -127,7 +127,7 @@ const TransferDecisionModal = ({
           >
             {employees.map((emp) => (
               <option key={emp.id} value={emp.id}>
-                [{emp.code}] {emp.name} — {emp.position} ({emp.department})
+                {emp.name} — {emp.position} ({emp.department})
               </option>
             ))}
           </select>
@@ -143,7 +143,7 @@ const TransferDecisionModal = ({
               value={decisionNumber}
               onChange={(e) => setDecisionNumber(e.target.value)}
               required
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
           </div>
           <div>

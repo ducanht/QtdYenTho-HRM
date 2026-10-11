@@ -14,6 +14,9 @@
  * - Không gây phình bundle tải trang ban đầu (Zero Performance Regression)
  */
 
+import { formatDateVN } from './dateUtils';
+import { calculatePositionTenure } from './evaluationUtils';
+
 // Helper tải file Blob về máy client
 export const downloadBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
@@ -566,3 +569,447 @@ export const exportToPng = async (
     throw error;
   }
 };
+
+/**
+ * ----------------------------------------------------------------------------
+ * 5. XUẤT DANH BẠ TOÀN BỘ CÁN BỘ SANG MICROSOFT EXCEL (.xlsx)
+ * ----------------------------------------------------------------------------
+ */
+export const exportEmployeesDirectoryToExcel = async (employees = []) => {
+  const headers = [
+    'STT',
+    'Họ và tên',
+    'Giới tính',
+    'Ngày sinh',
+    'Số CCCD',
+    'Số điện thoại',
+    'Hộp thư điện tử',
+    'Phòng ban',
+    'Chức danh công tác',
+    'Ngày vào Quỹ',
+    'Thâm niên công tác',
+    'Đảng viên ĐCSVN',
+    'Địa bàn phụ trách',
+    'Trình độ chuyên môn',
+  ];
+
+  const rows = employees.map((emp, idx) => {
+    const tenure = calculatePositionTenure(emp.joinDate);
+    return [
+      idx + 1,
+      emp.name || '',
+      emp.gender || 'Nam',
+      emp.birthDate ? formatDateVN(emp.birthDate) : '',
+      emp.cccd ? `'${emp.cccd}` : '',
+      emp.phone ? `'${emp.phone}` : '',
+      emp.email || '',
+      emp.department || '',
+      emp.position || '',
+      emp.joinDate ? formatDateVN(emp.joinDate) : '',
+      tenure,
+      emp.partyMember ? 'Đảng viên chính thức' : 'Chưa kết nạp',
+      emp.assignedArea || '',
+      emp.education || '',
+    ];
+  });
+
+  return await exportToExcel({
+    filename: 'Danh_ba_can_bo_QTDND_Yen_Tho.xlsx',
+    sheetName: 'Danh bạ cán bộ',
+    title: 'DANH SÁCH CÁN BỘ NHÂN VIÊN',
+    subtitle: 'QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ',
+    headers,
+    rows,
+    colWidths: [6, 24, 10, 14, 16, 14, 26, 20, 24, 14, 18, 20, 28, 30],
+  });
+};
+
+/**
+ * ----------------------------------------------------------------------------
+ * 6. XUẤT SƠ YẾU LÝ LỊCH TRÍCH NGANG CÁN BỘ SANG EXCEL (.xlsx) MẪU 2C/TCTD
+ * ----------------------------------------------------------------------------
+ */
+export const exportEmployeeProfileToExcel = async (emp, workHistory = [], trainings = []) => {
+  if (!emp) throw new Error('Không có thông tin cán bộ để xuất file Excel');
+
+  const XLSX = await import('xlsx');
+  const wb = XLSX.utils.book_new();
+  const wsData = [];
+
+  const effectiveStart = emp.positionStartDate || emp.joinDate;
+  const tenureText = calculatePositionTenure(effectiveStart);
+  const totalTenureText = calculatePositionTenure(emp.joinDate);
+
+  wsData.push(['QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ']);
+  wsData.push(['Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa']);
+  wsData.push([]);
+  wsData.push(['SƠ YẾU LÝ LỊCH TRÍCH NGANG CÁN BỘ (MẪU 2C/TCTD)']);
+  wsData.push(['Họ và tên:', emp.name ? emp.name.toUpperCase() : '']);
+  wsData.push([]);
+
+  wsData.push(['I. THÔNG TIN CÁ NHÂN & LIÊN HỆ']);
+  wsData.push(['Họ và tên khai sinh:', emp.name, 'Giới tính:', emp.gender || 'Nam']);
+  wsData.push(['Ngày sinh:', emp.birthDate ? formatDateVN(emp.birthDate) : '', 'Số CCCD:', emp.cccd ? `'${emp.cccd}` : '']);
+  wsData.push(['Số điện thoại:', emp.phone ? `'${emp.phone}` : '', 'Hộp thư điện tử:', emp.email || '']);
+  wsData.push([]);
+
+  wsData.push(['II. QUÁ TRÌNH CÔNG TÁC & VỊ TRÍ ĐẢM NHIỆM']);
+  wsData.push(['Phòng ban công tác:', emp.department || '', 'Chức danh hiện tại:', emp.position || '']);
+  wsData.push(['Ngày đảm nhiệm chức vụ:', effectiveStart ? formatDateVN(effectiveStart) : '', 'Thâm niên chức vụ:', tenureText]);
+  wsData.push(['Ngày tuyển dụng vào Quỹ:', emp.joinDate ? formatDateVN(emp.joinDate) : '', 'Tổng thâm niên tại Quỹ:', totalTenureText]);
+  wsData.push(['Loại hợp đồng lao động:', emp.contractType || 'Không xác định thời hạn', 'Địa bàn phụ trách:', emp.assignedArea || '']);
+  wsData.push([]);
+
+  wsData.push(['III. CHÍNH TRỊ & ĐẢNG - ĐOÀN THỂ']);
+  wsData.push(['Tình trạng Đảng viên:', emp.partyMember ? 'Đảng viên chính thức' : 'Chưa kết nạp', 'Chức vụ Chi bộ:', emp.politicalRole || '—']);
+  wsData.push(['Ngày vào Đảng dự bị:', emp.partyDate ? formatDateVN(emp.partyDate) : '', 'Ngày chính thức:', emp.partyOfficialDate ? formatDateVN(emp.partyOfficialDate) : '']);
+  wsData.push([]);
+
+  wsData.push(['IV. TRÌNH ĐỘ HỌC VẤN & CHUYÊN MÔN']);
+  wsData.push(['Trình độ chuyên môn / Học vị:', emp.education || 'Đại học chuyên ngành']);
+  wsData.push(['Tin học:', 'Ứng dụng CNTT cơ bản', 'Ngoại ngữ:', 'Tiếng Anh']);
+
+  const filteredHistory = workHistory.filter(
+    (rec) => rec.employeeId === emp.id || (rec.employeeCode && rec.employeeCode === emp.code)
+  );
+  if (filteredHistory.length > 0) {
+    wsData.push([]);
+    wsData.push(['V. LỊCH SỬ ĐIỀU ĐỘNG & LUÂN CHUYỂN CÔNG TÁC']);
+    wsData.push(['Số Quyết định', 'Ngày ký', 'Ngày hiệu lực', 'Hình thức điều động', 'Chức vụ tiếp nhận', 'Địa bàn mới', 'Người ký']);
+    filteredHistory.forEach((h) => {
+      wsData.push([
+        h.decisionNumber || '',
+        h.decisionDate ? formatDateVN(h.decisionDate) : '',
+        h.effectiveDate ? formatDateVN(h.effectiveDate) : '',
+        h.transferType === 'LUAN_CHUYEN_DINH_KY' ? 'Luân chuyển định kỳ' : 'Điều động',
+        h.toPosition || emp.position,
+        h.toAssignedArea || '',
+        h.signer || '',
+      ]);
+    });
+  }
+
+  const filteredTrainings = trainings.filter(
+    (t) => t.employeeId === emp.id || (t.employeeCode && t.employeeCode === emp.code)
+  );
+  if (filteredTrainings.length > 0) {
+    wsData.push([]);
+    wsData.push(['VI. DANH MỤC VĂN BẰNG & CHỨNG CHỈ ĐÀO TẠO']);
+    wsData.push(['STT', 'Tên khóa học / Chứng chỉ', 'Cơ sở đào tạo', 'Số hiệu', 'Ngày cấp', 'Hạn hiệu lực', 'Xếp loại']);
+    filteredTrainings.forEach((t, i) => {
+      wsData.push([
+        i + 1,
+        t.courseName || '',
+        t.institution || '',
+        t.certificateNumber ? `'${t.certificateNumber}` : '',
+        t.issueDate ? formatDateVN(t.issueDate) : '',
+        t.expireDate ? formatDateVN(t.expireDate) : 'Vô thời hạn',
+        t.grade || 'Đạt',
+      ]);
+    });
+  }
+
+  wsData.push([]);
+  const today = new Date();
+  wsData.push(['', '', '', `Quý Lộc, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`]);
+  wsData.push(['NGƯỜI KHAI', '', '', 'CHỦ TỊCH HĐQT / GIÁM ĐỐC']);
+  wsData.push([emp.name || '', '', '', '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 22 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Trich_ngang_2C');
+
+  const cleanName = (emp.name || 'Can_bo').replace(/\s+/g, '_');
+  const filename = `Trich_ngang_2C_${cleanName}.xlsx`;
+  XLSX.writeFileXLSX(wb, filename);
+  return { success: true, filename };
+};
+
+/**
+ * ----------------------------------------------------------------------------
+ * 7. XUẤT TRÍCH NGANG CÁN BỘ SANG MICROSOFT WORD (.docx) CHUẨN MẪU 2C/TCTD
+ * ----------------------------------------------------------------------------
+ */
+export const exportEmployeeProfileToDocx = async (emp, workHistory = [], trainings = []) => {
+  if (!emp) throw new Error('Không có thông tin cán bộ để xuất file Word');
+
+  const {
+    Document,
+    Packer,
+    Paragraph,
+    Table,
+    TableRow,
+    TableCell,
+    TextRun,
+    WidthType,
+    AlignmentType,
+    BorderStyle,
+  } = await import('docx');
+
+  const effectiveStart = emp.positionStartDate || emp.joinDate;
+  const tenureText = calculatePositionTenure(effectiveStart);
+  const totalTenureText = calculatePositionTenure(emp.joinDate);
+  const today = new Date();
+  const dateStr = `Quý Lộc, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+  // 1. Header Table: Cơ quan & Quốc hiệu
+  const headerTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 45, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: 'QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ', bold: true, size: 20, font: 'Times New Roman' }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: 'Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa', size: 17, italics: true, font: 'Times New Roman' }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: 'Số: ....../TCTD-YT', size: 18, font: 'Times New Roman' }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: 55, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', bold: true, size: 20, font: 'Times New Roman' }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: 'Độc lập - Tự do - Hạnh phúc', bold: true, italics: true, size: 20, font: 'Times New Roman' }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: '-----------------------', size: 16, font: 'Times New Roman' }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: dateStr, italics: true, size: 19, font: 'Times New Roman' }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  // 2. Tiêu đề
+  const titleParagraphs = [
+    new Paragraph({ text: '', spacing: { before: 200 } }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 100, after: 60 },
+      children: [
+        new TextRun({
+          text: 'SƠ YẾU LÝ LỊCH TRÍCH NGANG CÁN BỘ',
+          bold: true,
+          size: 28,
+          font: 'Times New Roman',
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [
+        new TextRun({
+          text: '(Mẫu 2C/TCTD - Báo cáo nội bộ & Ngân hàng Nhà nước)',
+          italics: true,
+          size: 20,
+          font: 'Times New Roman',
+        }),
+      ],
+    }),
+  ];
+
+  // Helper paragraph
+  const makeSectionHeading = (title) =>
+    new Paragraph({
+      spacing: { before: 200, after: 80 },
+      children: [
+        new TextRun({ text: title, bold: true, size: 22, font: 'Times New Roman' }),
+      ],
+    });
+
+  const makeInfoLine = (label, val, boldVal = false) =>
+    new Paragraph({
+      spacing: { before: 40, after: 40 },
+      children: [
+        new TextRun({ text: label, size: 20, font: 'Times New Roman' }),
+        new TextRun({ text: ` ${val || '—'}`, bold: boldVal, size: 20, font: 'Times New Roman' }),
+      ],
+    });
+
+  const contentParagraphs = [
+    makeSectionHeading('I. THÔNG TIN CÁ NHÂN & LIÊN HỆ'),
+    makeInfoLine('1. Họ và tên khai sinh:', emp.name ? emp.name.toUpperCase() : '—', true),
+    makeInfoLine('2. Giới tính:', emp.gender || 'Nam'),
+    makeInfoLine('3. Ngày, tháng, năm sinh:', emp.birthDate ? formatDateVN(emp.birthDate) : '—'),
+    makeInfoLine('4. Số Thẻ CCCD:', emp.cccd || '—', true),
+    makeInfoLine('5. Số điện thoại liên hệ:', emp.phone || '—'),
+    makeInfoLine('6. Hộp thư điện tử (Email):', emp.email || '—'),
+
+    makeSectionHeading('II. QUÁ TRÌNH CÔNG TÁC & VỊ TRÍ ĐẢM NHIỆM'),
+    makeInfoLine('1. Phòng ban công tác:', emp.department || '—', true),
+    makeInfoLine('2. Chức vụ hiện tại:', emp.position || '—', true),
+    makeInfoLine('3. Ngày đảm nhiệm chức vụ:', effectiveStart ? formatDateVN(effectiveStart) : '—'),
+    makeInfoLine('4. Thâm niên công tác tại vị trí hiện tại:', tenureText, true),
+    makeInfoLine('5. Ngày tuyển dụng vào Quỹ:', emp.joinDate ? formatDateVN(emp.joinDate) : '—'),
+    makeInfoLine('6. Tổng thâm niên công tác tại Quỹ:', totalTenureText),
+    makeInfoLine('7. Loại hợp đồng lao động:', emp.contractType || 'Không xác định thời hạn'),
+    makeInfoLine('8. Địa bàn phụ trách tín dụng:', emp.assignedArea || 'Chưa phân công địa bàn'),
+
+    makeSectionHeading('III. CHÍNH TRỊ & ĐẢNG - ĐOÀN THỂ'),
+    makeInfoLine('1. Tình trạng Đảng viên ĐCSVN:', emp.partyMember ? 'Đảng viên chính thức' : 'Chưa kết nạp', true),
+    makeInfoLine('2. Chức vụ Chi bộ:', emp.politicalRole || '—'),
+    makeInfoLine('3. Ngày kết nạp Đảng dự bị:', emp.partyDate ? formatDateVN(emp.partyDate) : '—'),
+    makeInfoLine('4. Ngày công nhận chính thức:', emp.partyOfficialDate ? formatDateVN(emp.partyOfficialDate) : '—'),
+
+    makeSectionHeading('IV. TRÌNH ĐỘ HỌC VẤN & VĂN BẰNG CHUYÊN MÔN'),
+    makeInfoLine('1. Trình độ chuyên môn / Học vị:', emp.education || 'Đại học chuyên ngành', true),
+    makeInfoLine('2. Lý luận chính trị:', 'Sơ cấp / Trung cấp'),
+    makeInfoLine('3. Quản lý Nhà nước / Nghiệp vụ Quỹ TDND:', 'Đã hoàn thành bồi dưỡng theo tiêu chuẩn NHNN'),
+  ];
+
+  // Bảng quá trình điều động luân chuyển nếu có
+  const filteredHistory = workHistory.filter(
+    (rec) => rec.employeeId === emp.id || (rec.employeeCode && rec.employeeCode === emp.code)
+  );
+  let historySection = [];
+  if (filteredHistory.length > 0) {
+    const borderThin = { style: BorderStyle.SINGLE, size: 1, color: '999999' };
+    const hBorders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideHorizontal: borderThin, insideVertical: borderThin };
+
+    const histHeader = new TableRow({
+      tableHeader: true,
+      children: ['Số QĐ', 'Ngày ký', 'Hiệu lực', 'Hình thức', 'Chức vụ tiếp nhận', 'Người ký'].map((h) =>
+        new TableCell({
+          shading: { fill: 'E2E8F0' },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: h, bold: true, size: 18, font: 'Times New Roman' })] })]
+        })
+      )
+    });
+
+    const histRows = filteredHistory.map((item) =>
+      new TableRow({
+        children: [
+          item.decisionNumber || '—',
+          item.decisionDate ? formatDateVN(item.decisionDate) : '—',
+          item.effectiveDate ? formatDateVN(item.effectiveDate) : '—',
+          item.transferType === 'LUAN_CHUYEN_DINH_KY' ? 'Luân chuyển định kỳ' : item.transferType === 'BO_NHIEM' ? 'Bổ nhiệm' : 'Điều động',
+          item.toPosition || emp.position,
+          item.signer || 'HĐQT'
+        ].map((c, i) =>
+          new TableCell({
+            children: [new Paragraph({ alignment: i === 0 || i === 1 || i === 2 ? AlignmentType.CENTER : AlignmentType.LEFT, children: [new TextRun({ text: String(c), size: 18, font: 'Times New Roman' })] })]
+          })
+        )
+      })
+    );
+
+    historySection = [
+      makeSectionHeading('V. QUÁ TRÌNH ĐIỀU ĐỘNG & LUÂN CHUYỂN CÔNG TÁC'),
+      new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: hBorders, rows: [histHeader, ...histRows] }),
+    ];
+  }
+
+  // Khối chữ ký 3 bên
+  const sigTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'NGƯỜI KHAI', bold: true, size: 20, font: 'Times New Roman' })] }),
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '(Ký, ghi rõ họ tên)', italics: true, size: 18, font: 'Times New Roman' })] }),
+              new Paragraph({ text: '', spacing: { before: 800 } }),
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: emp.name || '', bold: true, size: 20, font: 'Times New Roman' })] }),
+            ],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'BỘ PHẬN TỔ CHỨC / KIỂM SOÁT', bold: true, size: 20, font: 'Times New Roman' })] }),
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '(Ký, ghi rõ họ tên)', italics: true, size: 18, font: 'Times New Roman' })] }),
+              new Paragraph({ text: '', spacing: { before: 800 } }),
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'TRƯỞNG BKS', bold: true, size: 20, font: 'Times New Roman' })] }),
+            ],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'CHỦ TỊCH HĐQT / GIÁM ĐỐC', bold: true, size: 20, font: 'Times New Roman' })] }),
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '(Ký, đóng dấu, ghi rõ họ tên)', italics: true, size: 18, font: 'Times New Roman' })] }),
+              new Paragraph({ text: '', spacing: { before: 800 } }),
+              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'CHỦ TỊCH HĐQT', bold: true, size: 20, font: 'Times New Roman' })] }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: { top: 1134, bottom: 1134, left: 1417, right: 1134 },
+          },
+        },
+        children: [
+          headerTable,
+          ...titleParagraphs,
+          ...contentParagraphs,
+          ...historySection,
+          new Paragraph({ text: '', spacing: { before: 300 } }),
+          sigTable,
+        ],
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const cleanName = (emp.name || 'Can_bo').replace(/\s+/g, '_');
+  const filename = `Trich_ngang_2C_${cleanName}.docx`;
+  downloadBlob(blob, filename);
+  return { success: true, filename };
+};
+

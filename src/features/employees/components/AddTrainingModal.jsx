@@ -41,7 +41,7 @@ const AddTrainingModal = ({
       const compressed = await compressImage(file, 800, 800, 0.75);
       setCertificateImage(compressed.dataUrl);
       setImageSizeKb(compressed.sizeInKb);
-      toast?.showSuccess?.(`Đã nén ảnh scan chứng chỉ: ${compressed.sizeInKb} KB (chuẩn WebP)!`);
+      toast?.showSuccess?.('Đã tải ảnh scan chứng chỉ thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi nén ảnh chứng chỉ');
     } finally {
@@ -90,7 +90,7 @@ const AddTrainingModal = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Thêm Văn Bằng / Chứng Chỉ Đào Tạo"
-      subtitle={`Cán bộ: ${selectedEmp?.name || ''} (${selectedEmp?.code || ''})`}
+      subtitle={`Cán bộ: ${selectedEmp?.name || ''}`}
       maxWidth="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -129,7 +129,7 @@ const AddTrainingModal = ({
               placeholder="VD: HVNH-2024/089"
               value={certificateNumber}
               onChange={(e) => setCertificateNumber(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
           </div>
         </div>
@@ -204,7 +204,7 @@ const AddTrainingModal = ({
                 />
                 <div>
                   <span className="font-bold text-slate-800 block">Đã đính kèm ảnh</span>
-                  <span className="text-[11px] text-slate-500">Dung lượng nén: {imageSizeKb} KB</span>
+                  <span className="text-[11px] text-slate-500">Dung lượng: {imageSizeKb} KB</span>
                 </div>
               </div>
               <button
@@ -222,10 +222,10 @@ const AddTrainingModal = ({
             <label className="border-2 border-dashed border-slate-200 hover:border-emerald-600 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50/50 hover:bg-emerald-50/30">
               <Upload className="w-6 h-6 text-slate-400 mb-1" />
               <span className="text-xs font-bold text-slate-700">
-                {compressingImg ? 'Đang nén ảnh qua Canvas WebP...' : 'Bấm để chọn ảnh scan chứng chỉ'}
+                {compressingImg ? 'Đang xử lý ảnh...' : 'Bấm để chọn ảnh scan chứng chỉ'}
               </span>
               <span className="text-[10px] text-slate-400 mt-0.5">
-                Tự động nén WebP &lt; 45 KB lưu trực tiếp Firestore
+                Định dạng JPG, PNG hoặc WebP
               </span>
               <input
                 type="file"

@@ -31,10 +31,37 @@
    - Sẵn sàng cấu trúc lưu trữ lịch sử kết quả đánh giá KPI qua các kỳ (tháng, quý, năm) của từng nhân sự, tạo tiền đề liên thông với Phân hệ KPI và Tính lương.
 6. **Bổ sung Chức danh "Kiểm soát nội bộ (Kiểm soát viên chuyên trách)"**:
    - Mã `pos-11`, code `KSNB`, thuộc Ban Kiểm soát. Đảm bảo đúng cơ cấu tổ chức theo quy định mới của NHNN đối với Quỹ tín dụng nhân dân.
+7. **Bộ Công Cụ Xuất Báo Cáo Doanh Nghiệp (Enterprise Export Suite)**:
+   - Bản in Sơ yếu lý lịch trích ngang A4 chuẩn mẫu 2C/TCTD có xem trước.
+   - Xuất file Word (`.docx`) chuẩn thể thức văn bản hành chính Việt Nam với đầy đủ bảng biểu thâm niên, quá trình công tác và hồ sơ đào tạo.
+   - Xuất file Excel (`.xlsx`) đa năng: Xuất Danh bạ toàn Quỹ (13 cán bộ) và Sơ yếu lý lịch trích ngang cá nhân 2C/TCTD.
+8. **Cấu Hình Phân Hệ & Phân Quyền Truy Cập (`system_settings/module_hr`)**:
+   - `allowStaffViewDirectory`: Phân quyền xem danh bạ toàn Quỹ vs Chế độ bảo mật cá nhân (cán bộ thường chỉ xem hồ sơ của chính mình; Lãnh đạo xem toàn bộ 13 cán bộ).
+   - `transferMaxMonths` (36 tháng) & `transferWarningMonths` (6 tháng): Chu kỳ luân chuyển và cảnh báo theo chuẩn NHNN.
+   - `canStaffUploadTraining`: Quyền tự tải lên văn bằng chứng chỉ chuyên môn.
 
 ---
 
-## 🎨 2. GIẢI PHÁP TỐI ƯU HÓA HÌNH ẢNH & BẢO TOÀN FREE TIER FIREBASE (SPARK PLAN)
+## ⭐️ 2. NĂM NGUYÊN TẮC VÀNG THIẾT KẾ & VẬN HÀNH PHÂN HỆ NHÂN SỰ
+
+1. **Nguyên Tắc 1: Không Dùng Ngôn Từ AI Hoặc Kỹ Thuật Dư Thừa (Zero AI / Tech Jargon)**:
+   - Cấm triệt để: "tự động nén qua Canvas", "chuẩn WebP", "Chuẩn Free Tier", "AI", "thuật toán", "bất biến".
+   - 100% ngôn ngữ nghiệp vụ ngân hàng hợp tác/Quỹ TDND: trang trọng, ngắn gọn, súc tích, chính xác.
+2. **Nguyên Tắc 2: Ẩn Toàn Bộ Mã Kỹ Thuật Khỏi Giao Diện (Zero Technical ID Exposure)**:
+   - Ẩn hoàn toàn chuỗi UUID v4 RFC 4122, mã chức vụ (`pos-01`, `pos-02`), mã cán bộ (`CB01`..), và vai trò hệ thống (`staff`/`admin`) khỏi giao diện người dùng và bản in.
+   - Chỉ hiển thị thông tin nghiệp vụ cơ bản: Họ tên, Chức vụ, Phòng ban, Thâm niên, Ngày sinh, CCCD, Điện thoại, Email, Địa bàn phụ trách.
+   - Mã UUID và mã CB được bảo toàn ngầm định trong CSDL làm khóa liên kết bất biến chống trùng lặp.
+3. **Nguyên Tắc 3: Chuẩn Mực Typography - Tuyệt Đối Cấm Font Mono**:
+   - Cấm hoàn toàn class `font-mono` trên toàn bộ components và bản in.
+   - Sử dụng font sans-serif chuẩn (`Be Vietnam Pro` / `Inter`), các trường số liệu sử dụng `tabular-nums` thẳng hàng chuyên nghiệp.
+4. **Nguyên Tắc 4: Bộ Công Cụ Xuất Báo Cáo Doanh Nghiệp (Enterprise Export Suite)**:
+   - In A4 2C/TCTD xem trước, xuất Word `.docx` chuẩn thể thức hành chính, xuất Excel `.xlsx` danh bạ toàn Quỹ và sơ yếu lý lịch cá nhân.
+5. **Nguyên Tắc 5: Phân Quyền & Cấu Hình Phân Hệ Tập Trung (Subsystem RBAC & Config)**:
+   - Cấu hình qua Firestore `system_settings/module_hr` với cơ chế realtime listener `subscribeSubsystemConfig('hr')`.
+
+---
+
+## 🎨 3. GIẢI PHÁP TỐI ƯU HÓA HÌNH ẢNH CLIENT-SIDE
 
 ### 2.1. Thách thức:
 - Nếu lưu ảnh gốc dung lượng 3-8 MB từ điện thoại di động lên CSDL:

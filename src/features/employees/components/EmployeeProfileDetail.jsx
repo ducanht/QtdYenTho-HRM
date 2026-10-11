@@ -4,37 +4,36 @@ import {
   Edit3, 
   Printer, 
   User, 
-  Phone, 
-  Mail, 
-  CreditCard, 
-  MapPin, 
-  Calendar, 
-  Building2, 
   Briefcase, 
-  Clock, 
   Award, 
-  FileCheck, 
-  GraduationCap, 
-  Fingerprint
+  GraduationCap,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 import { calculatePositionTenure } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { compressImage } from '../../../lib/imageUtils';
 import { updateEmployeeProfile } from '../../../lib/services';
+import { exportEmployeeProfileToDocx, exportEmployeeProfileToExcel } from '../../../lib/exportUtils';
 import { useToast } from '../../../context/ToastContext';
 
 /**
  * EmployeeProfileDetail: Cột Phải cho Tab PROFILE
- * Hiển thị chi tiết Sơ yếu lý lịch Trích ngang 2C/TCTD chuẩn mực của Cán bộ Ngân hàng Hợp tác / QTDND
+ * Hiển thị chi tiết Sơ yếu lý lịch Trích ngang 2C/TCTD chuẩn mực của Cán bộ Quỹ Tín Dụng Nhân Dân Yên Thọ
+ * Tuân thủ: Ẩn toàn bộ UUID, mã code, mã chức vụ, phân quyền hệ thống. Không dùng font mono. Không dùng nhãn AI.
  */
 const EmployeeProfileDetail = ({
   emp,
   onOpenEdit,
   onOpenPrint,
+  workHistory = [],
+  trainings = [],
   canManage = false,
 }) => {
   const toast = useToast();
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [exportingWord, setExportingWord] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   if (!emp) {
     return (
@@ -48,7 +47,7 @@ const EmployeeProfileDetail = ({
   const tenureText = calculatePositionTenure(effectiveStart);
   const totalTenureText = calculatePositionTenure(emp.joinDate);
 
-  // Xử lý nén ảnh qua Canvas và cập nhật Firestore avatar < 45 KB
+  // Xử lý cập nhật ảnh đại diện
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -60,13 +59,35 @@ const EmployeeProfileDetail = ({
         avatar: compressed.dataUrl,
       });
 
-      toast?.showSuccess?.(
-        `Đã nén và cập nhật ảnh đại diện (${compressed.sizeInKb} KB, chuẩn WebP)!`
-      );
+      toast?.showSuccess?.('Đã cập nhật ảnh đại diện thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi cập nhật ảnh đại diện');
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  const handleExportWord = async () => {
+    try {
+      setExportingWord(true);
+      await exportEmployeeProfileToDocx(emp, workHistory, trainings);
+      toast?.showSuccess?.('Đã xuất file Word (.docx) thành công!');
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi xuất file Word');
+    } finally {
+      setExportingWord(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setExportingExcel(true);
+      await exportEmployeeProfileToExcel(emp, workHistory, trainings);
+      toast?.showSuccess?.('Đã xuất file Excel (.xlsx) thành công!');
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi xuất file Excel');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -76,7 +97,7 @@ const EmployeeProfileDetail = ({
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* Avatar lớn kèm nút camera nén ảnh */}
+            {/* Avatar kèm nút đổi ảnh */}
             <div className="relative group shrink-0">
               <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-teal-50 border-2 border-emerald-200 text-emerald-800 font-extrabold text-2xl flex items-center justify-center overflow-hidden shadow-xs">
                 {emp.avatar ? (
@@ -88,7 +109,7 @@ const EmployeeProfileDetail = ({
 
               <label 
                 className="absolute inset-0 bg-black/50 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
-                title="Thay đổi ảnh chân dung (Tự động nén Canvas WebP)"
+                title="Thay đổi ảnh chân dung"
               >
                 <Camera className="w-5 h-5 mb-1" />
                 <span>{uploadingAvatar ? '...' : 'Đổi ảnh'}</span>
@@ -105,10 +126,7 @@ const EmployeeProfileDetail = ({
             {/* Thông tin cốt lõi */}
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-black text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-lg border border-emerald-300">
-                  {emp.code || 'CB'}
-                </span>
-                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg">
+                <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
                   {emp.department}
                 </span>
                 <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
@@ -128,18 +146,33 @@ const EmployeeProfileDetail = ({
               <p className="text-xs sm:text-sm font-bold text-emerald-800">
                 {emp.position || 'Cán bộ'}
               </p>
-
-              {emp.uuid && (
-                <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400">
-                  <Fingerprint className="w-3 h-3 text-slate-400" />
-                  <span>UUID: {emp.uuid}</span>
-                </div>
-              )}
             </div>
           </div>
 
           {/* Nhóm nút thao tác */}
-          <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end">
+            <button
+              type="button"
+              onClick={handleExportWord}
+              disabled={exportingWord}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+              title="Xuất sơ yếu lý lịch sang Microsoft Word (.docx)"
+            >
+              <FileText className="w-4 h-4 text-blue-700" />
+              <span>{exportingWord ? 'Đang tạo...' : 'Xuất Word'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              disabled={exportingExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+              title="Xuất sơ yếu lý lịch sang Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+              <span>{exportingExcel ? 'Đang tạo...' : 'Xuất Excel'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => onOpenPrint(emp)}
@@ -176,8 +209,8 @@ const EmployeeProfileDetail = ({
 
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px] mb-0.5">Số CCCD (12 chữ số):</span>
-              <span className="font-mono font-bold text-slate-900">{emp.cccd || '—'}</span>
+              <span className="text-slate-400 block text-[11px] mb-0.5">Số Thẻ CCCD:</span>
+              <span className="font-bold text-slate-900 tabular-nums">{emp.cccd || '—'}</span>
             </div>
             <div>
               <span className="text-slate-400 block text-[11px] mb-0.5">Giới tính:</span>
@@ -185,21 +218,17 @@ const EmployeeProfileDetail = ({
             </div>
             <div>
               <span className="text-slate-400 block text-[11px] mb-0.5">Ngày sinh:</span>
-              <span className="font-bold text-slate-800">
+              <span className="font-bold text-slate-800 tabular-nums">
                 {emp.birthDate ? formatDateVN(emp.birthDate) : '—'}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px] mb-0.5">Số điện thoại di động:</span>
-              <span className="font-mono font-bold text-emerald-800">{emp.phone || '—'}</span>
+              <span className="text-slate-400 block text-[11px] mb-0.5">Số điện thoại liên hệ:</span>
+              <span className="font-bold text-emerald-800 tabular-nums">{emp.phone || '—'}</span>
             </div>
             <div className="col-span-2">
               <span className="text-slate-400 block text-[11px] mb-0.5">Hộp thư điện tử (Email):</span>
               <span className="font-medium text-slate-800">{emp.email || '—'}</span>
-            </div>
-            <div className="col-span-2">
-              <span className="text-slate-400 block text-[11px] mb-0.5">Mã định danh hệ thống (UUID v4):</span>
-              <span className="font-mono text-[11px] text-slate-500 break-all">{emp.uuid || emp.id}</span>
             </div>
           </div>
         </div>
@@ -224,7 +253,7 @@ const EmployeeProfileDetail = ({
             </div>
             <div>
               <span className="text-slate-400 block text-[11px] mb-0.5">Ngày đảm nhiệm chức vụ:</span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-slate-800 tabular-nums">
                 {emp.positionStartDate ? formatDateVN(emp.positionStartDate) : (emp.joinDate ? formatDateVN(emp.joinDate) : '—')}
               </span>
             </div>
@@ -234,7 +263,7 @@ const EmployeeProfileDetail = ({
             </div>
             <div>
               <span className="text-slate-400 block text-[11px] mb-0.5">Ngày vào Quỹ công tác:</span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-slate-800 tabular-nums">
                 {emp.joinDate ? formatDateVN(emp.joinDate) : '—'}
               </span>
             </div>
@@ -242,17 +271,13 @@ const EmployeeProfileDetail = ({
               <span className="text-slate-400 block text-[11px] mb-0.5">Tổng thâm niên tại Quỹ:</span>
               <span className="font-bold text-slate-700">{totalTenureText}</span>
             </div>
-            <div>
+            <div className="col-span-2">
               <span className="text-slate-400 block text-[11px] mb-0.5">Loại hợp đồng lao động:</span>
               <span className="font-medium text-slate-800">{emp.contractType || 'Không xác định thời hạn'}</span>
             </div>
-            <div>
-              <span className="text-slate-400 block text-[11px] mb-0.5">Phân quyền hệ thống:</span>
-              <span className="font-semibold uppercase text-slate-800">{emp.role || 'staff'}</span>
-            </div>
             <div className="col-span-2">
               <span className="text-slate-400 block text-[11px] mb-0.5">Địa bàn phụ trách tín dụng:</span>
-              <span className="font-medium text-slate-800 bg-slate-50 p-2 rounded-lg block border border-slate-100">
+              <span className="font-medium text-slate-800 bg-slate-50 p-2.5 rounded-lg block border border-slate-100">
                 {emp.assignedArea || 'Chưa phân công địa bàn'}
               </span>
             </div>
@@ -281,13 +306,13 @@ const EmployeeProfileDetail = ({
             </div>
             <div>
               <span className="text-slate-400 block text-[11px] mb-0.5">Ngày vào Đảng dự bị:</span>
-              <span className="font-medium text-slate-800">
+              <span className="font-medium text-slate-800 tabular-nums">
                 {emp.partyDate ? formatDateVN(emp.partyDate) : '—'}
               </span>
             </div>
             <div>
               <span className="text-slate-400 block text-[11px] mb-0.5">Ngày chính thức:</span>
-              <span className="font-medium text-slate-800">
+              <span className="font-medium text-slate-800 tabular-nums">
                 {emp.partyOfficialDate ? formatDateVN(emp.partyOfficialDate) : '—'}
               </span>
             </div>

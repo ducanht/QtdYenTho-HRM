@@ -89,7 +89,7 @@ const EmployeeCard = ({
 
             <label 
               className="absolute inset-0 bg-black/40 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
-              title="Đổi ảnh chân dung (Tự động nén qua Canvas)"
+              title="Đổi ảnh chân dung"
             >
               <Camera className="w-4 h-4 mb-0.5" />
               <span>{uploadingAvatar ? '...' : 'Đổi ảnh'}</span>
@@ -103,17 +103,8 @@ const EmployeeCard = ({
             </label>
           </div>
 
-          <Badge
-            variant={
-              emp.role === 'chairman'
-                ? 'danger'
-                : emp.role === 'manager'
-                ? 'primary'
-                : 'default'
-            }
-            size="sm"
-          >
-            {ROLE_LABELS[emp.role] || emp.role}
+          <Badge variant="success" size="sm">
+            {emp.status === 'ACTIVE' ? 'Đang công tác' : 'Nghỉ việc'}
           </Badge>
         </div>
 
@@ -127,7 +118,7 @@ const EmployeeCard = ({
             )}
           </div>
           <div className="text-[11px] font-bold text-[#0f766e] uppercase tracking-wider">
-            {emp.code} • {emp.position}
+            {emp.position}
           </div>
           <div className="text-xs text-slate-500">{emp.department}</div>
 
@@ -184,9 +175,9 @@ const EmployeeCard = ({
           )}
 
           {emp.cccd && (
-            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 pt-0.5">
+            <div className="text-[11px] text-slate-500 flex items-center gap-1 pt-0.5">
               <span className="text-slate-400">CCCD:</span>
-              <span className="font-semibold text-slate-700">{emp.cccd}</span>
+              <span className="font-semibold text-slate-700 tabular-nums">{emp.cccd}</span>
             </div>
           )}
           {emp.partyDate && (

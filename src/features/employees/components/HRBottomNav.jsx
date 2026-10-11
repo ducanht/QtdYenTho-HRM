@@ -21,7 +21,7 @@ const HRBottomNav = ({
     { id: 'TRANSFERS', label: 'Luân chuyển', icon: ArrowRightLeft, visible: true },
     { id: 'TRAINING', label: 'Đào tạo', icon: GraduationCap, visible: true },
     { id: 'ANALYTICS', label: 'Cơ cấu', icon: BarChart3, visible: true },
-    { id: 'SETTINGS', label: 'Danh mục', icon: Sliders, visible: canManage },
+    { id: 'SETTINGS', label: 'Cấu hình', icon: Sliders, visible: canManage },
   ].filter((item) => item.visible);
 
   return (

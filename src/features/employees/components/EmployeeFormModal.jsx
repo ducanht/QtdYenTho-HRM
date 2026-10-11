@@ -7,7 +7,7 @@ import { useToast } from '../../../context/ToastContext';
 
 /**
  * EmployeeFormModal: Modal Thêm mới hoặc Chỉnh sửa hồ sơ cán bộ
- * Tự động gán mã UUID chuẩn RFC 4122 v4 không trùng lặp cho mỗi cán bộ
+ * Tuân thủ: Ẩn UUID, ẩn mã CB, ẩn phân quyền hệ thống khỏi giao diện. Không dùng font mono.
  */
 const EmployeeFormModal = ({
   isOpen,
@@ -67,11 +67,10 @@ const EmployeeFormModal = ({
       setEducation(initialData.education || '');
       setRole(initialData.role || 'staff');
     } else {
-      // Khi thêm mới: tự động sinh UUID v4 và gợi ý mã cán bộ tiếp theo
       const newUuid = generateUUID();
       setUuid(newUuid);
 
-      // Gợi ý mã CB tiếp theo
+      // Gợi ý mã CB tự động ngầm định
       const maxCodeNum = existingEmployees.reduce((max, e) => {
         const match = (e.code || '').match(/CB(\d+)/i);
         return match ? Math.max(max, parseInt(match[1], 10)) : max;
@@ -107,16 +106,12 @@ const EmployeeFormModal = ({
       toast?.showError?.('Vui lòng nhập họ và tên cán bộ');
       return;
     }
-    if (!code.trim()) {
-      toast?.showError?.('Vui lòng nhập mã cán bộ');
-      return;
-    }
 
     setSubmitting(true);
     try {
       const payload = {
         uuid: uuid || generateUUID(),
-        code: code.trim().toUpperCase(),
+        code: (code || `CB${String(existingEmployees.length + 1).padStart(2, '0')}`).trim().toUpperCase(),
         name: name.trim(),
         gender,
         birthDate,
@@ -134,7 +129,7 @@ const EmployeeFormModal = ({
         partyOfficialDate: partyMember ? partyOfficialDate : '',
         politicalRole: partyMember ? politicalRole : '',
         education: education.trim(),
-        role,
+        role: role || 'staff',
         status: initialData?.status || 'ACTIVE',
       };
 
@@ -142,9 +137,9 @@ const EmployeeFormModal = ({
         await updateEmployeeProfile(initialData.id, payload);
         toast?.showSuccess?.(`Đã cập nhật hồ sơ cán bộ ${name} thành công!`);
       } else {
-        const customId = `emp-${code.trim().toLowerCase()}`;
+        const customId = `emp-${payload.code.toLowerCase()}`;
         await createEmployeeProfile({ ...payload, id: customId });
-        toast?.showSuccess?.(`Đã thêm mới cán bộ [${code}] ${name} thành công!`);
+        toast?.showSuccess?.(`Đã thêm mới cán bộ ${name} thành công!`);
       }
 
       onSuccess?.();
@@ -161,35 +156,16 @@ const EmployeeFormModal = ({
       isOpen={isOpen}
       onClose={onClose}
       title={isEdit ? 'Chỉnh Sửa Hồ Sơ Cán Bộ' : 'Thêm Mới Cán Bộ Nhân Viên'}
-      subtitle={`Quỹ Tín Dụng Nhân Dân Yên Thọ • Mã UUID v4: ${uuid || 'Tự động sinh'}`}
+      subtitle="Quỹ Tín Dụng Nhân Dân Yên Thọ • Hồ sơ cán bộ"
       maxWidth="max-w-3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-        {/* Thông tin cốt lõi & UUID */}
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-700">Mã định danh duy nhất (UUID v4 RFC 4122):</span>
-            <span className="font-mono text-emerald-800 font-extrabold">{uuid}</span>
-          </div>
-        </div>
-
         {/* Khối 1: Thông tin cá nhân */}
         <div className="space-y-2">
           <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-emerald-800">
-            1. Thông tin cá nhân & Liên hệ
+            1. Thông tin cá nhân &amp; Liên hệ
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Mã cán bộ:</label>
-              <input
-                type="text"
-                placeholder="VD: CB07"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                required
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-emerald-900 uppercase focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-              />
-            </div>
             <div className="sm:col-span-2">
               <label className="block text-slate-700 font-bold mb-1">Họ và tên đầy đủ:</label>
               <input
@@ -213,13 +189,13 @@ const EmployeeFormModal = ({
               </select>
             </div>
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Số CCCD (12 số):</label>
+              <label className="block text-slate-700 font-bold mb-1">Số Thẻ CCCD:</label>
               <input
                 type="text"
                 placeholder="0380..."
                 value={cccd}
                 onChange={(e) => setCccd(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>
             <div>
@@ -232,16 +208,16 @@ const EmployeeFormModal = ({
               />
             </div>
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Số điện thoại di động:</label>
+              <label className="block text-slate-700 font-bold mb-1">Số điện thoại liên hệ:</label>
               <input
                 type="text"
                 placeholder="0988..."
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-3">
               <label className="block text-slate-700 font-bold mb-1">Hộp thư điện tử (Email):</label>
               <input
                 type="email"
@@ -257,9 +233,9 @@ const EmployeeFormModal = ({
         {/* Khối 2: Công tác & Chức vụ */}
         <div className="space-y-2 pt-2 border-t border-slate-100">
           <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-emerald-800">
-            2. Công tác & Vị trí đảm nhiệm
+            2. Công tác &amp; Vị trí đảm nhiệm
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <label className="block text-slate-700 font-bold mb-1">Phòng ban:</label>
               <select
@@ -303,7 +279,7 @@ const EmployeeFormModal = ({
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-slate-700 font-bold mb-1">Loại hợp đồng lao động:</label>
               <select
                 value={contractType}
@@ -314,17 +290,6 @@ const EmployeeFormModal = ({
                 <option value="Theo nhiệm kỳ">Theo nhiệm kỳ bầu cử</option>
                 <option value="Xác định thời hạn 36 tháng">Xác định thời hạn 36 tháng</option>
                 <option value="Thử việc / Học việc">Thử việc / Tập sự</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Phân quyền hệ thống:</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 uppercase font-bold focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-              >
-                <option value="staff">STAFF (Cán bộ nhân viên)</option>
-                <option value="admin">ADMIN (Ban Quản trị / Lãnh đạo)</option>
               </select>
             </div>
             <div className="sm:col-span-3">
@@ -344,7 +309,7 @@ const EmployeeFormModal = ({
         <div className="space-y-2 pt-2 border-t border-slate-100">
           <div className="flex items-center justify-between">
             <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-emerald-800">
-              3. Chính trị & Đảng - Đoàn thể
+              3. Chính trị &amp; Đảng - Đoàn thể
             </h4>
             <label className="flex items-center gap-1.5 cursor-pointer select-none">
               <input
@@ -360,7 +325,7 @@ const EmployeeFormModal = ({
           {partyMember && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-amber-50/50 border border-amber-200 rounded-xl">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Ngày vào Đảng:</label>
+                <label className="block text-slate-700 font-bold mb-1">Ngày vào Đảng dự bị:</label>
                 <input
                   type="date"
                   value={partyDate}
@@ -369,7 +334,7 @@ const EmployeeFormModal = ({
                 />
               </div>
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Ngày chính thức:</label>
+                <label className="block text-slate-700 font-bold mb-1">Ngày công nhận chính thức:</label>
                 <input
                   type="date"
                   value={partyOfficialDate}
@@ -394,7 +359,7 @@ const EmployeeFormModal = ({
         {/* Khối 4: Trình độ đào tạo */}
         <div className="space-y-2 pt-2 border-t border-slate-100">
           <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-emerald-800">
-            4. Trình độ học vấn & Chuyên môn đào tạo
+            4. Trình độ học vấn &amp; Chuyên môn đào tạo
           </h4>
           <div>
             <label className="block text-slate-700 font-bold mb-1">Văn bằng / Học vị:</label>

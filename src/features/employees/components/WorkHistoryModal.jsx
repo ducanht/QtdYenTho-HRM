@@ -33,7 +33,7 @@ const WorkHistoryModal = ({
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <span className="text-slate-400 block text-[10px]">Số CCCD:</span>
-            <span className="font-mono font-bold text-slate-900">{selectedEmp.cccd || '—'}</span>
+            <span className="font-bold text-slate-900 tabular-nums">{selectedEmp.cccd || '—'}</span>
           </div>
           <div>
             <span className="text-slate-400 block text-[10px]">Giới tính & SĐT:</span>

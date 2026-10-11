@@ -1,20 +1,28 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
-import { Printer, Download } from 'lucide-react';
+import { Printer, FileSpreadsheet, FileText } from 'lucide-react';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { calculatePositionTenure } from '../../../lib/evaluationUtils';
+import { exportEmployeeProfileToDocx, exportEmployeeProfileToExcel } from '../../../lib/exportUtils';
+import { useToast } from '../../../context/ToastContext';
 
 /**
  * EmployeeA4PrintModal: Xem trước và In ấn Sơ yếu lý lịch trích ngang cán bộ chuẩn khổ A4
- * Phù hợp mẫu 2C/TCTD và biểu mẫu báo cáo Ngân hàng Nhà nước
+ * Hỗ trợ xuất trực tiếp sang file Microsoft Word (.docx) và Excel (.xlsx)
+ * Tuân thủ nghiêm ngặt: Không hiển thị UUID, không lộ mã kỹ thuật, không dùng font mono.
  */
 const EmployeeA4PrintModal = ({
   isOpen,
   onClose,
   emp,
+  workHistory = [],
+  trainings = [],
 }) => {
+  const toast = useToast();
   const printRef = useRef(null);
+  const [exportingWord, setExportingWord] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   if (!emp) return null;
 
@@ -26,18 +34,60 @@ const EmployeeA4PrintModal = ({
     window.print();
   };
 
+  const handleExportWord = async () => {
+    try {
+      setExportingWord(true);
+      await exportEmployeeProfileToDocx(emp, workHistory, trainings);
+      toast?.showSuccess?.('Đã xuất file Word (.docx) thành công!');
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi xuất file Word');
+    } finally {
+      setExportingWord(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setExportingExcel(true);
+      await exportEmployeeProfileToExcel(emp, workHistory, trainings);
+      toast?.showSuccess?.('Đã xuất file Excel (.xlsx) thành công!');
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi xuất file Excel');
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Bản In Trích Ngang Sơ Yếu Lý Lịch (Khổ A4)"
-      subtitle={`Cán bộ: ${emp.name} (${emp.code}) • Mẫu 2C/TCTD Ngân hàng Nhà nước`}
+      title="Trích Ngang Sơ Yếu Lý Lịch (Khổ A4)"
+      subtitle={`Cán bộ: ${emp.name} • Mẫu 2C/TCTD`}
       maxWidth="max-w-4xl"
       footer={
-        <div className="flex items-center justify-end gap-2 w-full">
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full">
           <Button variant="outline" onClick={onClose}>
             Đóng
           </Button>
+          <button
+            type="button"
+            onClick={handleExportWord}
+            disabled={exportingWord}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+          >
+            <FileText className="w-4 h-4 text-blue-700" />
+            <span>{exportingWord ? 'Đang tạo Word...' : 'Xuất Word (.docx)'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={exportingExcel}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+            <span>{exportingExcel ? 'Đang tạo Excel...' : 'Xuất Excel (.xlsx)'}</span>
+          </button>
           <Button variant="primary" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-1.5" />
             <span>In ấn / Xuất PDF</span>
@@ -47,7 +97,7 @@ const EmployeeA4PrintModal = ({
     >
       <div 
         ref={printRef}
-        className="p-6 sm:p-10 bg-white border border-slate-200 rounded-xl font-serif text-slate-900 space-y-6 text-sm print:border-0 print:p-0 print:m-0"
+        className="p-6 sm:p-10 bg-white border border-slate-200 rounded-xl text-slate-900 space-y-6 text-sm print:border-0 print:p-0 print:m-0"
       >
         {/* Quốc hiệu & Tiêu ngữ */}
         <div className="grid grid-cols-2 text-center pb-4 border-b-2 border-slate-900">
@@ -73,7 +123,7 @@ const EmployeeA4PrintModal = ({
             SƠ YẾU LÝ LỊCH TRÍCH NGANG CÁN BỘ
           </h2>
           <p className="text-xs italic text-slate-600">
-            (Lưu hành nội bộ &amp; Báo cáo cơ quan Quản lý Nhà nước)
+            (Mẫu 2C/TCTD - Quỹ Tín Dụng Nhân Dân)
           </p>
         </div>
 
@@ -85,14 +135,12 @@ const EmployeeA4PrintModal = ({
               I. THÔNG TIN CÁ NHÂN &amp; ĐỊA BÀN CƯ TRÚ
             </h3>
             <div className="grid grid-cols-2 gap-y-2 pt-2 px-2">
-              <p>1. Họ và tên: <span className="font-bold uppercase">{emp.name}</span></p>
-              <p>2. Mã cán bộ: <span className="font-bold font-mono">{emp.code}</span></p>
-              <p>3. Giới tính: <span>{emp.gender || 'Nam'}</span></p>
-              <p>4. Ngày sinh: <span>{emp.birthDate ? formatDateVN(emp.birthDate) : '—'}</span></p>
-              <p>5. Số CCCD: <span className="font-mono font-bold">{emp.cccd || '—'}</span></p>
-              <p>6. Số điện thoại: <span className="font-mono">{emp.phone || '—'}</span></p>
-              <p className="col-span-2">7. Hộp thư điện tử (Email): <span>{emp.email || '—'}</span></p>
-              <p className="col-span-2">8. Mã định danh UUID: <span className="font-mono text-[11px]">{emp.uuid || emp.id}</span></p>
+              <p>1. Họ và tên khai sinh: <span className="font-bold uppercase">{emp.name}</span></p>
+              <p>2. Giới tính: <span>{emp.gender || 'Nam'}</span></p>
+              <p>3. Ngày sinh: <span>{emp.birthDate ? formatDateVN(emp.birthDate) : '—'}</span></p>
+              <p>4. Số CCCD: <span className="font-bold tabular-nums">{emp.cccd || '—'}</span></p>
+              <p>5. Số điện thoại: <span className="font-bold tabular-nums">{emp.phone || '—'}</span></p>
+              <p>6. Hộp thư điện tử (Email): <span>{emp.email || '—'}</span></p>
             </div>
           </div>
 
@@ -122,7 +170,7 @@ const EmployeeA4PrintModal = ({
             <div className="grid grid-cols-2 gap-y-2 pt-2 px-2">
               <p>1. Đảng viên ĐCSVN: <span className="font-bold">{emp.partyMember ? 'Đảng viên chính thức' : 'Chưa kết nạp'}</span></p>
               <p>2. Chức vụ Chi bộ: <span>{emp.politicalRole || '—'}</span></p>
-              <p>3. Ngày vào Đảng: <span>{emp.partyDate ? formatDateVN(emp.partyDate) : '—'}</span></p>
+              <p>3. Ngày vào Đảng dự bị: <span>{emp.partyDate ? formatDateVN(emp.partyDate) : '—'}</span></p>
               <p>4. Ngày chính thức: <span>{emp.partyOfficialDate ? formatDateVN(emp.partyOfficialDate) : '—'}</span></p>
             </div>
           </div>
@@ -135,7 +183,7 @@ const EmployeeA4PrintModal = ({
             <div className="grid grid-cols-2 gap-y-2 pt-2 px-2">
               <p className="col-span-2">1. Trình độ chuyên môn / Học vị: <span className="font-bold">{emp.education || 'Chờ bổ sung'}</span></p>
               <p>2. Lý luận chính trị: <span>Sơ cấp / Trung cấp</span></p>
-              <p>3. Quản lý nhà nước: <span>Đã hoàn thành</span></p>
+              <p>3. Quản lý nhà nước: <span>Đã hoàn thành bồi dưỡng</span></p>
             </div>
           </div>
         </div>

@@ -84,12 +84,22 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
 
     // Kiểm tra sự xuất hiện của các cán bộ chính thức trong cơ sở dữ liệu
     await expect(page.getByText('Nguyễn Thị Sinh').first()).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/CB01/i).first()).toBeVisible();
+    await expect(page.getByText(/Chủ tịch Hội đồng Quản trị|Chủ tịch HĐQT/i).first()).toBeVisible();
     await expect(page.getByText('Trịnh Đức Anh').first()).toBeVisible();
-    await expect(page.getByText(/CB07/i).first()).toBeVisible();
+    await expect(page.getByText(/Kế toán trưởng/i).first()).toBeVisible();
+
+    // Xác nhận đã ẩn hoàn toàn mã kỹ thuật (CB01, CB07, UUID) khỏi giao diện người dùng
+    await expect(page.getByText(/^CB01$/i)).toHaveCount(0);
+    await expect(page.getByText(/^CB07$/i)).toHaveCount(0);
 
     // Kiểm tra hiển thị Thâm niên trên giao diện
     await expect(page.getByText(/Thâm niên/i).first()).toBeVisible();
+
+    // Kiểm tra các nút xuất báo cáo và in A4
+    await expect(page.getByTitle(/Xuất toàn bộ danh bạ cán bộ sang Excel/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /In trích ngang A4/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Xuất Word/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Xuất Excel/i }).first()).toBeVisible();
 
     // Chuyển tab Luân chuyển công tác
     const transferTab = page.getByRole('button', { name: /Luân chuyển công tác|Luân chuyển/i }).first();

@@ -21,7 +21,7 @@ const HRModuleTabsNav = ({
     { id: 'TRANSFERS', label: 'Luân chuyển công tác', icon: ArrowRightLeft, show: true },
     { id: 'TRAINING', label: 'Đào tạo & Chứng chỉ', icon: GraduationCap, show: true },
     { id: 'ANALYTICS', label: 'Cơ cấu & Thống kê', icon: BarChart3, show: true },
-    { id: 'SETTINGS', label: 'Danh mục & Chức danh', icon: Sliders, show: canManage },
+    { id: 'SETTINGS', label: 'Cấu hình & Phân quyền', icon: Sliders, show: canManage },
   ].filter((t) => t.show);
 
   return (

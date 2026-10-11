@@ -258,7 +258,7 @@ const EmployeeTrainingModal = ({ selectedEmp, onClose }) => {
                         {item.certificateNo && (
                           <div className="flex items-center gap-2">
                             <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>Số hiệu: <strong className="font-mono text-slate-700">{item.certificateNo}</strong></span>
+                            <span>Số hiệu: <strong className="text-slate-700">{item.certificateNo}</strong></span>
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-slate-500">
@@ -407,14 +407,14 @@ const EmployeeTrainingModal = ({ selectedEmp, onClose }) => {
               <div className="space-y-2 md:col-span-2 p-4 rounded-xl border border-teal-200 bg-teal-50/40">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#0f766e]" />
+                    <FileText className="w-4 h-4 text-[#0f766e]" />
                     <label className="text-xs font-bold text-slate-800">
-                      Hình ảnh bản scan / chụp giấy chứng nhận (Tự động nén qua Canvas)
+                      Hình ảnh bản scan / chụp giấy chứng nhận
                     </label>
                   </div>
                   {formData.imageSizeKb > 0 && (
                     <span className="text-[11px] font-bold text-[#0f766e] bg-teal-100 px-2 py-0.5 rounded-full">
-                      Dung lượng nén: {formData.imageSizeKb} KB (Chuẩn Free Tier)
+                      Dung lượng: {formData.imageSizeKb} KB
                     </span>
                   )}
                 </div>
@@ -422,7 +422,7 @@ const EmployeeTrainingModal = ({ selectedEmp, onClose }) => {
                 <div className="flex items-center gap-4">
                   <label className="px-4 py-2 border border-teal-300 rounded-xl bg-white text-xs font-bold text-[#0f766e] hover:bg-teal-50 cursor-pointer inline-flex items-center gap-2 transition-colors">
                     <Upload className="w-4 h-4" />
-                    <span>{compressing ? 'Đang nén ảnh...' : 'Chọn file ảnh chứng chỉ'}</span>
+                    <span>{compressing ? 'Đang xử lý ảnh...' : 'Chọn file ảnh chứng chỉ'}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -432,7 +432,7 @@ const EmployeeTrainingModal = ({ selectedEmp, onClose }) => {
                     />
                   </label>
                   <p className="text-[11px] text-slate-500">
-                    Hệ thống tự động nén kích thước &lt; 50 KB bảo toàn trọn vẹn dung lượng Firestore miễn phí.
+                    Định dạng ảnh JPG hoặc PNG dung lượng nhẹ.
                   </p>
                 </div>
 
@@ -440,7 +440,7 @@ const EmployeeTrainingModal = ({ selectedEmp, onClose }) => {
                   <div className="mt-2 flex items-center gap-3">
                     <img
                       src={formData.certificateImage}
-                      alt="Chứng chỉ nén"
+                      alt="Chứng chỉ"
                       className="w-16 h-16 object-cover rounded-lg border border-teal-300 shadow-xs"
                     />
                     <div className="text-xs">

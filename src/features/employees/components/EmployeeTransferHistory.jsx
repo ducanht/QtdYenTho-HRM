@@ -101,8 +101,8 @@ const EmployeeTransferHistory = ({
             <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
               <ArrowRightLeft className="w-4 h-4 text-emerald-700" />
               <span>Theo Dõi Luân Chuyển Công Tác</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
-                {emp.name} ({emp.code})
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
+                {emp.name}
               </span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -142,7 +142,7 @@ const EmployeeTransferHistory = ({
                 )}
                 <span>Chu kỳ luân chuyển theo quy định NHNN:</span>
               </span>
-              <span className={`font-mono font-black ${
+              <span className={`font-black tabular-nums ${
                 isDue ? 'text-rose-700' : isNear ? 'text-amber-700' : 'text-slate-700'
               }`}>
                 {tenureText} / 3 năm (36 tháng)
@@ -211,7 +211,7 @@ const EmployeeTransferHistory = ({
                 >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                      <span className="font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200">
                         {item.decisionNumber || 'Chưa ghi số QĐ'}
                       </span>
                       <span className="font-bold text-emerald-900 bg-emerald-100/70 px-2 py-0.5 rounded-md">

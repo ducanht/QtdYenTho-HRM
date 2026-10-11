@@ -85,8 +85,8 @@ const EmployeeTrainingTab = ({
             <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
               <GraduationCap className="w-4 h-4 text-emerald-700" />
               <span>Hồ Sơ Đào Tạo & Chứng Chỉ Chuyên Môn</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
-                {emp.name} ({emp.code})
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
+                {emp.name}
               </span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -170,7 +170,7 @@ const EmployeeTrainingTab = ({
                         <span className="font-medium text-slate-700">{cert.institution}</span>
                       </p>
                       {cert.certificateNumber && (
-                        <p className="flex items-center gap-1.5 font-mono">
+                        <p className="flex items-center gap-1.5">
                           <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>Số hiệu: {cert.certificateNumber}</span>
                         </p>
@@ -215,7 +215,7 @@ const EmployeeTrainingTab = ({
           isOpen={Boolean(viewingImage)}
           onClose={() => setViewingImage(null)}
           title="Bản Scan Chứng Chỉ Đào Tạo"
-          subtitle="Quỹ Tín Dụng Nhân Dân Yên Thọ • Lưu trữ số hóa WebP"
+          subtitle="Quỹ Tín Dụng Nhân Dân Yên Thọ • Hồ sơ chứng chỉ số hóa"
           maxWidth="max-w-3xl"
         >
           <div className="p-2 flex flex-col items-center justify-center space-y-3">

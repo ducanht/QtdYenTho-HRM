@@ -7,7 +7,8 @@ import {
   subscribeEmployees, 
   subscribeWorkHistory, 
   subscribeEmployeeTraining, 
-  subscribeDepartments 
+  subscribeDepartments,
+  subscribeSubsystemConfig
 } from '../../lib/services';
 import { getOfficialStaff } from '../../lib/evaluationUtils';
 import Spinner from '../../components/common/Spinner';
@@ -33,9 +34,9 @@ import EmployeeA4PrintModal from './components/EmployeeA4PrintModal';
 /**
  * EmployeesContainer: Bộ điều phối chính Phân hệ Quản trị Nhân sự
  * - Bố cục Master - Detail iPad 2 phần (Cột trái 4/12, Cột phải 8/12)
- * - Thanh tab ngang Desktop/iPad & Thanh Bottom Nav di động
- * - Đồng bộ trạng thái vào URL searchParams: ?tab=PROFILE&empId=...
+ * - Tích hợp phân quyền & cấu hình phạm vi xem danh bạ (Toàn Quỹ vs Cá nhân)
  * - Không mock data, 100% thời gian thực từ Cloud Firestore
+ * - Không dùng font-mono, không dùng từ ngữ mang tính AI
  */
 const EmployeesContainer = () => {
   const { currentUser, role } = useAuth();
@@ -47,6 +48,7 @@ const EmployeesContainer = () => {
   const [departments, setDepartments] = useState([]);
   const [workHistory, setWorkHistory] = useState([]);
   const [trainings, setTrainings] = useState([]);
+  const [hrConfig, setHrConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Phân quyền Quản trị: HĐQT, Giám đốc, SuperAdmin
@@ -77,9 +79,16 @@ const EmployeesContainer = () => {
   const [activeTab, setActiveTabState] = useState(urlTab);
   const [selectedEmpId, setSelectedEmpIdState] = useState(urlEmpId);
 
+  // Chặn truy cập tab SETTINGS nếu không có quyền
+  useEffect(() => {
+    if (activeTab === 'SETTINGS' && !canManage) {
+      setActiveTabState('PROFILE');
+    }
+  }, [activeTab, canManage]);
+
   // Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [formModalData, setFormModalData] = useState(null); // null: thêm mới, object: sửa
+  const [formModalData, setFormModalData] = useState(null);
 
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [transferTargetEmp, setTransferTargetEmp] = useState(null);
@@ -90,24 +99,36 @@ const EmployeesContainer = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printTargetEmp, setPrintTargetEmp] = useState(null);
 
-  // Danh bạ 13 cán bộ chính thức (loại trừ tài khoản root)
+  // Danh bạ cán bộ chính thức (loại trừ tài khoản root)
   const officialEmployees = useMemo(() => {
     return getOfficialStaff(employees);
   }, [employees]);
 
+  // Danh bạ được phép xem theo cấu hình và phân quyền
+  const viewableEmployees = useMemo(() => {
+    if (canManage || hrConfig?.allowStaffViewDirectory !== false) {
+      return officialEmployees;
+    }
+    // Nếu ở chế độ bảo mật cá nhân: Cán bộ chỉ thấy hồ sơ của mình
+    const me = officialEmployees.find(
+      (e) => e.id === currentUser?.uid || e.email === currentUser?.email
+    );
+    return me ? [me] : officialEmployees;
+  }, [officialEmployees, canManage, hrConfig?.allowStaffViewDirectory, currentUser]);
+
   // Tự động chọn cán bộ mặc định nếu chưa chọn
   useEffect(() => {
-    if (officialEmployees.length > 0) {
-      if (!selectedEmpId || !officialEmployees.some((e) => e.id === selectedEmpId)) {
+    if (viewableEmployees.length > 0) {
+      if (!selectedEmpId || !viewableEmployees.some((e) => e.id === selectedEmpId)) {
         // Ưu tiên chọn tài khoản chính mình nếu thuộc danh bạ
-        const me = officialEmployees.find(
+        const me = viewableEmployees.find(
           (e) => e.id === currentUser?.uid || e.email === currentUser?.email
         );
-        const defaultId = me ? me.id : officialEmployees[0].id;
+        const defaultId = me ? me.id : viewableEmployees[0].id;
         setSelectedEmpIdState(defaultId);
       }
     }
-  }, [officialEmployees, selectedEmpId, currentUser]);
+  }, [viewableEmployees, selectedEmpId, currentUser]);
 
   // Đồng bộ State -> URL
   useEffect(() => {
@@ -173,18 +194,23 @@ const EmployeesContainer = () => {
       setTrainings(list || []);
     });
 
+    const unsubConfig = subscribeSubsystemConfig('hr', (cfg) => {
+      setHrConfig(cfg || null);
+    });
+
     return () => {
       unsubEmp();
       unsubDept();
       unsubWork();
       unsubTrain();
+      unsubConfig();
     };
   }, []);
 
   // Cán bộ đang được chọn xem chi tiết
   const currentEmp = useMemo(() => {
-    return officialEmployees.find((e) => e.id === selectedEmpId) || officialEmployees[0] || null;
-  }, [officialEmployees, selectedEmpId]);
+    return viewableEmployees.find((e) => e.id === selectedEmpId) || viewableEmployees[0] || null;
+  }, [viewableEmployees, selectedEmpId]);
 
   // Handlers mở modal
   const handleOpenAdd = useCallback(() => {
@@ -237,7 +263,7 @@ const EmployeesContainer = () => {
           {/* CỘT TRÁI (MASTER): Danh sách Cán bộ & Bộ lọc nhanh */}
           <div className="lg:col-span-4 xl:col-span-4">
             <EmployeeMasterSidebar
-              employees={officialEmployees}
+              employees={viewableEmployees}
               selectedEmployeeId={selectedEmpId}
               onSelectEmployee={setSelectedEmpIdState}
               searchTerm={searchTerm}
@@ -257,6 +283,8 @@ const EmployeesContainer = () => {
                 emp={currentEmp}
                 onOpenEdit={handleOpenEdit}
                 onOpenPrint={handleOpenPrint}
+                workHistory={workHistory}
+                trainings={trainings}
                 canManage={canManage}
               />
             )}
@@ -281,15 +309,17 @@ const EmployeesContainer = () => {
 
             {activeTab === 'ANALYTICS' && (
               <EmployeeAnalyticsTab
-                employees={officialEmployees}
+                employees={viewableEmployees}
                 departments={departments}
                 onSelectEmployeeForTransfer={handleSelectEmployeeForTransfer}
               />
             )}
 
-            {activeTab === 'SETTINGS' && (
+            {activeTab === 'SETTINGS' && canManage && (
               <EmployeeSettingsTab
                 departments={departments}
+                hrConfig={hrConfig}
+                canManage={canManage}
               />
             )}
           </div>
@@ -340,6 +370,8 @@ const EmployeesContainer = () => {
           isOpen={isPrintModalOpen}
           onClose={() => setIsPrintModalOpen(false)}
           emp={printTargetEmp || currentEmp}
+          workHistory={workHistory}
+          trainings={trainings}
         />
       )}
     </div>
