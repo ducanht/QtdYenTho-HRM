@@ -74,12 +74,15 @@ run(`git push origin ${currentBranch}`);
 
 // 4. Firebase Deploy
 console.log('\n\x1b[34m[BƯỚC 4/4] Deploy trực tiếp lên Google Firebase...\x1b[0m');
-const isWin = process.platform === 'win32';
-const fbCmd = isWin ? 'firebase.cmd' : 'firebase';
+let fbCmd = 'firebase';
+if (process.platform === 'win32') {
+  const globalFbBin = 'C:\\Users\\Lenovo\\AppData\\Roaming\\npm\\node_modules\\firebase-tools\\lib\\bin\\firebase.js';
+  fbCmd = `node "${globalFbBin}"`;
+}
 
 if (isDeployAll) {
-  console.log('Chế độ deploy toàn bộ: Hosting, Firestore Rules & Firestore Indexes...');
-  run(`${fbCmd} deploy --only hosting,firestore:rules,firestore:indexes --non-interactive`);
+  console.log('Chế độ deploy toàn bộ: Hosting & Firestore Rules...');
+  run(`${fbCmd} deploy --only hosting,firestore:rules --non-interactive`);
 } else {
   console.log('Chế độ deploy hosting & firestore rules...');
   run(`${fbCmd} deploy --only hosting,firestore:rules --non-interactive`);
