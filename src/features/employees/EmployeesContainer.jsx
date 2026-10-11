@@ -295,7 +295,7 @@ const EmployeesContainer = () => {
                 onDeleteSuccess={(deletedId) => {
                   const remaining = viewableEmployees.filter((e) => e.id !== deletedId);
                   if (remaining.length > 0) {
-                    setSelectedEmpId(remaining[0].id);
+                    setSelectedEmpIdState(remaining[0].id);
                   }
                 }}
                 workHistory={workHistory}

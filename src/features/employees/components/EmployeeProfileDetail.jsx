@@ -116,71 +116,79 @@ const EmployeeProfileDetail = ({
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
       {/* 1. Header Card: Định Danh & Tác Vụ Chính */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            {/* Avatar kèm nút đổi ảnh */}
-            <div className="relative group shrink-0">
-              <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-teal-50 border-2 border-emerald-200 text-emerald-800 font-extrabold text-2xl flex items-center justify-center overflow-hidden shadow-xs">
-                {emp.avatar ? (
-                  <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
-                ) : (
-                  emp.name.charAt(0)
-                )}
-              </div>
-
-              <label 
-                className="absolute inset-0 bg-black/50 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
-                title="Thay đổi ảnh chân dung"
-              >
-                <Camera className="w-5 h-5 mb-1" />
-                <span>{uploadingAvatar ? '...' : 'Đổi ảnh'}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  disabled={uploadingAvatar}
-                  className="hidden"
-                />
-              </label>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5">
+        {/* Phần 1: Khối Định Danh Cán Bộ (Avatar + Họ Tên + Chức Vụ + Badge Nhỏ Gọn) */}
+        <div className="flex items-center gap-3.5 sm:gap-4">
+          {/* Avatar kèm nút đổi ảnh */}
+          <div className="relative group shrink-0">
+            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-teal-50 border-2 border-emerald-200 text-emerald-800 font-extrabold text-xl sm:text-2xl flex items-center justify-center overflow-hidden shadow-2xs">
+              {emp.avatar ? (
+                <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+              ) : (
+                emp.name.charAt(0)
+              )}
             </div>
 
-            {/* Thông tin cốt lõi */}
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
-                  {emp.department}
-                </span>
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                  {emp.status === 'ACTIVE' ? 'Đang công tác' : 'Nghỉ việc'}
-                </span>
-                {emp.partyMember && (
-                  <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                    Đảng viên ĐCSVN
-                  </span>
-                )}
-              </div>
+            <label 
+              className="absolute inset-0 bg-black/50 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
+              title="Thay đổi ảnh chân dung"
+            >
+              <Camera className="w-4 h-4 mb-0.5" />
+              <span>{uploadingAvatar ? '...' : 'Đổi ảnh'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                disabled={uploadingAvatar}
+                className="hidden"
+              />
+            </label>
+          </div>
 
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          {/* Thông tin cốt lõi */}
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
                 {emp.name}
               </h1>
 
-              <p className="text-xs sm:text-sm font-bold text-emerald-800">
+              {/* Các thông tin Đảng viên, Đang công tác chỉ hiển thị badge nhỏ */}
+              <span className="text-[10px] sm:text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                <span>{emp.status === 'ACTIVE' ? 'Đang công tác' : 'Nghỉ việc'}</span>
+              </span>
+
+              {emp.partyMember && (
+                <span className="text-[10px] sm:text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 inline-flex items-center gap-1 shrink-0">
+                  <span>Đảng viên</span>
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
+              <span className="font-bold text-emerald-900">
                 {emp.position || 'Cán bộ'}
-              </p>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="font-medium text-slate-600">
+                {emp.department}
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* Nhóm nút thao tác */}
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end">
+        {/* Phần 2: Hàng Nút Chức Năng Riêng Biệt (Xuất Báo Cáo, In Ấn & Quản Trị) */}
+        <div className="pt-3.5 mt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+          {/* Nhóm Xuất Báo Cáo & In Ấn */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleExportWord}
               disabled={exportingWord}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
               title="Xuất sơ yếu lý lịch sang Microsoft Word (.docx)"
             >
-              <FileText className="w-4 h-4 text-blue-700" />
+              <FileText className="w-3.5 h-3.5 text-blue-700" />
               <span>{exportingWord ? 'Đang tạo...' : 'Xuất Word'}</span>
             </button>
 
@@ -188,45 +196,46 @@ const EmployeeProfileDetail = ({
               type="button"
               onClick={handleExportExcel}
               disabled={exportingExcel}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
               title="Xuất sơ yếu lý lịch sang Microsoft Excel (.xlsx)"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
               <span>{exportingExcel ? 'Đang tạo...' : 'Xuất Excel'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => onOpenPrint(emp)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
             >
-              <Printer className="w-4 h-4 text-slate-500" />
+              <Printer className="w-3.5 h-3.5 text-slate-500" />
               <span>In trích ngang A4</span>
             </button>
-
-            {canManage && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onOpenEdit(emp)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span>Chỉnh sửa hồ sơ</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-                  title="Xóa hồ sơ cán bộ khỏi hệ thống"
-                >
-                  <Trash2 className="w-4 h-4 text-rose-600" />
-                  <span>Xóa cán bộ</span>
-                </button>
-              </>
-            )}
           </div>
+
+          {/* Nhóm Quản Trị Cán Bộ */}
+          {canManage && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenEdit(emp)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Chỉnh sửa hồ sơ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                title="Xóa hồ sơ cán bộ khỏi hệ thống"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>Xóa cán bộ</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
