@@ -271,6 +271,7 @@ const EmployeesContainer = () => {
               selectedDept={selectedDept}
               setSelectedDept={setSelectedDept}
               departments={departments}
+              hrConfig={hrConfig}
               onOpenAddModal={handleOpenAdd}
               canManage={canManage}
             />
@@ -283,6 +284,12 @@ const EmployeesContainer = () => {
                 emp={currentEmp}
                 onOpenEdit={handleOpenEdit}
                 onOpenPrint={handleOpenPrint}
+                onDeleteSuccess={(deletedId) => {
+                  const remaining = viewableEmployees.filter((e) => e.id !== deletedId);
+                  if (remaining.length > 0) {
+                    setSelectedEmpId(remaining[0].id);
+                  }
+                }}
                 workHistory={workHistory}
                 trainings={trainings}
                 canManage={canManage}
@@ -293,7 +300,7 @@ const EmployeesContainer = () => {
               <EmployeeTransferHistory
                 emp={currentEmp}
                 workHistory={workHistory}
-                onOpenCreateTransfer={handleOpenTransfer}
+                hrConfig={hrConfig}
                 canManage={canManage}
               />
             )}
@@ -311,6 +318,7 @@ const EmployeesContainer = () => {
               <EmployeeAnalyticsTab
                 employees={viewableEmployees}
                 departments={departments}
+                hrConfig={hrConfig}
                 onSelectEmployeeForTransfer={handleSelectEmployeeForTransfer}
               />
             )}
@@ -318,6 +326,7 @@ const EmployeesContainer = () => {
             {activeTab === 'SETTINGS' && canManage && (
               <EmployeeSettingsTab
                 departments={departments}
+                positions={positions}
                 hrConfig={hrConfig}
                 canManage={canManage}
               />

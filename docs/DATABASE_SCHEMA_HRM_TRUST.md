@@ -52,17 +52,25 @@ erDiagram
     }
 
     EMPLOYEE_TRAINING {
-        string id PK "Mã chứng chỉ (train-uuid)"
+        string id PK "Mã bản ghi đào tạo (train-uuid)"
         string employeeId FK "Mã cán bộ (FK -> employees.id)"
         string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
         string employeeName "Họ tên cán bộ"
-        string courseName "Tên khóa đào tạo / bồi dưỡng / chứng chỉ"
-        string institution "Đơn vị đào tạo / cấp chứng chỉ"
-        date issueDate "Ngày cấp chứng chỉ (YYYY-MM-DD)"
-        date expiryDate "Ngày hết hạn (YYYY-MM-DD)"
+        string courseName "Tên khóa đào tạo / bồi dưỡng nghiệp vụ"
+        string organizer "Đơn vị tổ chức đào tạo (NHNN, Hiệp hội QTDND...)"
+        string decisionNo "Số quyết định / Kế hoạch cử đi học"
+        date startDate "Ngày bắt đầu khóa đào tạo"
+        date endDate "Ngày kết thúc khóa đào tạo"
+        string location "Địa điểm tổ chức đào tạo"
+        string content "Tóm tắt nội dung đào tạo nghiệp vụ"
+        boolean hasCertificate "true: Có cấp văn bằng / chứng chỉ"
+        string certificateName "Tên văn bằng / chứng chỉ được cấp"
         string certificateNumber "Số hiệu văn bằng / chứng chỉ"
-        string certificateImage "Chuỗi Base64 ảnh scan chứng chỉ nén qua Canvas (< 50KB)"
-        string status "COMPLETED | IN_PROGRESS | EXPIRED"
+        date issueDate "Ngày cấp chứng chỉ (YYYY-MM-DD)"
+        date expireDate "Ngày hết hạn hiệu lực"
+        string grade "Kết quả / Xếp loại tốt nghiệp (Xuất sắc | Giỏi | Khá | Hoàn thành)"
+        string certificateImage "Chuỗi Base64 ảnh scan chứng chỉ (< 50KB)"
+        string notes "Ghi chú bổ sung"
         timestamp createdAt "Thời gian khởi tạo"
     }
 
@@ -194,23 +202,32 @@ Theo chỉ đạo của Ngân hàng Nhà nước, các vị trí nhạy cảm t�
 ## 🎓 2.1. Chi Tiết Thực Thể: Hồ Sơ Đào Tạo & Chứng Chỉ Chuyên Môn (`employee_training`)
 
 Collection Firestore: `employee_training`  
-Quản lý lịch sử toàn bộ các khóa đào tạo, bồi dưỡng nghiệp vụ chuyên ngành và chứng chỉ hành nghề của cán bộ, nhân viên Quỹ tín dụng nhân dân.
+Quản lý lịch sử toàn bộ các khóa đào tạo, bồi dưỡng nghiệp vụ chuyên ngành và chứng chỉ hành nghề của cán bộ, nhân viên Quỹ tín dụng nhân dân theo chuẩn Thống đốc NHNN.
 
 ### Cấu trúc dữ liệu:
 | Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
 | :--- | :--- | :--- | :--- |
 | `id` | `string` | **PK** | Mã định danh chứng chỉ (VD: `train-f47ac10b-...`). |
-| `employeeId` | `string` | **FK -> employees.id** | Cán bộ được cấp văn bằng / chứng chỉ. |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ tham gia đào tạo / được cấp văn bằng. |
 | `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
+| `employeeCode` | `string` | Snapshot | Mã cán bộ (CB01, CB02...). |
 | `employeeName` | `string` | Snapshot | Họ tên cán bộ tại thời điểm lưu. |
-| `courseName` | `string` | **Not Null** | Tên khóa học / bồi dưỡng / chứng chỉ (VD: Nghiệp vụ Quỹ TDND, Thẩm định Tài sản...). |
-| `institution` | `string` | **Not Null** | Đơn vị đào tạo / cấp chứng chỉ (Học viện Ngân hàng, Hiệp hội QTDND, NHNN...). |
+| `courseName` | `string` | **Not Null** | Tên khóa đào tạo / bồi dưỡng nghiệp vụ (VD: Nghiệp vụ Quỹ TDND, Thẩm định TSĐB & Phòng ngừa rủi ro...). |
+| `organizer` / `institution` | `string` | **Not Null** | Đơn vị tổ chức đào tạo (NHNN, Hiệp hội QTDND, Học viện Ngân hàng...). |
+| `decisionNo` | `string` | Nullable | Số quyết định / Kế hoạch cử cán bộ đi học (VD: `18/QĐ-HĐQT`, `05/KH-QTD`). |
+| `startDate` | `string` | `YYYY-MM-DD` | Ngày bắt đầu khóa học. |
+| `endDate` | `string` | `YYYY-MM-DD` | Ngày kết thúc khóa học. |
+| `location` | `string` | Nullable | Địa điểm tổ chức (Hà Nội, Thanh Hóa, Trực tuyến...). |
+| `content` | `string` | Text | Tóm tắt nội dung chương trình đào tạo nghiệp vụ. |
+| `hasCertificate` | `boolean` | `true/false` | Xác nhận khóa học có cấp văn bằng / chứng chỉ tốt nghiệp. |
+| `certificateName` | `string` | Nullable | Tên chứng chỉ / văn bằng được cấp. |
+| `certificateNumber` / `certificateNo` | `string` | Nullable | Số hiệu chứng chỉ / số vào sổ cấp chứng chỉ. |
 | `issueDate` | `string` | `YYYY-MM-DD` | Ngày cấp văn bằng / chứng chỉ. |
-| `expiryDate` | `string` | `YYYY-MM-DD` | Ngày hết hạn hiệu lực (để trống nếu có giá trị vô thời hạn). |
-| `certificateNumber` | `string` | Text | Số hiệu chứng chỉ / số vào sổ cấp chứng chỉ. |
-| `certificateImage` | `string` | Base64 Text | Ảnh scan/chụp chứng chỉ đã được nén tự động qua Canvas WebP/JPEG (< 50KB). |
-| `status` | `string` | Enum | `'COMPLETED'` (Đã hoàn thành), `'IN_PROGRESS'` (Đang học), `'EXPIRED'` (Hết hạn). |
-| `notes` | `string` | Text | Ghi chú thêm về kết quả học tập / xếp loại. |
+| `expireDate` | `string` | `YYYY-MM-DD` | Ngày hết hạn hiệu lực (để trống nếu có giá trị vô thời hạn). |
+| `type` | `string` | Enum | `CHUYEN_MON`, `CHUNG_CHI_HANH_NGHE`, `LY_LUAN_CHINH_TRI`, `KHAC`. |
+| `grade` | `string` | Enum | Xếp loại tốt nghiệp (`Xuất sắc`, `Giỏi`, `Khá`, `Đạt / Hoàn thành`). |
+| `certificateImage` | `string` | Base64 Text | Ảnh scan/chụp chứng chỉ đã được nén an toàn (< 50KB). |
+| `notes` | `string` | Text | Ghi chú thêm về khóa đào tạo. |
 | `createdAt` | `timestamp` | Server Time | Thời điểm tạo bản ghi. |
 | `updatedAt` | `timestamp` | Server Time | Thời điểm cập nhật lần cuối. |
 

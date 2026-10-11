@@ -57,14 +57,14 @@ Khi cần mở rộng CSDL cho các phân hệ mới:
 
 ---
 
-## 🏛️ 5. BẢN ĐỒ 18 COLLECTIONS NÒNG CỐT HIỆN TẠI (SCHEMA V5.1)
+## 🏛️ 5. BẢN ĐỒ 18 COLLECTIONS NÒNG CỐT HIỆN TẠI (SCHEMA V5.3)
 
-Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 Collections nòng cốt:
+Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 Collections nòng cốt (Schema `2026.10.11_v5.3_flexible_transfer_rules_and_full_training_lifecycle`):
 1. `accounts`: Danh sách tài khoản đăng nhập, xác thực và phân quyền.
 2. `employees`: Danh bạ Cán bộ Nhân viên chính thức của Quỹ (`emp-001` .. `emp-013`).
 3. `system_metadata`: Siêu dữ liệu phiên bản CSDL và lịch sử đồng bộ (`schema_status`).
 4. `system_modules`: Danh mục 8 phân hệ chức năng hệ thống.
-5. `system_settings`: Cấu hình thông tin pháp nhân, tham số chung và phân hệ.
+5. `system_settings`: Cấu hình thông tin pháp nhân, tham số chung và phân hệ (bao gồm `transferRules` linh hoạt).
 6. `roles_permissions`: Ma trận phân quyền RBAC toàn hệ thống.
 7. `departments`: Danh mục 5 phòng ban chuẩn của Quỹ.
 8. `positions`: Danh mục chức vụ và vị trí công tác.
@@ -76,7 +76,7 @@ Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 
 14. `evaluations_trust`: Phiếu đánh giá tín nhiệm chi tiết.
 15. `evaluations_kpi`: Dữ liệu đánh giá hiệu quả KPI 3 cấp.
 16. `evaluations_planning`: Dữ liệu bỏ phiếu quy hoạch cán bộ nguồn.
-17. `employee_training`: Hồ sơ văn bằng, chứng chỉ và khóa đào tạo chuyên sâu.
+17. `employee_training`: Hồ sơ văn bằng, chứng chỉ và chu trình đào tạo chuyên sâu toàn diện.
 18. `employee_kpi_history`: Lịch sử diễn biến kết quả xếp loại KPI nhiều năm.
 
 ---
@@ -97,14 +97,16 @@ Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 
    - Thiết kế này bảo đảm khi mở rộng phân hệ mới (như Chấm công `MODULE_TIMEKEEPING`, Tính lương `MODULE_PAYROLL` hay Khen thưởng `MODULE_AWARDS`) sẽ không làm xáo trộn các bảng hiện hữu.
 3. **Kiến Trúc Giao Diện Master - Detail 2 Phần Kế Thừa Phân Hệ Đánh Giá**:
    - Phân hệ Quản trị Nhân sự (`MODULE_HR` / `/employees`) kế thừa trọn vẹn bố cục Master-Detail iPad 2 phần:
-     * **Cột trái (Master Sidebar)**: Tìm kiếm, lọc theo phòng ban, danh sách thẻ cán bộ mini với Avatar nén Canvas, huy hiệu thâm niên và chỉ báo cảnh báo luân chuyển NHNN 36 tháng (vàng $\ge 2.5$ năm, đỏ $\ge 3$ năm).
-     * **Cột phải (Detail Panel)**: 5 Tab chức năng (*Hồ sơ trích ngang 2C/TCTD*, *Luân chuyển công tác*, *Đào tạo & Chứng chỉ*, *Cơ cấu & Thống kê*, *Danh mục & Chức danh*).
+     * **Cột trái (Master Sidebar)**: Tìm kiếm, lọc theo phòng ban, danh sách thẻ cán bộ mini với Avatar nén an toàn, huy hiệu thâm niên và chỉ báo cảnh báo luân chuyển động theo `hrConfig.transferRules`.
+     * **Cột phải (Detail Panel)**: 5 Tab chức năng (*Hồ sơ trích ngang 2C/TCTD*, *Theo dõi luân chuyển công tác*, *Hồ sơ đào tạo & chứng chỉ*, *Cơ cấu & Thống kê*, *Cấu hình phân hệ & chức vụ*).
      * **Thanh Bottom Navigation Di Động**: 5 icon điều hướng cố định đáy màn hình mobile/tablet.
    - 100% responsive, triệt tiêu toàn bộ từ ngữ AI hay giải thích thừa thãi, tập trung vào nghiệp vụ ngân hàng hợp tác.
-4. **Cơ Chế Khử Trùng Lặp Đa Tầng (Defense-in-depth)**:
-   - `subscribeEmployees`: Tự động khử trùng lặp qua `Map` theo `code` (CB01..CB13) hoặc `email`, ưu tiên giữ bản ghi có ID `emp-xxx` và sắp xếp theo `order`.
-   - `getOfficialStaff`, `getEligibleTargetEmployees`, `getEligibleVoterEmployees`: Luôn lọc qua bộ khử trùng lặp `Map` và loại trừ tài khoản kỹ thuật quản trị webapp (`isSystemAdminAccount`).
-   - Bảng tổng quan `TrustOverviewReport`: Khử trùng lặp danh sách cử tri hợp lệ qua `getEligibleVoterEmployees`.
+4. **Cơ Chế Luân Chuyển Linh Hoạt & Đào Tạo Toàn Diện**:
+   - Vị trí nào phải luân chuyển và thời hạn cụ thể từng vị trí được đưa vào Cấu hình CSDL (`hrConfig.transferRules`), không gắn cứng cố định.
+   - Tab Luân chuyển công tác thuần túy phục vụ **theo dõi tiến độ thâm niên và cảnh báo**, không lập quyết định tại phân hệ này.
+   - Phân hệ Đào tạo theo dõi toàn diện: Khóa đào tạo, Đơn vị tổ chức (NHNN, Hiệp hội QTDND...), Quyết định/Kế hoạch cử đi học, Thời gian (từ ngày - đến ngày), Địa điểm, Nội dung đào tạo, Chứng chỉ cấp (tên, số hiệu, ngày cấp/hạn, xếp loại, xem ảnh scan).
+   - Đầy đủ CRUD cán bộ: Thêm mới, chỉnh sửa và xóa an toàn có xác nhận với quyền `canManage`.
+   - Bổ sung Thống kê Cơ cấu Trình độ Chuyên môn / Học vấn toàn Quỹ.
 
 ---
 

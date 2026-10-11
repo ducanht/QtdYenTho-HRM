@@ -16,28 +16,32 @@
 
 1. **Quản trị danh bạ trích ngang 13 Cán bộ Nhân viên chính thức** (không dùng dữ liệu giả/mock, chuẩn hóa ID `emp-001` đến `emp-013`, Zero Duplicate Policy):
    - Quản lý đầy đủ thông tin: Họ và tên, mã cán bộ (`CB01` đến `CB13`), số CCCD (12 chữ số), ngày sinh, giới tính, chức danh chính quyền, chức vụ Đảng - Đoàn thể, địa bàn phụ trách, trình độ chuyên môn, loại hợp đồng, số điện thoại và email công vụ.
-2. **Theo dõi Quá trình Luân chuyển công tác & Điều động địa bàn (`work_history`)**:
-   - Theo quy định của Ngân hàng Nhà nước, các vị trí nhạy cảm tại Quỹ tín dụng nhân dân (CBTD, Kế toán, Thủ quỹ, BKS) **bắt buộc phải thực hiện luân chuyển định kỳ** từ 2 đến 3 năm một lần để phòng ngừa rủi ro câu kết và tiêu cực tín dụng.
+2. **Theo dõi Quá trình Luân chuyển công tác & Thâm niên Vị trí (`work_history`)**:
+   - Theo quy định của Ngân hàng Nhà nước và Quy chế quản trị nội bộ, các vị trí nhạy cảm tại Quỹ tín dụng nhân dân (CBTD, Kế toán, Thủ quỹ, BKS) **phải được giám sát luân chuyển định kỳ** nhằm phòng ngừa rủi ro đạo đức và rủi ro hoạt động tín dụng.
+   - **Cấu hình luân chuyển linh hoạt (`transferRules`)**: Vị trí nào phải luân chuyển và thời hạn cụ thể (số tháng chu kỳ và số tháng cảnh báo trước) được đưa vào cấu hình CSDL `system_settings/module_hr`, không gắn cứng cố định.
+   - **Theo dõi thuần túy**: Phân hệ tập trung theo dõi thâm niên, tiến độ chu kỳ và cảnh báo trực quan; không còn nút lập quyết định luân chuyển tại phân hệ này để đảm bảo phân tách đúng thẩm quyền điều hành của HĐQT.
    - Hệ thống hiển thị **Timeline quá trình luân chuyển** với đầy đủ: Số quyết định, ngày ký, ngày có hiệu lực, người ký (Chủ tịch HĐQT/Giám đốc), hình thức luân chuyển (`LUAN_CHUYEN_DINH_KY`, `BO_NHIEM`, `DIEU_DONG`, `THAY_DOI_DIA_BAN`), chức vụ và địa bàn cũ $\rightarrow$ mới, tình trạng bàn giao hồ sơ nợ và ghi chú.
 3. **Quản lý Thâm niên Giữ chức vụ (`positionStartDate`)**:
    - Lưu trữ ngày bắt đầu đảm nhiệm chức danh hiện tại của từng cán bộ.
    - Tiện ích tính toán tự động `calculatePositionTenure(positionStartDate)` quy đổi ra năm/tháng công tác (ví dụ: *"3 năm 4 tháng"*).
-   - Phục vụ trực tiếp cho công tác xét nâng bậc lương định kỳ, quy hoạch bổ nhiệm và giám sát thời hạn luân chuyển bắt buộc theo quy định NHNN.
-4. **Quản lý Hồ sơ Đào tạo & Chứng chỉ Chuyên môn (`employee_training`)**:
-   - Lưu trữ toàn bộ lịch sử các khóa đào tạo, bồi dưỡng nghiệp vụ mà cán bộ đã hoàn thành.
-   - Quản lý chi tiết: Tên khóa học/chứng chỉ, cơ sở đào tạo (Học viện Ngân hàng, Hiệp hội QTDND...), ngày cấp, ngày hết hạn hiệu lực, số hiệu chứng chỉ.
-   - Lưu trữ ảnh scan/chụp chứng chỉ trực tiếp để tra cứu đối soát khi có đoàn thanh tra, kiểm tra.
-5. **Lưu trữ Lịch sử Đánh giá Hiệu suất KPI (`employee_kpi_history`)**:
-   - Sẵn sàng cấu trúc lưu trữ lịch sử kết quả đánh giá KPI qua các kỳ (tháng, quý, năm) của từng nhân sự, tạo tiền đề liên thông với Phân hệ KPI và Tính lương.
-6. **Bổ sung Chức danh "Kiểm soát nội bộ (Kiểm soát viên chuyên trách)"**:
-   - Mã `pos-11`, code `KSNB`, thuộc Ban Kiểm soát. Đảm bảo đúng cơ cấu tổ chức theo quy định mới của NHNN đối với Quỹ tín dụng nhân dân.
+   - Phục vụ trực tiếp cho công tác xét nâng bậc lương định kỳ, quy hoạch bổ nhiệm và giám sát thời hạn luân chuyển bắt buộc theo cấu hình.
+4. **Theo dõi Toàn diện Hồ sơ Đào tạo & Bồi dưỡng Nghiệp vụ (`employee_training`)**:
+   - Quản lý chi tiết từng khóa học: Tên khóa đào tạo/bồi dưỡng nghiệp vụ; Đơn vị tổ chức (NHNN, Hiệp hội QTDND, Học viện Ngân hàng...); Quyết định / Kế hoạch cử cán bộ đi học; Thời gian (từ ngày - đến ngày), địa điểm tổ chức; Nội dung tóm tắt chương trình đào tạo; Chứng chỉ cấp (tên chứng chỉ, số hiệu, ngày cấp, ngày hết hạn, xếp loại tốt nghiệp, xem ảnh scan).
+   - Hỗ trợ cả 2 hình thức: Khóa học có cấp văn bằng/chứng chỉ và Khóa tập huấn/bồi dưỡng ngắn hạn có chứng nhận hoàn thành.
+5. **Đầy đủ Bộ Thao tác Quản trị Cán bộ (Thêm, Chỉnh sửa, Xóa an toàn)**:
+   - Thêm mới cán bộ (`EmployeeFormModal`): Tự động tạo hồ sơ danh bạ và tài khoản xác thực đồng bộ.
+   - Chỉnh sửa hồ sơ (`EmployeeProfileDetail`): Cập nhật thông tin lý lịch 2C/TCTD.
+   - Xóa cán bộ (`deleteEmployeeProfile`): Tích hợp hộp thoại xác nhận an toàn, xóa đồng bộ tài khoản và danh bạ nhân sự đối với người có thẩm quyền `canManage`.
+6. **Thống Kê Cơ Cấu Nhân Lực & Trình Độ Chuyên Môn**:
+   - Bổ sung khối Thống kê Cơ cấu Trình độ Chuyên môn / Học vấn toàn Quỹ (Thạc sĩ/Sau đại học, Đại học/Cử nhân/Kỹ sư, Cao đẳng, Trung cấp, Khác) phục vụ lập báo cáo chất lượng nhân sự theo chuẩn NHNN.
+   - Bảng giám sát thời hạn luân chuyển toàn Quỹ tự động áp dụng `transferRules` cấu hình động.
 7. **Bộ Công Cụ Xuất Báo Cáo Doanh Nghiệp (Enterprise Export Suite)**:
    - Bản in Sơ yếu lý lịch trích ngang A4 chuẩn mẫu 2C/TCTD có xem trước.
    - Xuất file Word (`.docx`) chuẩn thể thức văn bản hành chính Việt Nam với đầy đủ bảng biểu thâm niên, quá trình công tác và hồ sơ đào tạo.
-   - Xuất file Excel (`.xlsx`) đa năng: Xuất Danh bạ toàn Quỹ (13 cán bộ) và Sơ yếu lý lịch trích ngang cá nhân 2C/TCTD.
+   - Xuất file Excel (`.xlsx`) đa năng: Xuất Danh bạ toàn Quỹ và Sơ yếu lý lịch trích ngang cá nhân 2C/TCTD.
 8. **Cấu Hình Phân Hệ & Phân Quyền Truy Cập (`system_settings/module_hr`)**:
-   - `allowStaffViewDirectory`: Phân quyền xem danh bạ toàn Quỹ vs Chế độ bảo mật cá nhân (cán bộ thường chỉ xem hồ sơ của chính mình; Lãnh đạo xem toàn bộ 13 cán bộ).
-   - `transferMaxMonths` (36 tháng) & `transferWarningMonths` (6 tháng): Chu kỳ luân chuyển và cảnh báo theo chuẩn NHNN.
+   - `allowStaffViewDirectory`: Phân quyền xem danh bạ toàn Quỹ vs Chế độ bảo mật cá nhân (cán bộ thường chỉ xem hồ sơ của chính mình; Lãnh đạo xem toàn bộ cán bộ).
+   - `transferRules`: Danh mục quy tắc luân chuyển theo từng chức danh (gồm `positionId`, `positionName`, `requiresTransfer`, `maxMonths`, `warningMonths`).
    - `canStaffUploadTraining`: Quyền tự tải lên văn bằng chứng chỉ chuyên môn.
 
 ---

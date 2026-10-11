@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 import { 
-  BarChart3, 
   Users, 
   Award, 
   ShieldAlert, 
   Clock, 
   CheckCircle2, 
   Building2, 
-  PieChart 
+  PieChart,
+  GraduationCap
 } from 'lucide-react';
 import { calculatePositionTenure } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
@@ -19,6 +19,7 @@ import { formatDateVN } from '../../../lib/dateUtils';
 const EmployeeAnalyticsTab = ({
   employees = [],
   departments = [],
+  hrConfig = {},
   onSelectEmployeeForTransfer,
 }) => {
   // 1. Thống kê cơ bản
@@ -41,17 +42,49 @@ const EmployeeAnalyticsTab = ({
     });
   }, [employees, departments, totalEmployees]);
 
-  // 3. Phân tích danh sách cán bộ vị trí nhạy cảm cần luân chuyển
+  // Tra cứu quy tắc luân chuyển theo cấu hình
+  const getTransferRule = (posName) => {
+    if (!posName) return null;
+    const rules = hrConfig?.transferRules || [];
+    const directMatch = rules.find(
+      (r) => r.positionName?.trim().toLowerCase() === posName.trim().toLowerCase()
+    );
+    if (directMatch) return directMatch;
+
+    const posLower = posName.toLowerCase();
+    const partialMatch = rules.find(
+      (r) => posLower.includes(r.positionName?.toLowerCase()) || r.positionName?.toLowerCase().includes(posLower)
+    );
+    return partialMatch || null;
+  };
+
+  // 3. Phân tích danh sách cán bộ vị trí nhạy cảm cần luân chuyển (theo cấu hình động)
   const transferMonitoringList = useMemo(() => {
     const list = [];
+    const rules = hrConfig?.transferRules || [];
 
     employees.forEach((emp) => {
-      const p = (emp.position || '').toLowerCase();
-      const isSensitive =
-        p.includes('tín dụng') ||
-        p.includes('kế toán') ||
-        p.includes('thủ quỹ') ||
-        p.includes('kiểm soát');
+      const posName = emp.position || '';
+      let isSensitive = false;
+      let maxMonths = 36;
+      let warningMonths = 6;
+
+      if (rules.length > 0) {
+        const rule = getTransferRule(posName);
+        if (rule && rule.requiresTransfer) {
+          isSensitive = true;
+          maxMonths = Number(rule.maxMonths) || 36;
+          warningMonths = Number(rule.warningMonths) || 6;
+        }
+      } else {
+        // Fallback mặc định theo Thông tư NHNN nếu chưa tải kịp cấu hình
+        const p = posName.toLowerCase();
+        isSensitive =
+          p.includes('tín dụng') ||
+          p.includes('kế toán') ||
+          p.includes('thủ quỹ') ||
+          p.includes('kiểm soát');
+      }
 
       if (!isSensitive) return;
 
@@ -71,8 +104,9 @@ const EmployeeAnalyticsTab = ({
         }
       }
 
-      const isDue = tenureMonths >= 36;
-      const isNear = tenureMonths >= 30 && tenureMonths < 36;
+      const warningThreshold = Math.max(0, maxMonths - warningMonths);
+      const isDue = tenureMonths >= maxMonths;
+      const isNear = tenureMonths >= warningThreshold && tenureMonths < maxMonths;
 
       list.push({
         id: emp.id,
@@ -84,15 +118,67 @@ const EmployeeAnalyticsTab = ({
         startDate: effectiveStart,
         tenureText,
         tenureMonths,
+        maxMonths,
+        warningMonths,
         isDue,
         isNear,
       });
     });
 
-    // Sắp xếp theo thâm niên giảm dần (nguy cơ cao nhất lên đầu)
-    list.sort((a, b) => b.tenureMonths - a.tenureMonths);
+    // Sắp xếp theo mức độ cấp thiết (Đến hạn trước, rồi đến thâm niên giảm dần)
+    list.sort((a, b) => {
+      if (a.isDue !== b.isDue) return a.isDue ? -1 : 1;
+      if (a.isNear !== b.isNear) return a.isNear ? -1 : 1;
+      return (b.tenureMonths - b.maxMonths) - (a.tenureMonths - a.maxMonths);
+    });
     return list;
-  }, [employees]);
+  }, [employees, hrConfig]);
+
+  // 4. Thống kê theo trình độ chuyên môn / học vấn
+  const educationStats = useMemo(() => {
+    const buckets = [
+      { key: 'THAC_SI', label: 'Thạc sĩ / Sau đại học', match: (edu) => edu.includes('thạc sĩ') || edu.includes('thạc sỹ') || edu.includes('cao học') || edu.includes('master') },
+      { key: 'DAI_HOC', label: 'Đại học / Cử nhân / Kỹ sư', match: (edu) => edu.includes('đại học') || edu.includes('cử nhân') || edu.includes('kỹ sư') },
+      { key: 'CAO_DANG', label: 'Cao đẳng', match: (edu) => edu.includes('cao đẳng') },
+      { key: 'TRUNG_CAP', label: 'Trung cấp', match: (edu) => edu.includes('trung cấp') },
+      { key: 'KHAC', label: 'Trình độ khác / Đang cập nhật', match: () => true },
+    ];
+
+    const counts = {
+      THAC_SI: 0,
+      DAI_HOC: 0,
+      CAO_DANG: 0,
+      TRUNG_CAP: 0,
+      KHAC: 0,
+    };
+
+    employees.forEach((emp) => {
+      const edu = (emp.education || '').toLowerCase().trim();
+      if (!edu) {
+        counts.KHAC++;
+        return;
+      }
+      for (const b of buckets) {
+        if (b.key === 'KHAC') {
+          counts.KHAC++;
+          break;
+        }
+        if (b.match(edu)) {
+          counts[b.key]++;
+          break;
+        }
+      }
+    });
+
+    return buckets
+      .map((b) => ({
+        key: b.key,
+        label: b.label,
+        count: counts[b.key],
+        percent: totalEmployees ? Math.round((counts[b.key] / totalEmployees) * 100) : 0,
+      }))
+      .filter((b) => b.count > 0 || b.key === 'DAI_HOC' || b.key === 'THAC_SI');
+  }, [employees, totalEmployees]);
 
   const dueCount = transferMonitoringList.filter((i) => i.isDue).length;
   const nearCount = transferMonitoringList.filter((i) => i.isNear).length;
@@ -134,7 +220,7 @@ const EmployeeAnalyticsTab = ({
 
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold uppercase">Hạn luân chuyển NHNN</span>
+            <span className="text-[11px] font-bold uppercase">Hạn luân chuyển</span>
             <ShieldAlert className="w-4 h-4 text-rose-600" />
           </div>
           <div className="text-2xl font-black text-rose-700">{dueCount}</div>
@@ -150,10 +236,10 @@ const EmployeeAnalyticsTab = ({
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4 text-emerald-700" />
-              <span>Bảng Giám Sát Luân Chuyển Định Kỳ Toàn Quỹ (NHNN)</span>
+              <span>Bảng Giám Sát Luân Chuyển Định Kỳ Toàn Quỹ</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Áp dụng cho các vị trí nhạy cảm (CBTD, Kế toán, Thủ quỹ, BKS) theo chu kỳ 36 tháng
+              Theo dõi thâm niên các vị trí theo danh mục chu kỳ luân chuyển đã thiết lập trong Cấu hình hệ thống & quy định NHNN
             </p>
           </div>
 
@@ -167,67 +253,107 @@ const EmployeeAnalyticsTab = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
-                <th className="py-2.5 px-3 text-center w-12">STT</th>
-                <th className="py-2.5 px-3">Họ và tên</th>
-                <th className="py-2.5 px-3">Chức vụ & Phòng ban</th>
-                <th className="py-2.5 px-3">Ngày bắt đầu</th>
-                <th className="py-2.5 px-3">Thâm niên chức vụ</th>
-                <th className="py-2.5 px-3 text-right">Trạng thái theo dõi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {transferMonitoringList.map((row, idx) => (
-                <tr 
-                  key={row.id}
-                  onClick={() => onSelectEmployeeForTransfer?.(row.id)}
-                  className="hover:bg-slate-50/80 transition-colors cursor-pointer"
-                >
-                  <td className="py-2.5 px-3 text-center font-bold text-slate-500 tabular-nums">
-                    {idx + 1}
-                  </td>
-                  <td className="py-2.5 px-3 font-bold text-slate-900">
-                    {row.name}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600">
-                    <span className="font-bold text-slate-800">{row.position}</span>
-                    <span className="text-[11px] text-slate-400 block">{row.department}</span>
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600 font-medium">
-                    {formatDateVN(row.startDate)}
-                  </td>
-                  <td className="py-2.5 px-3 font-bold text-slate-800">
-                    {row.tenureText}
-                  </td>
-                  <td className="py-2.5 px-3 text-right">
-                    {row.isDue ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
-                        <ShieldAlert className="w-3.5 h-3.5" />
-                        Đến hạn luân chuyển
-                      </span>
-                    ) : row.isNear ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                        <Clock className="w-3.5 h-3.5" />
-                        Sắp đến hạn (&lt; 6 tháng)
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Trong hạn an toàn
-                      </span>
-                    )}
-                  </td>
+        {transferMonitoringList.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 text-xs">
+            Hiện không có cán bộ nào thuộc vị trí luân chuyển hoặc toàn bộ nhân sự đang trong hạn an toàn.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
+                  <th className="py-2.5 px-3 text-center w-12">STT</th>
+                  <th className="py-2.5 px-3">Họ và tên</th>
+                  <th className="py-2.5 px-3">Chức vụ & Phòng ban</th>
+                  <th className="py-2.5 px-3">Ngày bắt đầu</th>
+                  <th className="py-2.5 px-3">Thâm niên chức vụ</th>
+                  <th className="py-2.5 px-3">Chu kỳ quy định</th>
+                  <th className="py-2.5 px-3 text-right">Trạng thái theo dõi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {transferMonitoringList.map((row, idx) => (
+                  <tr 
+                    key={row.id}
+                    onClick={() => onSelectEmployeeForTransfer?.(row.id)}
+                    className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                  >
+                    <td className="py-2.5 px-3 text-center font-bold text-slate-500 tabular-nums">
+                      {idx + 1}
+                    </td>
+                    <td className="py-2.5 px-3 font-bold text-slate-900">
+                      {row.name}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-600">
+                      <span className="font-bold text-slate-800">{row.position}</span>
+                      <span className="text-[11px] text-slate-400 block">{row.department}</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-600 font-medium">
+                      {formatDateVN(row.startDate)}
+                    </td>
+                    <td className="py-2.5 px-3 font-bold text-slate-800">
+                      {row.tenureText}
+                    </td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-700">
+                      {row.maxMonths} tháng
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      {row.isDue ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                          <ShieldAlert className="w-3.5 h-3.5" />
+                          Đến hạn luân chuyển
+                        </span>
+                      ) : row.isNear ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                          <Clock className="w-3.5 h-3.5" />
+                          Sắp đến hạn (&lt; {row.warningMonths} tháng)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Trong hạn an toàn
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Cơ Cấu Trình Độ Chuyên Môn / Học Vấn */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+            <GraduationCap className="w-4 h-4 text-emerald-700" />
+            <span>Cơ Cấu Trình Độ Chuyên Môn & Học Vấn Toàn Quỹ</span>
+          </h3>
+          <span className="text-[11px] text-slate-500 font-medium">
+            Tiêu chuẩn chức danh theo quy định NHNN
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {educationStats.map((item) => (
+            <div key={item.key} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-800">{item.label}</span>
+                <span className="font-black text-emerald-800">{item.count} người ({item.percent}%)</span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-emerald-700 h-1.5 rounded-full"
+                  style={{ width: `${item.percent}%` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* 3. Phân Bổ Nhân Sự Theo Phòng Ban */}
+      {/* 4. Phân Bổ Nhân Sự Theo Phòng Ban */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
         <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-100">
           <Building2 className="w-4 h-4 text-emerald-700" />

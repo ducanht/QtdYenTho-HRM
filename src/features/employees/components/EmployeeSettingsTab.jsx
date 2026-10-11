@@ -36,6 +36,7 @@ const EmployeeSettingsTab = ({
   const [canStaffUploadTraining, setCanStaffUploadTraining] = useState(true);
   const [transferMaxMonths, setTransferMaxMonths] = useState(36);
   const [transferWarningMonths, setTransferWarningMonths] = useState(6);
+  const [transferRules, setTransferRules] = useState([]);
 
   useEffect(() => {
     if (hrConfig) {
@@ -51,8 +52,86 @@ const EmployeeSettingsTab = ({
       if (hrConfig.transferWarningMonths !== undefined) {
         setTransferWarningMonths(Number(hrConfig.transferWarningMonths) || 6);
       }
+      if (Array.isArray(hrConfig.transferRules)) {
+        setTransferRules(hrConfig.transferRules);
+      } else {
+        // Khởi tạo quy tắc mặc định nếu chưa có
+        const defaultRules = positions.map((pos) => {
+          const p = (pos.name || '').toLowerCase();
+          const defaultRequires = (
+            p.includes('tín dụng') ||
+            p.includes('kế toán') ||
+            p.includes('thủ quỹ') ||
+            p.includes('kiểm soát')
+          );
+          return {
+            positionName: pos.name,
+            requiresTransfer: defaultRequires,
+            maxMonths: 36,
+            warningMonths: 6,
+          };
+        });
+        setTransferRules(defaultRules);
+      }
+    } else {
+      // Fallback nếu hrConfig null
+      const defaultRules = positions.map((pos) => {
+        const p = (pos.name || '').toLowerCase();
+        const defaultRequires = (
+          p.includes('tín dụng') ||
+          p.includes('kế toán') ||
+          p.includes('thủ quỹ') ||
+          p.includes('kiểm soát')
+        );
+        return {
+          positionName: pos.name,
+          requiresTransfer: defaultRequires,
+          maxMonths: 36,
+          warningMonths: 6,
+        };
+      });
+      setTransferRules(defaultRules);
     }
-  }, [hrConfig]);
+  }, [hrConfig, positions]);
+
+  // Cập nhật quy tắc cho một chức vụ
+  const handleUpdateRule = (posName, field, value) => {
+    setTransferRules((prev) => {
+      const idx = prev.findIndex((r) => r.positionName === posName);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], [field]: value };
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          positionName: posName,
+          requiresTransfer: field === 'requiresTransfer' ? value : false,
+          maxMonths: field === 'maxMonths' ? value : transferMaxMonths || 36,
+          warningMonths: field === 'warningMonths' ? value : transferWarningMonths || 6,
+        },
+      ];
+    });
+  };
+
+  const getRuleForPos = (posName) => {
+    const found = transferRules.find((r) => r.positionName === posName);
+    if (found) return found;
+    const p = (posName || '').toLowerCase();
+    const defaultRequires = (
+      p.includes('tín dụng') ||
+      p.includes('kế toán') ||
+      p.includes('thủ quỹ') ||
+      p.includes('kiểm soát')
+    );
+    return {
+      positionName: posName,
+      requiresTransfer: defaultRequires,
+      maxMonths: transferMaxMonths || 36,
+      warningMonths: transferWarningMonths || 6,
+    };
+  };
 
   const handleSaveConfig = async (e) => {
     e?.preventDefault?.();
@@ -68,8 +147,9 @@ const EmployeeSettingsTab = ({
         canStaffUploadTraining,
         transferMaxMonths: Number(transferMaxMonths) || 36,
         transferWarningMonths: Number(transferWarningMonths) || 6,
+        transferRules,
       });
-      toast?.showSuccess?.('Đã lưu cấu hình và phân quyền phân hệ thành công!');
+      toast?.showSuccess?.('Đã lưu cấu hình và phân quyền luân chuyển thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi lưu cấu hình');
     } finally {
@@ -150,17 +230,17 @@ const EmployeeSettingsTab = ({
             </div>
           </div>
 
-          {/* Cấu hình 2: Quyền quản lý chứng chỉ & Tham số luân chuyển */}
+          {/* Cấu hình 2: Quyền quản lý chứng chỉ & Tham số luân chuyển chung */}
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
             <div className="flex items-center gap-2">
               <Sliders className="w-4 h-4 text-emerald-700" />
-              <h4 className="font-bold text-slate-900">Tham Số Giám Sát Luân Chuyển (NHNN)</h4>
+              <h4 className="font-bold text-slate-900">Tham Số Giám Sát Luân Chuyển Mặc Định</h4>
             </div>
 
             <div className="space-y-3">
               <div>
                 <label className="block text-slate-700 font-bold mb-1">
-                  Chu kỳ luân chuyển tối đa (tháng):
+                  Chu kỳ luân chuyển mặc định (tháng):
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -172,13 +252,13 @@ const EmployeeSettingsTab = ({
                     disabled={!canManage}
                     className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
                   />
-                  <span className="text-slate-500 text-[11px]">tháng (Mặc định: 36 tháng / 3 năm)</span>
+                  <span className="text-slate-500 text-[11px]">tháng (Áp dụng làm giá trị chuẩn ban đầu)</span>
                 </div>
               </div>
 
               <div>
                 <label className="block text-slate-700 font-bold mb-1">
-                  Thời gian cảnh báo trước hạn (tháng):
+                  Thời gian cảnh báo trước hạn mặc định (tháng):
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -190,7 +270,7 @@ const EmployeeSettingsTab = ({
                     disabled={!canManage}
                     className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
                   />
-                  <span className="text-slate-500 text-[11px]">tháng (Mặc định: 6 tháng trước hạn)</span>
+                  <span className="text-slate-500 text-[11px]">tháng trước khi đến hạn luân chuyển</span>
                 </div>
               </div>
 
@@ -234,18 +314,24 @@ const EmployeeSettingsTab = ({
         </div>
       </div>
 
-      {/* 3. Danh Mục 11 Chức Vụ Chuẩn & Vị Trí Nhạy Cảm NHNN */}
+      {/* 3. Cấu Hình Vị Trí Phải Luân Chuyển & Thời Hạn Cụ Thể (Linh Hoạt Không Gắn Cứng) */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
               <Briefcase className="w-4 h-4 text-emerald-700" />
-              <span>Danh Mục Chức Vụ &amp; Vị Trí Công Tác Chuẩn ({positions.length})</span>
+              <span>Cấu Hình Vị Trí Bắt Buộc Luân Chuyển &amp; Thời Hạn Từng Chức Danh ({positions.length})</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Bao gồm chức danh Kiểm soát nội bộ (Kiểm soát viên chuyên trách) theo quy định của NHNN
+              Lựa chọn chức danh nào phải luân chuyển và thiết lập chu kỳ tháng riêng biệt, không gán cứng cố định
             </p>
           </div>
+
+          {canManage && (
+            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+              Có quyền điều chỉnh chu kỳ
+            </span>
+          )}
         </div>
 
         <div className="overflow-x-auto">
@@ -254,21 +340,21 @@ const EmployeeSettingsTab = ({
               <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
                 <th className="py-2.5 px-3 text-center w-12">STT</th>
                 <th className="py-2.5 px-3">Tên chức vụ chính quyền</th>
-                <th className="py-2.5 px-3">Phòng ban trực thuộc</th>
-                <th className="py-2.5 px-3 text-right">Phân loại theo dõi</th>
+                <th className="py-2.5 px-3">Phòng ban</th>
+                <th className="py-2.5 px-3 text-center">Bắt buộc luân chuyển</th>
+                <th className="py-2.5 px-3 text-center">Thời hạn (tháng)</th>
+                <th className="py-2.5 px-3 text-center">Cảnh báo trước (tháng)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {positions.map((pos, idx) => {
-                const p = (pos.name || '').toLowerCase();
-                const isSensitive =
-                  p.includes('tín dụng') ||
-                  p.includes('kế toán') ||
-                  p.includes('thủ quỹ') ||
-                  p.includes('kiểm soát');
+                const rule = getRuleForPos(pos.name);
+                const requiresTransfer = Boolean(rule.requiresTransfer);
+                const maxM = Number(rule.maxMonths) || 36;
+                const warnM = Number(rule.warningMonths) || 6;
 
                 return (
-                  <tr key={pos.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={pos.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-2.5 px-3 text-center font-bold text-slate-500 tabular-nums">
                       {idx + 1}
                     </td>
@@ -278,17 +364,54 @@ const EmployeeSettingsTab = ({
                     <td className="py-2.5 px-3 text-slate-600">
                       {pos.department}
                     </td>
-                    <td className="py-2.5 px-3 text-right">
-                      {isSensitive ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                          <ShieldAlert className="w-3.5 h-3.5" />
-                          Luân chuyển 3 năm
+                    <td className="py-2.5 px-3 text-center">
+                      <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={requiresTransfer}
+                          onChange={(e) => handleUpdateRule(pos.name, 'requiresTransfer', e.target.checked)}
+                          disabled={!canManage}
+                          className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+                        />
+                        <span className={`text-[11px] font-bold ${requiresTransfer ? 'text-amber-800' : 'text-slate-500'}`}>
+                          {requiresTransfer ? 'Bắt buộc' : 'Theo nhiệm kỳ'}
                         </span>
+                      </label>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      {requiresTransfer ? (
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            min="6"
+                            max="60"
+                            value={maxM}
+                            onChange={(e) => handleUpdateRule(pos.name, 'maxMonths', Number(e.target.value))}
+                            disabled={!canManage}
+                            className="w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg text-center font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-1 focus:ring-emerald-700"
+                          />
+                          <span className="text-[11px] text-slate-500">tháng</span>
+                        </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-                          Theo nhiệm kỳ / HĐLĐ
-                        </span>
+                        <span className="text-slate-400 text-[11px]">—</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      {requiresTransfer ? (
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            min="1"
+                            max="12"
+                            value={warnM}
+                            onChange={(e) => handleUpdateRule(pos.name, 'warningMonths', Number(e.target.value))}
+                            disabled={!canManage}
+                            className="w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg text-center font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-1 focus:ring-emerald-700"
+                          />
+                          <span className="text-[11px] text-slate-500">tháng</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">—</span>
                       )}
                     </td>
                   </tr>

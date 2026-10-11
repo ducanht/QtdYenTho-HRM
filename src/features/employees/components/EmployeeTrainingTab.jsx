@@ -10,7 +10,8 @@ import {
   Trash2, 
   CheckCircle2, 
   AlertTriangle, 
-  Clock 
+  Clock,
+  FileCheck
 } from 'lucide-react';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { deleteEmployeeTraining } from '../../../lib/services';
@@ -44,14 +45,14 @@ const EmployeeTrainingTab = ({
   );
 
   const handleDelete = async (trainingId, name) => {
-    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa chứng chỉ "${name || trainingId}" không?`)) {
+    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa khóa đào tạo / chứng chỉ "${name || trainingId}" không?`)) {
       return;
     }
     try {
       await deleteEmployeeTraining(trainingId);
-      toast?.showSuccess?.('Đã xóa chứng chỉ đào tạo thành công');
+      toast?.showSuccess?.('Đã xóa thông tin đào tạo thành công');
     } catch (err) {
-      toast?.showError?.(err.message || 'Lỗi khi xóa chứng chỉ');
+      toast?.showError?.(err.message || 'Lỗi khi xóa thông tin đào tạo');
     }
   };
 
@@ -90,7 +91,7 @@ const EmployeeTrainingTab = ({
               </span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Tổng số văn bằng, chứng chỉ đã ghi nhận: <span className="font-bold text-slate-800">{empTrainings.length}</span>
+              Tổng số khóa đào tạo, bồi dưỡng đã tham gia: <span className="font-bold text-slate-800">{empTrainings.length}</span>
             </p>
           </div>
 
@@ -101,7 +102,7 @@ const EmployeeTrainingTab = ({
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Thêm chứng chỉ</span>
+              <span>Ghi nhận khóa học</span>
             </button>
           )}
         </div>
@@ -109,7 +110,7 @@ const EmployeeTrainingTab = ({
         {/* Khung Thông Tin Tiêu Chuẩn Chức Danh NHNN */}
         <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span>
-            Hệ thống quản lý chứng chỉ theo đúng tiêu chuẩn chức danh của Thống đốc NHNN quy định đối với Quỹ tín dụng nhân dân.
+            Hệ thống theo dõi bồi dưỡng nghiệp vụ & chứng chỉ đáp ứng chuẩn chức danh của Thống đốc Ngân hàng Nhà nước.
           </span>
           <span className="font-bold text-emerald-800 shrink-0">
             {emp.education || 'Đại học chuyên ngành'}
@@ -122,7 +123,7 @@ const EmployeeTrainingTab = ({
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
             <Award className="w-4 h-4 text-emerald-700" />
-            <span>Danh Mục Văn Bằng & Chứng Chỉ Đã Cấp ({empTrainings.length})</span>
+            <span>Danh Mục Khóa Đào Tạo & Chứng Chỉ ({empTrainings.length})</span>
           </h3>
         </div>
 
@@ -141,54 +142,100 @@ const EmployeeTrainingTab = ({
                   key={cert.id}
                   className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-xs transition-all text-xs space-y-3 bg-white flex flex-col justify-between"
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <div className="flex items-start justify-between gap-2">
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border flex items-center gap-1 ${status.color}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        <span>{status.label}</span>
-                      </span>
+                      {cert.hasCertificate !== false ? (
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border flex items-center gap-1 ${status.color}`}>
+                          <StatusIcon className="w-3 h-3" />
+                          <span>{status.label}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md border bg-slate-100 text-slate-700 border-slate-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Hoàn thành tập huấn</span>
+                        </span>
+                      )}
 
                       {canManage && (
                         <button
                           type="button"
                           onClick={() => handleDelete(cert.id, cert.courseName)}
                           className="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
-                          title="Xóa chứng chỉ này"
+                          title="Xóa khóa đào tạo này"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
 
-                    <h4 className="font-bold text-slate-900 text-sm leading-snug">
-                      {cert.courseName}
-                    </h4>
-
-                    <div className="space-y-1 text-slate-500 text-[11px]">
-                      <p className="flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="font-medium text-slate-700">{cert.institution}</span>
-                      </p>
-                      {cert.certificateNumber && (
-                        <p className="flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>Số hiệu: {cert.certificateNumber}</span>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm leading-snug">
+                        {cert.courseName}
+                      </h4>
+                      {cert.certificateName && cert.certificateName !== cert.courseName && (
+                        <p className="text-[11px] font-semibold text-emerald-800 mt-0.5">
+                          Văn bằng: {cert.certificateName}
                         </p>
                       )}
-                      <p className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>Cấp ngày: {formatDateVN(cert.issueDate)}</span>
-                        {cert.expireDate && (
-                          <span> • Hết hạn: {formatDateVN(cert.expireDate)}</span>
-                        )}
-                      </p>
                     </div>
+
+                    <div className="space-y-1.5 text-slate-600 text-[11px] bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                      <p className="flex items-start gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <span><strong className="text-slate-700">Đơn vị tổ chức:</strong> {cert.organizer || cert.institution || '—'}</span>
+                      </p>
+
+                      {cert.decisionNo && (
+                        <p className="flex items-start gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <span><strong className="text-slate-700">Quyết định/Kế hoạch:</strong> {cert.decisionNo}</span>
+                        </p>
+                      )}
+
+                      {(cert.startDate || cert.endDate || cert.location) && (
+                        <p className="flex items-start gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <span>
+                            <strong className="text-slate-700">Thời gian:</strong>{' '}
+                            {cert.startDate ? formatDateVN(cert.startDate) : '—'}
+                            {cert.endDate ? ` đến ${formatDateVN(cert.endDate)}` : ''}
+                            {cert.location ? ` • ${cert.location}` : ''}
+                          </span>
+                        </p>
+                      )}
+
+                      {cert.content && (
+                        <p className="text-slate-500 italic pt-1 border-t border-slate-200/60 leading-relaxed">
+                          "{cert.content}"
+                        </p>
+                      )}
+                    </div>
+
+                    {cert.hasCertificate !== false && (
+                      <div className="space-y-1 text-slate-500 text-[11px] px-1">
+                        {(cert.certificateNumber || cert.certificateNo) && (
+                          <p className="flex items-center gap-1.5">
+                            <FileCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                            <span>Số hiệu: <strong className="text-slate-800">{cert.certificateNumber || cert.certificateNo}</strong></span>
+                          </p>
+                        )}
+                        {cert.issueDate && (
+                          <p className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>Cấp ngày: {formatDateVN(cert.issueDate)}</span>
+                            {cert.expireDate && (
+                              <span> • Hết hạn: {formatDateVN(cert.expireDate)}</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Ảnh đính kèm & Chi tiết */}
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">
-                      Xếp loại: <span className="text-slate-700">{cert.grade || 'Đạt'}</span>
+                      Xếp loại: <span className="text-slate-700">{cert.grade || 'Đạt / Hoàn thành'}</span>
                     </span>
 
                     {cert.certificateImage && (

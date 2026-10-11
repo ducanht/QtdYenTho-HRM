@@ -17,21 +17,34 @@ const EmployeeMasterSidebar = ({
   selectedDept,
   setSelectedDept,
   departments = [],
+  hrConfig = null,
   onOpenAddModal,
   canManage = false,
 }) => {
   const toast = useToast();
   const [exportingExcel, setExportingExcel] = useState(false);
 
-  // Nhận diện vị trí nhạy cảm cần luân chuyển định kỳ theo quy định NHNN
-  const isSensitivePosition = (pos = '') => {
+  // Tra cứu quy tắc luân chuyển theo cấu hình phân hệ
+  const getTransferRule = (pos = '') => {
+    if (!pos) return { requiresTransfer: false, maxMonths: 36, warningMonths: 6 };
+    const rules = hrConfig?.transferRules || [];
+    const found = rules.find((r) => r.positionName === pos);
+    if (found) return found;
+
+    // Fallback nếu chưa lưu cấu hình riêng
     const p = pos.toLowerCase();
-    return (
+    const defaultRequires = (
       p.includes('tín dụng') ||
       p.includes('kế toán') ||
       p.includes('thủ quỹ') ||
       p.includes('kiểm soát')
     );
+    return {
+      positionName: pos,
+      requiresTransfer: defaultRequires,
+      maxMonths: hrConfig?.transferMaxMonths || 36,
+      warningMonths: hrConfig?.transferWarningMonths || 6,
+    };
   };
 
   // Tính số tháng công tác tại vị trí hiện tại
@@ -174,10 +187,26 @@ const EmployeeMasterSidebar = ({
             const isSelected = selectedEmployeeId === emp.id;
             const effectiveStart = emp.positionStartDate || emp.joinDate;
             const tenureText = calculatePositionTenure(effectiveStart);
-            const tenureMonths = getTenureMonths(effectiveStart);
-            const isSensitive = isSensitivePosition(emp.position);
-            const isDueTransfer = isSensitive && tenureMonths >= 36;
-            const isNearTransfer = isSensitive && tenureMonths >= 30 && tenureMonths < 36;
+
+            let tenureMonths = 0;
+            if (effectiveStart) {
+              try {
+                const start = new Date(effectiveStart);
+                const now = new Date();
+                if (!isNaN(start.getTime())) {
+                  tenureMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+                }
+              } catch {
+                tenureMonths = 0;
+              }
+            }
+
+            const rule = getTransferRule(emp.position);
+            const requiresTransfer = Boolean(rule?.requiresTransfer);
+            const maxM = Number(rule?.maxMonths) || 36;
+            const warnM = Number(rule?.warningMonths) || 6;
+            const isDueTransfer = requiresTransfer && tenureMonths >= maxM;
+            const isNearTransfer = requiresTransfer && tenureMonths >= (maxM - warnM) && tenureMonths < maxM;
 
             return (
               <div

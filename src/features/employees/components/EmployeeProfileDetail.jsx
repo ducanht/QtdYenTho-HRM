@@ -8,14 +8,18 @@ import {
   Award, 
   GraduationCap,
   FileSpreadsheet,
-  FileText
+  FileText,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { calculatePositionTenure } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { compressImage } from '../../../lib/imageUtils';
-import { updateEmployeeProfile } from '../../../lib/services';
+import { updateEmployeeProfile, deleteEmployeeProfile } from '../../../lib/services';
 import { exportEmployeeProfileToDocx, exportEmployeeProfileToExcel } from '../../../lib/exportUtils';
 import { useToast } from '../../../context/ToastContext';
+import Modal from '../../../components/common/Modal';
+import Button from '../../../components/common/Button';
 
 /**
  * EmployeeProfileDetail: Cột Phải cho Tab PROFILE
@@ -26,6 +30,7 @@ const EmployeeProfileDetail = ({
   emp,
   onOpenEdit,
   onOpenPrint,
+  onDeleteSuccess,
   workHistory = [],
   trainings = [],
   canManage = false,
@@ -34,6 +39,8 @@ const EmployeeProfileDetail = ({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [exportingWord, setExportingWord] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!emp) {
     return (
@@ -88,6 +95,21 @@ const EmployeeProfileDetail = ({
       toast?.showError?.(err.message || 'Lỗi khi xuất file Excel');
     } finally {
       setExportingExcel(false);
+    }
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!emp?.id) return;
+    try {
+      setDeleting(true);
+      await deleteEmployeeProfile(emp.id, true);
+      toast?.showSuccess?.(`Đã xóa hồ sơ cán bộ ${emp.name} thành công.`);
+      setIsDeleteModalOpen(false);
+      onDeleteSuccess?.(emp.id);
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi xóa hồ sơ cán bộ');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -183,14 +205,26 @@ const EmployeeProfileDetail = ({
             </button>
 
             {canManage && (
-              <button
-                type="button"
-                onClick={() => onOpenEdit(emp)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Chỉnh sửa hồ sơ</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => onOpenEdit(emp)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Chỉnh sửa hồ sơ</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  title="Xóa hồ sơ cán bộ khỏi hệ thống"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  <span>Xóa cán bộ</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -346,6 +380,51 @@ const EmployeeProfileDetail = ({
           </div>
         </div>
       </div>
+
+      {/* Modal Xác Nhận Xóa Cán Bộ */}
+      {isDeleteModalOpen && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => !deleting && setIsDeleteModalOpen(false)}
+          title="Xác Nhận Xóa Hồ Sơ Cán Bộ"
+          subtitle="Quỹ Tín Dụng Nhân Dân Yên Thọ • Quản lý nhân sự"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-rose-900">Cảnh báo xóa vĩnh viễn</h4>
+                <p className="text-rose-700 leading-relaxed">
+                  Đồng chí có chắc chắn muốn xóa hồ sơ cán bộ <strong className="font-bold text-rose-950">{emp.name}</strong> ({emp.position || 'Cán bộ'} - {emp.department}) khỏi hệ thống không?
+                </p>
+                <p className="text-slate-600 text-[11px] pt-1">
+                  Thao tác này sẽ xóa hồ sơ danh bạ và tài khoản đăng nhập tương ứng. Dữ liệu đánh giá tín nhiệm lịch sử trước đây vẫn được lưu trữ đối soát theo quy định.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={deleting}
+              >
+                Hủy bỏ
+              </Button>
+              <button
+                type="button"
+                onClick={handleDeleteEmployee}
+                disabled={deleting}
+                className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                {deleting ? 'Đang xóa...' : 'Xác nhận xóa'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -205,11 +205,24 @@ export const DEFAULT_MODULE_TRUST_SETTINGS = {
 
 // Phân hệ Nhân Sự & Luân Chuyển (MODULE_HR)
 export const DEFAULT_MODULE_HR_SETTINGS = {
-  transferCycleMonths: 36,        // Chu kỳ tối đa luân chuyển cán bộ tín dụng
-  warningDaysBefore: 90,          // Cảnh báo trước 90 ngày
+  allowStaffViewDirectory: true,  // Cho phép CBNV xem danh bạ toàn Quỹ
+  canStaffUploadTraining: true,   // Cho phép CBNV tự gửi chứng chỉ đào tạo
+  transferMaxMonths: 36,          // Chu kỳ luân chuyển chung (36 tháng)
+  transferWarningMonths: 6,       // Cảnh báo trước hạn luân chuyển (6 tháng)
+  transferCycleMonths: 36,        // Legacy alias
+  warningDaysBefore: 90,          // Legacy alias
   requireDebtHandover: true,      // Yêu cầu biên bản bàn giao nợ trước khi chuyển địa bàn
-  codePrefix: 'CB',               // Tiền tố mã nhân viên
+  codePrefix: 'CB',               // Tiền tố mã nhân viên ngầm định
   autoGenerateCode: true,
+  // Cấu hình linh hoạt: Vị trí nào phải luân chuyển và thời hạn cụ thể từng vị trí
+  transferRules: [
+    { positionName: 'Cán bộ tín dụng', requiresTransfer: true, maxMonths: 36, warningMonths: 6 },
+    { positionName: 'Kế toán trưởng', requiresTransfer: true, maxMonths: 36, warningMonths: 6 },
+    { positionName: 'Cán bộ kế toán', requiresTransfer: true, maxMonths: 36, warningMonths: 6 },
+    { positionName: 'Thủ quỹ', requiresTransfer: true, maxMonths: 36, warningMonths: 6 },
+    { positionName: 'Trưởng Ban Kiểm soát', requiresTransfer: true, maxMonths: 36, warningMonths: 6 },
+    { positionName: 'Kiểm soát nội bộ (Kiểm soát viên chuyên trách)', requiresTransfer: true, maxMonths: 36, warningMonths: 6 },
+  ],
   transferTypes: [
     { code: 'LUAN_CHUYEN_DINH_KY', label: 'Luân chuyển định kỳ địa bàn tín dụng' },
     { code: 'BO_NHIEM', label: 'Bổ nhiệm chức danh quản lý' },

@@ -1,16 +1,12 @@
 import React, { useMemo } from 'react';
 import { 
   ArrowRightLeft, 
-  PlusCircle, 
   FileText, 
-  Calendar, 
   MapPin, 
-  User, 
   ShieldAlert, 
   CheckCircle2, 
   Clock, 
-  Trash2, 
-  Building2 
+  Trash2 
 } from 'lucide-react';
 import { calculatePositionTenure } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
@@ -24,22 +20,37 @@ import { useToast } from '../../../context/ToastContext';
 const EmployeeTransferHistory = ({
   emp,
   workHistory = [],
-  onOpenCreateTransfer,
+  hrConfig = null,
   canManage = false,
 }) => {
   const toast = useToast();
 
-  // Nhận diện vị trí nhạy cảm cần luân chuyển
-  const isSensitive = useMemo(() => {
-    if (!emp) return false;
-    const p = (emp.position || '').toLowerCase();
-    return (
+  // Nhận diện quy tắc luân chuyển theo chức vụ cấu hình
+  const positionRule = useMemo(() => {
+    if (!emp?.position) return null;
+    const rules = hrConfig?.transferRules || [];
+    const found = rules.find((r) => r.positionName === emp.position);
+    if (found) return found;
+
+    // Fallback logic ban đầu nếu chưa có cấu hình riêng
+    const p = emp.position.toLowerCase();
+    const defaultRequires = (
       p.includes('tín dụng') ||
       p.includes('kế toán') ||
       p.includes('thủ quỹ') ||
       p.includes('kiểm soát')
     );
-  }, [emp?.position]);
+    return {
+      positionName: emp.position,
+      requiresTransfer: defaultRequires,
+      maxMonths: hrConfig?.transferMaxMonths || 36,
+      warningMonths: hrConfig?.transferWarningMonths || 6,
+    };
+  }, [emp?.position, hrConfig]);
+
+  const requiresTransfer = Boolean(positionRule?.requiresTransfer);
+  const maxMonths = Number(positionRule?.maxMonths) || 36;
+  const warningMonths = Number(positionRule?.warningMonths) || 6;
 
   // Tính số tháng công tác tại vị trí hiện tại
   const effectiveStart = emp ? (emp.positionStartDate || emp.joinDate) : null;
@@ -57,11 +68,9 @@ const EmployeeTransferHistory = ({
     }
   }, [effectiveStart]);
 
-  const maxMonths = 36; // Chu kỳ luân chuyển tối đa theo quy định (36 tháng)
   const percent = Math.min(100, Math.round((tenureMonths / maxMonths) * 100));
-
-  const isDue = isSensitive && tenureMonths >= 36;
-  const isNear = isSensitive && tenureMonths >= 30 && tenureMonths < 36;
+  const isDue = requiresTransfer && tenureMonths >= maxMonths;
+  const isNear = requiresTransfer && tenureMonths >= (maxMonths - warningMonths) && tenureMonths < maxMonths;
 
   // Lọc lịch sử luân chuyển của cán bộ đang chọn
   const empHistory = useMemo(() => {
@@ -81,12 +90,12 @@ const EmployeeTransferHistory = ({
 
   // Xóa bản ghi lịch sử luân chuyển
   const handleDelete = async (recordId, decNo) => {
-    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa quyết định luân chuyển số "${decNo || recordId}" không?`)) {
+    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa bản ghi luân chuyển "${decNo || recordId}" không?`)) {
       return;
     }
     try {
       await deleteWorkHistory(recordId);
-      toast?.showSuccess?.('Đã xóa bản ghi quyết định luân chuyển thành công');
+      toast?.showSuccess?.('Đã xóa bản ghi luân chuyển thành công');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi xóa quyết định');
     }
@@ -110,20 +119,23 @@ const EmployeeTransferHistory = ({
             </p>
           </div>
 
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => onOpenCreateTransfer(emp)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Lập quyết định luân chuyển</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {requiresTransfer ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Vị trí luân chuyển định kỳ ({maxMonths} tháng)</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 text-xs font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
+                <span>Theo nhiệm kỳ / HĐLĐ</span>
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Khung Tiến Độ Thời Gian Giữ Vị Trí Nhạy Cảm */}
-        {isSensitive ? (
+        {/* Khung Tiến Độ Thời Gian Giữ Vị Trí Theo Cấu Hình */}
+        {requiresTransfer ? (
           <div className={`p-4 rounded-xl border ${
             isDue 
               ? 'bg-rose-50/70 border-rose-200' 
@@ -140,12 +152,12 @@ const EmployeeTransferHistory = ({
                 ) : (
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 )}
-                <span>Chu kỳ luân chuyển theo quy định NHNN:</span>
+                <span>Thời gian công tác tại vị trí hiện tại:</span>
               </span>
               <span className={`font-black tabular-nums ${
                 isDue ? 'text-rose-700' : isNear ? 'text-amber-700' : 'text-slate-700'
               }`}>
-                {tenureText} / 3 năm (36 tháng)
+                {tenureText} / {maxMonths} tháng
               </span>
             </div>
 
@@ -163,21 +175,36 @@ const EmployeeTransferHistory = ({
               />
             </div>
 
-            <div className="mt-2 text-[11px] text-slate-600 flex items-center justify-between">
-              <span>Ngày bắt đầu: {formatDateVN(effectiveStart)}</span>
-              <span className="font-bold">
-                {isDue 
-                  ? 'Đã đến hạn luân chuyển bắt buộc (Đề nghị lập phương án điều động)' 
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2.5 text-[11px]">
+              <span className="text-slate-500">
+                Ngày bắt đầu giữ vị trí: <strong className="text-slate-700">{formatDateVN(effectiveStart)}</strong>
+              </span>
+              <span className={`font-bold ${
+                isDue 
+                  ? 'text-rose-700' 
                   : isNear 
-                  ? 'Sắp đến hạn luân chuyển trong vòng 6 tháng tới' 
-                  : 'Thời hạn công tác trong ngưỡng an toàn'}
+                  ? 'text-amber-700' 
+                  : 'text-emerald-700'
+              }`}>
+                {isDue 
+                  ? `Đã vượt thời hạn luân chuyển (${tenureMonths - maxMonths} tháng)` 
+                  : isNear 
+                  ? `Sắp đến hạn luân chuyển (còn ${maxMonths - tenureMonths} tháng)` 
+                  : 'Trong thời hạn công tác an toàn'}
               </span>
             </div>
           </div>
         ) : (
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-            <span>Vị trí công tác hiện tại không thuộc nhóm bắt buộc luân chuyển theo chu kỳ 3 năm của NHNN.</span>
-            <span className="font-bold text-slate-800">Thâm niên: {tenureText}</span>
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 flex items-center gap-3 text-xs text-slate-600">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div>
+              <p className="font-bold text-slate-800">
+                Vị trí công tác hiện tại theo dõi theo nhiệm kỳ / HĐLĐ
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Chức danh này không thuộc diện bắt buộc luân chuyển định kỳ theo cấu hình hệ thống hiện tại của Quỹ.
+              </p>
+            </div>
           </div>
         )}
       </div>

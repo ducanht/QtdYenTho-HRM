@@ -198,23 +198,28 @@ export const createEmployeeProfile = async (employeeData) => {
 };
 
 /**
- * Xóa/Chuyển trạng thái thôi việc cho cán bộ nhân viên
+ * Xóa cán bộ nhân viên khỏi hệ thống (Hỗ trợ xóa tài liệu vĩnh viễn hoặc chuyển trạng thái thôi việc)
  */
-export const deleteEmployeeProfile = async (employeeId) => {
+export const deleteEmployeeProfile = async (employeeId, permanent = true) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
   if (!employeeId) throw new Error('Thiếu ID cán bộ cần xóa');
 
   try {
-    const payload = {
-      status: 'LEAVE',
-      updatedAt: new Date().toISOString(),
-      serverTime: serverTimestamp(),
-    };
-    await setDoc(doc(db, 'users', employeeId), payload, { merge: true });
-    await setDoc(doc(db, 'employees', employeeId), payload, { merge: true }).catch(() => {});
+    if (permanent) {
+      await deleteDoc(doc(db, 'employees', employeeId)).catch(() => {});
+      await deleteDoc(doc(db, 'users', employeeId)).catch(() => {});
+    } else {
+      const payload = {
+        status: 'LEAVE',
+        updatedAt: new Date().toISOString(),
+        serverTime: serverTimestamp(),
+      };
+      await setDoc(doc(db, 'users', employeeId), payload, { merge: true });
+      await setDoc(doc(db, 'employees', employeeId), payload, { merge: true }).catch(() => {});
+    }
     return { success: true, id: employeeId };
   } catch (err) {
-    console.error(`Lỗi chuyển trạng thái thôi việc [${employeeId}]:`, err);
+    console.error(`Lỗi xóa cán bộ [${employeeId}]:`, err);
     throw err;
   }
 };
@@ -1340,11 +1345,22 @@ export const saveEmployeeTraining = async (trainingData) => {
     ...trainingData,
     id: targetId,
     courseName: trainingData.courseName ? trainingData.courseName.trim() : '',
-    institution: trainingData.institution ? trainingData.institution.trim() : '',
-    certificateNo: trainingData.certificateNo ? trainingData.certificateNo.trim() : '',
+    organizer: trainingData.organizer ? trainingData.organizer.trim() : (trainingData.institution ? trainingData.institution.trim() : ''),
+    institution: trainingData.organizer ? trainingData.organizer.trim() : (trainingData.institution ? trainingData.institution.trim() : ''),
+    decisionNo: trainingData.decisionNo ? trainingData.decisionNo.trim() : '',
+    startDate: trainingData.startDate || '',
+    endDate: trainingData.endDate || '',
+    location: trainingData.location ? trainingData.location.trim() : '',
+    content: trainingData.content ? trainingData.content.trim() : '',
+    hasCertificate: trainingData.hasCertificate !== undefined ? Boolean(trainingData.hasCertificate) : true,
+    certificateName: trainingData.certificateName ? trainingData.certificateName.trim() : '',
+    certificateNumber: trainingData.certificateNumber ? trainingData.certificateNumber.trim() : (trainingData.certificateNo ? trainingData.certificateNo.trim() : ''),
+    certificateNo: trainingData.certificateNumber ? trainingData.certificateNumber.trim() : (trainingData.certificateNo ? trainingData.certificateNo.trim() : ''),
     issueDate: trainingData.issueDate || '',
     expireDate: trainingData.expireDate || '',
-    grade: trainingData.grade || 'Giỏi',
+    grade: trainingData.grade || 'Đạt',
+    certificateImage: trainingData.certificateImage || '',
+    notes: trainingData.notes ? trainingData.notes.trim() : '',
     type: trainingData.type || 'CHUYEN_MON', // 'CHUYEN_MON' | 'CHUNG_CHI_HANH_NGHE' | 'LY_LUAN_CHINH_TRI' | 'KHAC'
     updatedAt: nowIso,
     serverTime: serverTimestamp(),
