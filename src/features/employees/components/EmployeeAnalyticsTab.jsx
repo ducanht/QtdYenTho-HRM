@@ -18,6 +18,8 @@ import { formatDateVN } from '../../../lib/dateUtils';
  */
 const EmployeeAnalyticsTab = ({
   employees = [],
+  departments = [],
+  degrees = [],
   hrConfig = {},
   onSelectEmployeeForTransfer,
 }) => {
@@ -148,7 +150,8 @@ const EmployeeAnalyticsTab = ({
   // 4. Thống kê theo trình độ chuyên môn / học vấn
   const educationStats = useMemo(() => {
     const buckets = [
-      { key: 'THAC_SI', label: 'Thạc sĩ / Sau đại học', match: (edu) => edu.includes('thạc sĩ') || edu.includes('thạc sỹ') || edu.includes('cao học') || edu.includes('master') },
+      { key: 'TIEN_SI', label: 'Tiến sĩ / Sau đại học', match: (edu) => edu.includes('tiến sĩ') || edu.includes('tiến sỹ') || edu.includes('phó giáo sư') || edu.includes('giáo sư') },
+      { key: 'THAC_SI', label: 'Thạc sĩ / Cao học', match: (edu) => edu.includes('thạc sĩ') || edu.includes('thạc sỹ') || edu.includes('cao học') || edu.includes('master') },
       { key: 'DAI_HOC', label: 'Đại học / Cử nhân / Kỹ sư', match: (edu) => edu.includes('đại học') || edu.includes('cử nhân') || edu.includes('kỹ sư') },
       { key: 'CAO_DANG', label: 'Cao đẳng', match: (edu) => edu.includes('cao đẳng') },
       { key: 'TRUNG_CAP', label: 'Trung cấp', match: (edu) => edu.includes('trung cấp') },
@@ -156,6 +159,7 @@ const EmployeeAnalyticsTab = ({
     ];
 
     const counts = {
+      TIEN_SI: 0,
       THAC_SI: 0,
       DAI_HOC: 0,
       CAO_DANG: 0,
@@ -164,7 +168,17 @@ const EmployeeAnalyticsTab = ({
     };
 
     employees.forEach((emp) => {
-      const edu = (emp.education || '').toLowerCase().trim();
+      // Tìm văn bằng cao nhất trong bảng employee_degrees
+      const empDegs = degrees.filter((d) => d.employeeId === emp.id || d.employeeUuid === emp.id);
+      let edu = '';
+      if (empDegs.length > 0) {
+        const highest = empDegs.find((d) => d.isHighest) || empDegs[0];
+        edu = (highest.degreeLevel || '').toLowerCase().trim();
+      }
+      if (!edu) {
+        edu = (emp.education || '').toLowerCase().trim();
+      }
+
       if (!edu) {
         counts.KHAC++;
         return;
@@ -189,7 +203,7 @@ const EmployeeAnalyticsTab = ({
         percent: totalEmployees ? Math.round((counts[b.key] / totalEmployees) * 100) : 0,
       }))
       .filter((b) => b.count > 0 || b.key === 'DAI_HOC' || b.key === 'THAC_SI');
-  }, [employees, totalEmployees]);
+  }, [employees, totalEmployees, degrees]);
 
   const dueCount = transferMonitoringList.filter((i) => i.isDue).length;
   const nearCount = transferMonitoringList.filter((i) => i.isNear).length;

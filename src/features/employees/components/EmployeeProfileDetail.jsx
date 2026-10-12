@@ -11,16 +11,28 @@ import {
   FileText,
   Trash2,
   AlertTriangle,
-  MapPin
+  MapPin,
+  Plus,
+  Share2,
+  ExternalLink,
+  Edit2,
+  Eye,
+  BookOpen
 } from 'lucide-react';
 import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { compressImage } from '../../../lib/imageUtils';
-import { updateEmployeeProfile, deleteEmployeeProfile } from '../../../lib/services';
+import { 
+  updateEmployeeProfile, 
+  deleteEmployeeProfile, 
+  deleteEmployeeDegree 
+} from '../../../lib/services';
 import { exportEmployeeProfileToDocx, exportEmployeeProfileToExcel } from '../../../lib/exportUtils';
 import { useToast } from '../../../context/ToastContext';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
+import AddDegreeModal from './AddDegreeModal';
+import ManageSocialsModal, { SOCIAL_PLATFORMS } from './ManageSocialsModal';
 
 /**
  * EmployeeProfileDetail: Cột Phải cho Tab PROFILE
@@ -34,6 +46,8 @@ const EmployeeProfileDetail = ({
   onDeleteSuccess,
   workHistory = [],
   trainings = [],
+  degrees = [],
+  socials = [],
   canManage = false,
 }) => {
   const toast = useToast();
@@ -42,6 +56,12 @@ const EmployeeProfileDetail = ({
   const [exportingExcel, setExportingExcel] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Modal văn bằng & mạng xã hội
+  const [isAddDegreeModalOpen, setIsAddDegreeModalOpen] = useState(false);
+  const [editingDegree, setEditingDegree] = useState(null);
+  const [isManageSocialsModalOpen, setIsManageSocialsModalOpen] = useState(false);
+  const [viewingScanImage, setViewingScanImage] = useState(null);
 
   if (!emp) {
     return (
@@ -60,6 +80,23 @@ const EmployeeProfileDetail = ({
     Boolean(emp.assignedArea);
 
   const areaInfo = isCreditOfficer ? calculateAreaTenureAndDueDate(emp.areaStartDate || effectiveStart) : null;
+
+  const empDegrees = degrees.filter(
+    (d) => d.employeeId === emp?.id || d.employeeUuid === emp?.id
+  );
+  const empSocials = socials.filter(
+    (s) => s.employeeId === emp?.id || s.employeeUuid === emp?.id
+  );
+
+  const handleDeleteDegree = async (degreeId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa văn bằng chuyên môn này khỏi hồ sơ?')) return;
+    try {
+      await deleteEmployeeDegree(degreeId);
+      toast?.showSuccess?.('Đã xóa văn bằng chuyên môn thành công!');
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi xóa văn bằng chuyên môn');
+    }
+  };
 
   // Xử lý cập nhật ảnh đại diện
   const handleAvatarChange = async (e) => {
@@ -280,6 +317,75 @@ const EmployeeProfileDetail = ({
               <span className="text-slate-400 block text-[11px] mb-0.5">Hộp thư điện tử (Email):</span>
               <span className="font-medium text-slate-800">{emp.email || '—'}</span>
             </div>
+
+            {/* Khối Kênh Liên Lạc & Mạng Xã Hội */}
+            <div className="col-span-2 pt-3 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Share2 className="w-3.5 h-3.5 text-blue-700" />
+                  <span>Kênh Liên Lạc & Mạng Xã Hội</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsManageSocialsModalOpen(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                >
+                  <Edit2 className="w-2.5 h-2.5" />
+                  <span>Cập nhật ({empSocials.length})</span>
+                </button>
+              </div>
+
+              {empSocials.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {empSocials.map((soc) => {
+                    const plat = SOCIAL_PLATFORMS.find((p) => p.value === soc.platform) || {
+                      color: 'bg-slate-700 text-white',
+                    };
+                    return soc.url ? (
+                      <a
+                        key={soc.id}
+                        href={soc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-slate-800 transition-all shadow-2xs group"
+                        title={`Mở kênh ${soc.platform} của cán bộ`}
+                      >
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-black ${plat.color}`}>
+                          {soc.platform}
+                        </span>
+                        <span className="font-semibold text-[11px] group-hover:text-blue-700">
+                          {soc.accountName || soc.username || soc.platform}
+                        </span>
+                        <ExternalLink className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-600" />
+                      </a>
+                    ) : (
+                      <div
+                        key={soc.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
+                      >
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-black ${plat.color}`}>
+                          {soc.platform}
+                        </span>
+                        <span className="font-semibold text-[11px]">
+                          {soc.accountName || soc.username || soc.platform}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-[11px] text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">
+                  <span>Chưa thiết lập kênh mạng xã hội</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsManageSocialsModalOpen(true)}
+                    className="text-emerald-700 font-bold hover:underline not-italic cursor-pointer"
+                  >
+                    + Thêm ngay
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -414,27 +520,136 @@ const EmployeeProfileDetail = ({
 
         {/* Phân khu 4: Trình độ & Chuyên môn Đào tạo */}
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <GraduationCap className="w-4 h-4 text-emerald-700" />
-            <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-              4. Trình Độ & Chuyên Môn
-            </h3>
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-emerald-700" />
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+                4. Trình Độ & Văn Bằng Chuyên Môn
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingDegree(null);
+                setIsAddDegreeModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-200 transition-colors cursor-pointer shadow-2xs"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Thêm văn bằng</span>
+            </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div className="col-span-2">
-              <span className="text-slate-400 block text-[11px] mb-0.5">Chuyên môn đào tạo / Học vị:</span>
-              <span className="font-bold text-slate-900 bg-slate-50 p-2 rounded-lg block border border-slate-100">
-                {emp.education || 'Chưa cập nhật văn bằng'}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Tin học:</span>
-              <span className="font-medium text-slate-800">Ứng dụng CNTT cơ bản</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Ngoại ngữ:</span>
-              <span className="font-medium text-slate-800">Tiếng Anh</span>
+          {/* Danh sách các văn bằng chuyên môn đa cấp */}
+          <div className="space-y-3">
+            {empDegrees.length > 0 ? (
+              <div className="space-y-2.5">
+                {empDegrees.map((deg) => {
+                  const isHigh = Boolean(deg.isHighest);
+                  return (
+                    <div
+                      key={deg.id}
+                      className={`p-3.5 rounded-xl border transition-all ${
+                        isHigh
+                          ? 'border-emerald-300 bg-emerald-50/40 shadow-2xs'
+                          : 'border-slate-200 bg-slate-50/60 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-800 text-white shadow-2xs">
+                              {deg.degreeLevel || 'Đại học'}
+                            </span>
+                            {isHigh && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                                Chuyên môn chính
+                              </span>
+                            )}
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              • {deg.trainingType || 'Chính quy'}
+                            </span>
+                            {deg.graduationYear && (
+                              <span className="text-[11px] font-bold text-slate-700 tabular-nums">
+                                • Năm {deg.graduationYear}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-xs font-bold text-slate-900">
+                            {deg.major}
+                          </div>
+
+                          <div className="text-[11px] text-slate-600 mt-0.5 flex flex-wrap items-center gap-x-2">
+                            <span>{deg.institution}</span>
+                            {deg.classification && (
+                              <span className="text-slate-400">• Loại: <strong className="text-slate-700 font-semibold">{deg.classification}</strong></span>
+                            )}
+                            {deg.degreeNumber && (
+                              <span className="text-slate-400">• Số hiệu: <strong className="text-slate-700 font-semibold tabular-nums">{deg.degreeNumber}</strong></span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Nút tác vụ cho từng văn bằng */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {deg.degreeImage && (
+                            <button
+                              type="button"
+                              onClick={() => setViewingScanImage(deg.degreeImage)}
+                              className="p-1.5 text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors cursor-pointer"
+                              title="Xem bản scan văn bằng"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingDegree(deg);
+                              setIsAddDegreeModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="Sửa thông tin văn bằng"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDegree(deg.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa văn bằng"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
+                <div className="text-slate-400 text-[11px]">Chuyên môn đào tạo / Học vị (Tóm tắt):</div>
+                <div className="font-bold text-slate-800">
+                  {emp.education || 'Chưa cập nhật văn bằng'}
+                </div>
+                <div className="text-[11px] text-emerald-800 pt-1">
+                  Nhấp <strong>"Thêm văn bằng"</strong> phía trên để lưu chi tiết các cấp bậc văn bằng (Cử nhân, Thạc sĩ...) kèm hình thức và bản scan.
+                </div>
+              </div>
+            )}
+
+            {/* Trình độ Tin học & Ngoại ngữ */}
+            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Tin học:</span>
+                <span className="font-medium text-slate-800">Ứng dụng CNTT cơ bản</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Ngoại ngữ:</span>
+                <span className="font-medium text-slate-800">Tiếng Anh</span>
+              </div>
             </div>
           </div>
         </div>
@@ -480,6 +695,58 @@ const EmployeeProfileDetail = ({
               >
                 {deleting ? 'Đang xóa...' : 'Xác nhận xóa'}
               </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Thêm / Chỉnh Sửa Văn Bằng Chuyên Môn */}
+      {isAddDegreeModalOpen && (
+        <AddDegreeModal
+          isOpen={isAddDegreeModalOpen}
+          onClose={() => {
+            setIsAddDegreeModalOpen(false);
+            setEditingDegree(null);
+          }}
+          emp={emp}
+          initialData={editingDegree}
+          existingDegreesCount={empDegrees.length}
+          onSuccess={() => {}}
+        />
+      )}
+
+      {/* Modal Quản Lý Mạng Xã Hội */}
+      {isManageSocialsModalOpen && (
+        <ManageSocialsModal
+          isOpen={isManageSocialsModalOpen}
+          onClose={() => setIsManageSocialsModalOpen(false)}
+          emp={emp}
+          socials={socials}
+          onSuccess={() => {}}
+        />
+      )}
+
+      {/* Modal Xem Bản Scan Văn Bằng */}
+      {viewingScanImage && (
+        <Modal
+          isOpen={Boolean(viewingScanImage)}
+          onClose={() => setViewingScanImage(null)}
+          title="Bản Scan / Ảnh Chụp Văn Bằng Chứng Thực"
+          subtitle={`Cán bộ: ${emp?.name || ''} • ${emp?.position || ''}`}
+          maxWidth="max-w-2xl"
+        >
+          <div className="p-4 space-y-4">
+            <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center max-h-[70vh]">
+              <img
+                src={viewingScanImage}
+                alt="Bản scan văn bằng"
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button type="button" variant="outline" onClick={() => setViewingScanImage(null)}>
+                Đóng
+              </Button>
             </div>
           </div>
         </Modal>

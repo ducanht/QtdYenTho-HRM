@@ -1,179 +1,182 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Modal from '../../../components/common/Modal';
-import Button from '../../../components/common/Button';
 import { 
   Calendar, 
-  Briefcase, 
   MapPin, 
-  Building2, 
-  FileText, 
-  UserCheck, 
   CheckCircle2, 
-  Clock, 
-  ShieldAlert 
+  FileText, 
+  Building2, 
+  UserCheck, 
+  Briefcase 
 } from 'lucide-react';
+import Modal from '../../../components/common/Modal';
+import Button from '../../../components/common/Button';
 import { saveWorkHistory } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
 import { DEFAULT_DEPARTMENTS, DEFAULT_POSITIONS } from '../../../lib/systemDefaults';
 
-const TRANSFER_TYPES = [
-  { value: 'LUAN_CHUYEN_DINH_KY', label: 'Luân chuyển định kỳ địa bàn / vị trí' },
-  { value: 'BO_NHIEM', label: 'Bổ nhiệm chức danh mới' },
-  { value: 'THAY_DOI_DIA_BAN', label: 'Thay đổi phân công địa bàn tín dụng' },
-  { value: 'DIEU_DONG_NOI_BO', label: 'Điều động công tác nội bộ' },
-  { value: 'CONG_TAC_BAN_DAU', label: 'Tiếp nhận công tác ban đầu' },
-  { value: 'KHAC', label: 'Quyết định điều động khác' },
-];
-
-const AREA_SUGGESTIONS = [
-  'Địa bàn xã Quý Lộc (Cụm Thôn 1, 2, 3)',
-  'Địa bàn xã Quý Lộc (Cụm Thôn 4, 5, 6)',
-  'Địa bàn xã Quý Lộc (Cụm Thôn 7, 8)',
-  'Toàn địa bàn xã Yên Thọ',
-  'Địa bàn xã Yên Thọ (Thôn 1, 2, 3)',
-  'Địa bàn xã Yên Thọ (Thôn Tân Lộc, Tân Hưng)',
-  'Bộ phận Thẩm định tài sản & Hồ sơ vay vốn',
-  'Phụ trách toàn diện Kế toán & Ngân quỹ',
-  'Quản lý kho quỹ, tiền mặt & thu chi tại quầy',
+export const TRANSFER_TYPES = [
+  { value: 'LUAN_CHUYEN_DINH_KY', label: 'Luân chuyển định kỳ' },
+  { value: 'BO_NHIEM', label: 'Bổ nhiệm chức vụ' },
+  { value: 'THAY_DOI_DIA_BAN', label: 'Thay đổi địa bàn tín dụng' },
+  { value: 'DIEU_DONG_NOI_BO', label: 'Điều động nội bộ' },
+  { value: 'CONG_TAC_BAN_DAU', label: 'Tiếp nhận / Công tác ban đầu' },
 ];
 
 /**
- * WorkHistoryPeriodModal: Modal Thêm / Chỉnh Sửa Mốc Quá Trình Công Tác & Luân Chuyển
- * Quản lý cấu trúc Timeline chi tiết: Thời gian, Chức vụ, Phòng ban, Địa bàn quản lý
+ * WorkHistoryPeriodModal: Modal Thêm Mới & Chỉnh Sửa Mốc Quá Trình Công Tác (Timeline)
+ * Phục vụ theo dõi thâm niên vị trí, địa bàn tín dụng và giám sát luân chuyển theo quy định NHNN
  */
 const WorkHistoryPeriodModal = ({
   isOpen,
   onClose,
-  emp,
-  initialData = null,
-  departments = DEFAULT_DEPARTMENTS,
-  positions = DEFAULT_POSITIONS,
+  selectedEmp,
+  editingRecord = null,
+  departments = [],
+  positions = [],
   onSuccess,
 }) => {
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
 
-  const isEditing = Boolean(initialData?.id);
+  // Chuẩn hóa danh sách phòng ban & chức vụ
+  const deptList = useMemo(() => {
+    if (Array.isArray(departments) && departments.length > 0) {
+      return departments.map((d) => (typeof d === 'string' ? d : d.name || d.title || ''));
+    }
+    return DEFAULT_DEPARTMENTS.map((d) => d.name);
+  }, [departments]);
 
-  // Form states
+  const posList = useMemo(() => {
+    if (Array.isArray(positions) && positions.length > 0) {
+      return positions.map((p) => (typeof p === 'string' ? p : p.name || p.title || ''));
+    }
+    return DEFAULT_POSITIONS.map((p) => p.name);
+  }, [positions]);
+
+  // Form State
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isCurrent, setIsCurrent] = useState(false);
-  const [department, setDepartment] = useState('');
+  const [isCurrent, setIsCurrent] = useState(true);
   const [position, setPosition] = useState('');
+  const [department, setDepartment] = useState('');
   const [assignedArea, setAssignedArea] = useState('');
   const [transferType, setTransferType] = useState('LUAN_CHUYEN_DINH_KY');
   const [decisionNumber, setDecisionNumber] = useState('');
   const [decisionDate, setDecisionDate] = useState('');
-  const [signer, setSigner] = useState('Trịnh Đức Anh (Chủ tịch HĐQT)');
-  const [handoverStatus, setHandoverStatus] = useState('DA_BAN_GIAO');
+  const [signer, setSigner] = useState('Trịnh Đức Anh - Chủ tịch HĐQT');
   const [notes, setNotes] = useState('');
   const [syncToProfile, setSyncToProfile] = useState(true);
 
-  // Điền dữ liệu khi mở modal hoặc thay đổi initialData
+  // Nhận diện Cán bộ Tín dụng để làm nổi bật địa bàn
+  const isCreditOfficer = useMemo(() => {
+    const dept = (department || '').toLowerCase();
+    const pos = (position || '').toLowerCase();
+    return dept.includes('tín dụng') || pos.includes('tín dụng') || Boolean(assignedArea);
+  }, [department, position, assignedArea]);
+
+  // Khởi tạo và đồng bộ dữ liệu form khi mở modal
   useEffect(() => {
     if (isOpen) {
-      if (initialData) {
-        setStartDate(initialData.startDate || initialData.effectiveDate || '');
-        setEndDate(initialData.endDate || '');
-        setIsCurrent(initialData.isCurrent !== undefined ? Boolean(initialData.isCurrent) : !initialData.endDate);
-        setDepartment(initialData.department || initialData.toDepartment || emp?.department || '');
-        setPosition(initialData.position || initialData.toPosition || emp?.position || '');
-        setAssignedArea(initialData.assignedArea || initialData.toAssignedArea || emp?.assignedArea || '');
-        setTransferType(initialData.transferType || 'LUAN_CHUYEN_DINH_KY');
-        setDecisionNumber(initialData.decisionNumber || '');
-        setDecisionDate(initialData.decisionDate || '');
-        setSigner(initialData.signer || 'Trịnh Đức Anh (Chủ tịch HĐQT)');
-        setHandoverStatus(initialData.handoverStatus || 'DA_BAN_GIAO');
-        setNotes(initialData.notes || initialData.reason || '');
-        setSyncToProfile(Boolean(initialData.isCurrent));
+      if (editingRecord) {
+        setStartDate(editingRecord.startDate || editingRecord.effectiveDate || '');
+        setEndDate(editingRecord.endDate || '');
+        setIsCurrent(editingRecord.isCurrent !== undefined ? Boolean(editingRecord.isCurrent) : !editingRecord.endDate);
+        setPosition(editingRecord.position || editingRecord.toPosition || '');
+        setDepartment(editingRecord.department || editingRecord.toDepartment || deptList[0] || 'Phòng Tín dụng');
+        setAssignedArea(editingRecord.assignedArea || editingRecord.toAssignedArea || '');
+        setTransferType(editingRecord.transferType || 'LUAN_CHUYEN_DINH_KY');
+        setDecisionNumber(editingRecord.decisionNumber || '');
+        setDecisionDate(editingRecord.decisionDate || '');
+        setSigner(editingRecord.signer || 'Trịnh Đức Anh - Chủ tịch HĐQT');
+        setNotes(editingRecord.notes || editingRecord.reason || '');
+        setSyncToProfile(Boolean(editingRecord.isCurrent));
       } else {
         const today = new Date().toISOString().slice(0, 10);
-        setStartDate(today);
+        setStartDate(selectedEmp?.positionStartDate || selectedEmp?.joinDate || today);
         setEndDate('');
-        setIsCurrent(false);
-        setDepartment(emp?.department || (departments[0]?.name || 'Phòng Tín dụng'));
-        setPosition(emp?.position || (positions[0]?.name || 'Cán bộ tín dụng'));
-        setAssignedArea(emp?.assignedArea || '');
+        setIsCurrent(true);
+        setPosition(selectedEmp?.position || '');
+        setDepartment(selectedEmp?.department || deptList[0] || 'Phòng Tín dụng');
+        setAssignedArea(selectedEmp?.assignedArea || '');
         setTransferType('LUAN_CHUYEN_DINH_KY');
         setDecisionNumber('');
-        setDecisionDate(today);
-        setSigner('Trịnh Đức Anh (Chủ tịch HĐQT)');
-        setHandoverStatus('DA_BAN_GIAO');
+        setDecisionDate('');
+        setSigner('Trịnh Đức Anh - Chủ tịch HĐQT');
         setNotes('');
         setSyncToProfile(true);
       }
     }
-  }, [isOpen, initialData, emp, departments, positions]);
-
-  // Kiểm tra nếu là cán bộ tín dụng để làm nổi bật địa bàn
-  const isCreditDept = useMemo(() => {
-    const d = (department || '').toLowerCase();
-    const p = (position || '').toLowerCase();
-    return d.includes('tín dụng') || p.includes('tín dụng') || p.includes('thẩm định');
-  }, [department, position]);
+  }, [isOpen, editingRecord, selectedEmp, deptList]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!emp) {
-      toast?.showError?.('Không tìm thấy thông tin cán bộ.');
-      return;
-    }
-    if (!startDate) {
-      toast?.showError?.('Vui lòng chọn ngày bắt đầu mốc công tác.');
-      return;
-    }
-    if (!isCurrent && endDate && startDate > endDate) {
-      toast?.showError?.('Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.');
+    if (!selectedEmp) {
+      toast?.showError?.('Vui lòng chọn cán bộ thực hiện');
       return;
     }
     if (!position.trim()) {
-      toast?.showError?.('Vui lòng chọn hoặc nhập chức danh công tác.');
+      toast?.showError?.('Vui lòng nhập hoặc chọn chức danh công tác');
       return;
     }
     if (!department.trim()) {
-      toast?.showError?.('Vui lòng chọn phòng ban công tác.');
+      toast?.showError?.('Vui lòng chọn phòng ban công tác');
+      return;
+    }
+    if (!startDate) {
+      toast?.showError?.('Vui lòng chọn ngày bắt đầu mốc công tác');
+      return;
+    }
+    if (!isCurrent && !endDate) {
+      toast?.showError?.('Vui lòng nhập ngày kết thúc đối với mốc công tác trong quá khứ');
+      return;
+    }
+    if (!isCurrent && endDate && startDate && endDate < startDate) {
+      toast?.showError?.('Ngày kết thúc không được trước ngày bắt đầu');
+      return;
+    }
+    if (isCreditOfficer && !assignedArea.trim()) {
+      toast?.showError?.('Vui lòng nhập địa bàn quản lý đối với chức vụ Cán bộ Tín dụng');
       return;
     }
 
     setSubmitting(true);
     try {
-      const typeLabel = TRANSFER_TYPES.find((t) => t.value === transferType)?.label || 'Điều động công tác';
       const payload = {
-        id: initialData?.id || undefined,
-        employeeId: emp.id,
-        employeeCode: emp.code || '',
-        employeeName: emp.name || '',
+        ...(editingRecord?.id ? { id: editingRecord.id } : {}),
+        employeeId: selectedEmp.id,
+        employeeUuid: selectedEmp.uuid || selectedEmp.id,
+        employeeCode: selectedEmp.code || '',
+        employeeName: selectedEmp.name || '',
         startDate,
         endDate: isCurrent ? '' : endDate,
         isCurrent: Boolean(isCurrent),
+        effectiveDate: startDate,
         position: position.trim(),
         department: department.trim(),
         assignedArea: assignedArea.trim(),
-        transferType,
-        transferTypeLabel: typeLabel,
-        decisionNumber: decisionNumber.trim(),
-        decisionDate: decisionDate || startDate,
-        effectiveDate: startDate,
         toPosition: position.trim(),
         toDepartment: department.trim(),
         toAssignedArea: assignedArea.trim(),
-        fromPosition: initialData?.fromPosition || emp.position || '',
-        fromDepartment: initialData?.fromDepartment || emp.department || '',
-        fromAssignedArea: initialData?.fromAssignedArea || emp.assignedArea || '',
+        transferType,
+        transferTypeLabel: TRANSFER_TYPES.find((t) => t.value === transferType)?.label || transferType,
+        decisionNumber: decisionNumber.trim(),
+        decisionDate: decisionDate || '',
         signer: signer.trim(),
-        handoverStatus,
         notes: notes.trim(),
         reason: notes.trim(),
-        syncToProfile: Boolean(syncToProfile && isCurrent),
+        syncToProfile: Boolean(isCurrent && syncToProfile),
       };
 
       await saveWorkHistory(payload);
-      toast?.showSuccess?.(isEditing ? 'Cập nhật mốc công tác thành công' : 'Đã thêm mốc quá trình công tác mới');
+      toast?.showSuccess?.(
+        editingRecord 
+          ? 'Đã cập nhật mốc công tác thành công' 
+          : 'Đã thêm mốc quá trình công tác mới thành công'
+      );
       onSuccess?.();
-      onClose?.();
+      onClose();
     } catch (err) {
-      toast?.showError?.(err.message || 'Lỗi lưu thông tin mốc công tác');
+      toast?.showError?.(err.message || 'Lỗi khi lưu mốc quá trình công tác');
     } finally {
       setSubmitting(false);
     }
@@ -183,165 +186,170 @@ const WorkHistoryPeriodModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? 'Chỉnh Sửa Mốc Quá Trình Công Tác' : 'Thêm Mốc Quá Trình Công Tác'}
-      subtitle={emp ? `Cán bộ: ${emp.name} • ${emp.position || ''}` : ''}
+      title={editingRecord ? 'Chỉnh Sửa Mốc Quá Trình Công Tác' : 'Thêm Mốc Quá Trình Công Tác Mới'}
+      subtitle={selectedEmp ? `Cán bộ: ${selectedEmp.name} (${selectedEmp.code}) • Quỹ TDND Yên Thọ` : 'Quỹ TDND Yên Thọ'}
       maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-        {/* 1. Thời Gian Công Tác & Trạng Thái Hiện Tại */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+        {/* Khối 1: Khoảng thời gian & Trạng thái đảm nhiệm */}
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-emerald-700" />
+            <span className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
               <span>Thời Gian Công Tác</span>
             </span>
-            <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs hover:border-emerald-300 transition-colors">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs hover:bg-emerald-50 transition-colors">
               <input
                 type="checkbox"
                 checked={isCurrent}
                 onChange={(e) => {
-                  setIsCurrent(e.target.checked);
-                  if (e.target.checked) setEndDate('');
+                  const checked = e.target.checked;
+                  setIsCurrent(checked);
+                  if (checked) {
+                    setEndDate('');
+                  }
                 }}
-                className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-600"
+                className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
               />
-              <span className="font-bold text-slate-800 text-[11px]">Đang đảm nhiệm mốc này</span>
+              <span>Đang đảm nhiệm (Mốc hiện tại)</span>
             </label>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Từ Ngày (Bắt đầu) <span className="text-rose-500">*</span>
+              <label className="block text-slate-700 font-bold mb-1">
+                Từ ngày (Bắt đầu): <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans tabular-nums"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Đến Ngày (Kết thúc)
+              <label className="block text-slate-700 font-bold mb-1">
+                Đến ngày (Kết thúc): {!isCurrent && <span className="text-rose-500">*</span>}
               </label>
-              {isCurrent ? (
-                <div className="w-full px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span>Đang công tác hiện tại (Đến nay)</span>
-                </div>
-              ) : (
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans tabular-nums"
-                />
-              )}
+              <input
+                type="date"
+                disabled={isCurrent}
+                required={!isCurrent}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                placeholder={isCurrent ? 'Đang công tác (Đến nay)' : ''}
+                className={`w-full px-3 py-2 border rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 ${
+                  isCurrent 
+                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed italic' 
+                    : 'bg-white border-slate-200'
+                }`}
+              />
             </div>
           </div>
+
+          {isCurrent && (
+            <div className="p-2.5 rounded-lg bg-emerald-100/60 border border-emerald-300 flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="sync-profile-checkbox"
+                checked={syncToProfile}
+                onChange={(e) => setSyncToProfile(e.target.checked)}
+                className="mt-0.5 rounded border-emerald-400 text-emerald-700 focus:ring-emerald-600"
+              />
+              <label htmlFor="sync-profile-checkbox" className="text-[11px] text-emerald-950 font-medium leading-snug cursor-pointer select-none">
+                <span className="font-extrabold text-emerald-900">Đồng bộ sang Hồ sơ cán bộ:</span> Tự động cập nhật chức vụ, phòng ban và địa bàn quản lý này thành thông tin công tác hiện tại trong hồ sơ của cán bộ.
+              </label>
+            </div>
+          )}
         </div>
 
-        {/* 2. Chức Danh & Phòng Ban */}
+        {/* Khối 2: Chức vụ & Phòng ban */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Phòng Ban / Bộ Phận <span className="text-rose-500">*</span>
+            <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Phòng ban đảm nhiệm: <span className="text-rose-500">*</span></span>
             </label>
-            <div className="relative">
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
-              >
-                {departments.map((d) => (
-                  <option key={d.id || d.code || d.name} value={d.name}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+            >
+              {deptList.map((d, idx) => (
+                <option key={idx} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Chức Danh / Vị Trí Công Tác <span className="text-rose-500">*</span>
+            <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1">
+              <Briefcase className="w-3.5 h-3.5 text-slate-500" />
+              <span>Chức vụ / Vị trí công tác: <span className="text-rose-500">*</span></span>
             </label>
             <input
               type="text"
-              list="position-datalist"
+              list="work-history-positions"
               required
-              placeholder="Chọn hoặc nhập chức danh"
+              placeholder="VD: Cán bộ tín dụng / Kế toán viên"
               value={position}
               onChange={(e) => setPosition(e.target.value)}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
-            <datalist id="position-datalist">
-              {positions.map((p) => (
-                <option key={p.id || p.code || p.name} value={p.name} />
+            <datalist id="work-history-positions">
+              {posList.map((pos, idx) => (
+                <option key={idx} value={pos} />
               ))}
             </datalist>
           </div>
         </div>
 
-        {/* 3. Địa Bàn Quản Lý (Nổi Bật Với Cán Bộ Tín Dụng) */}
+        {/* Khối 3: Địa bàn quản lý tín dụng (Bắt buộc và nổi bật với CBTD) */}
         <div className={`p-3.5 rounded-xl border transition-all ${
-          isCreditDept 
-            ? 'bg-emerald-50/50 border-emerald-300 shadow-2xs' 
-            : 'bg-slate-50 border-slate-200'
+          isCreditOfficer 
+            ? 'bg-emerald-50/70 border-emerald-300' 
+            : 'bg-slate-50/80 border-slate-200'
         }`}>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-[11px] font-bold text-slate-900 flex items-center gap-1.5">
-              <MapPin className={`w-4 h-4 ${isCreditDept ? 'text-emerald-700' : 'text-slate-500'}`} />
-              <span>Địa Bàn Quản Lý / Phụ Trách Nghiệp Vụ</span>
-              {isCreditDept && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                  Phục vụ tính thâm niên địa bàn
-                </span>
-              )}
+            <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <MapPin className={`w-4 h-4 ${isCreditOfficer ? 'text-emerald-700' : 'text-slate-500'}`} />
+              <span>Địa bàn quản lý tín dụng:</span>
+              {isCreditOfficer && <span className="text-rose-500">*</span>}
             </label>
+            {isCreditOfficer && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                Theo dõi luân chuyển NHNN (36 tháng)
+              </span>
+            )}
           </div>
-
           <input
             type="text"
-            placeholder="Ví dụ: Địa bàn xã Quý Lộc (Cụm Thôn 1, 2, 3), Toàn xã Yên Thọ..."
+            required={isCreditOfficer}
+            placeholder="VD: Thôn Tân Lộc, Thôn 1 Quý Lộc / Toàn xã Yên Thọ"
             value={assignedArea}
             onChange={(e) => setAssignedArea(e.target.value)}
-            className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
+            className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 ${
+              isCreditOfficer ? 'border-emerald-300 font-bold' : 'border-slate-200'
+            }`}
           />
-
-          {/* Gợi ý chọn nhanh địa bàn chuẩn */}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-slate-500 font-medium">Gợi ý nhanh:</span>
-            {AREA_SUGGESTIONS.map((area) => (
-              <button
-                type="button"
-                key={area}
-                onClick={() => setAssignedArea(area)}
-                className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
-                  assignedArea === area 
-                    ? 'bg-emerald-700 text-white border-emerald-700 font-bold' 
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50'
-                }`}
-              >
-                {area}
-              </button>
-            ))}
-          </div>
+          <p className="text-[11px] text-slate-500 mt-1">
+            {isCreditOfficer
+              ? '* Bắt buộc phân công địa bàn quản lý (thôn/xã) đối với Cán bộ Tín dụng để tính chu kỳ luân chuyển định kỳ.'
+              : 'Phạm vi công việc hoặc cơ sở phụ trách (nếu có).'}
+          </p>
         </div>
 
-        {/* 4. Loại Điều Động & Quyết Định Phê Chuẩn */}
+        {/* Khối 4: Hình thức điều chuyển, Quyết định & Người ký */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Hình Thức Điều Động
-            </label>
+            <label className="block text-slate-700 font-bold mb-1">Hình thức công tác:</label>
             <select
               value={transferType}
               onChange={(e) => setTransferType(e.target.value)}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             >
               {TRANSFER_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -352,116 +360,75 @@ const WorkHistoryPeriodModal = ({
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Số Quyết Định (Nếu có)
+            <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5 text-slate-500" />
+              <span>Số Quyết định (nếu có):</span>
             </label>
             <input
               type="text"
-              placeholder="VD: 24/QĐ-HĐQT-2022"
+              placeholder="VD: 18/QĐ-HĐQT-2026"
               value={decisionNumber}
               onChange={(e) => setDecisionNumber(e.target.value)}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Ngày Ban Hành QĐ
-            </label>
+            <label className="block text-slate-700 font-bold mb-1">Ngày ký quyết định:</label>
             <input
               type="date"
               value={decisionDate}
               onChange={(e) => setDecisionDate(e.target.value)}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans tabular-nums"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
           </div>
         </div>
 
-        {/* 5. Người Ký & Trạng Thái Bàn Giao */}
+        {/* Khối 5: Người ký & Ghi chú */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Người Ký / Thẩm Quyền Phê Duyệt
+            <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1">
+              <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+              <span>Người ký quyết định:</span>
             </label>
             <input
               type="text"
-              placeholder="Chủ tịch HĐQT hoặc Giám đốc"
+              placeholder="Trịnh Đức Anh - Chủ tịch HĐQT"
               value={signer}
               onChange={(e) => setSigner(e.target.value)}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-              Tình Trạng Bàn Giao Hồ Sơ / Tài Sản
-            </label>
-            <select
-              value={handoverStatus}
-              onChange={(e) => setHandoverStatus(e.target.value)}
-              className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
-            >
-              <option value="DA_BAN_GIAO">Đã hoàn tất bàn giao đầy đủ</option>
-              <option value="DANG_BAN_GIAO">Đang tiến hành kiểm kê bàn giao</option>
-              <option value="CHUA_BAN_GIAO">Chưa bàn giao hồ sơ</option>
-            </select>
-          </div>
-        </div>
-
-        {/* 6. Nhiệm Vụ Trọng Tâm / Ghi Chú */}
-        <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">
-            Nhiệm Vụ Trọng Tâm & Ghi Chú Mốc Công Tác
-          </label>
-          <textarea
-            rows={2}
-            placeholder="Mô tả công việc phụ trách, căn cứ luân chuyển, bàn giao tài sản bảo đảm..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
-          />
-        </div>
-
-        {/* 7. Đồng Bộ Sang Hồ Sơ Hiện Tại */}
-        {isCurrent && (
-          <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-              <div>
-                <p className="font-bold text-slate-900 text-xs">
-                  Đồng bộ mốc này vào thông tin hồ sơ hiện tại
-                </p>
-                <p className="text-[11px] text-slate-600">
-                  Tự động cập nhật Chức vụ, Phòng ban, Địa bàn và Ngày nhận vị trí vào hồ sơ cán bộ.
-                </p>
-              </div>
-            </div>
+            <label className="block text-slate-700 font-bold mb-1">Ghi chú / Căn cứ công tác:</label>
             <input
-              type="checkbox"
-              checked={syncToProfile}
-              onChange={(e) => setSyncToProfile(e.target.checked)}
-              className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-600 cursor-pointer"
+              type="text"
+              placeholder="Ghi chú thêm về mốc quá trình công tác..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
           </div>
-        )}
+        </div>
 
-        {/* Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+        {/* Nút hành động */}
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             onClick={onClose}
             disabled={submitting}
           >
-            Hủy Bỏ
+            Hủy bỏ
           </Button>
           <Button
             type="submit"
             variant="primary"
-            disabled={submitting}
-            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+            isLoading={submitting}
+            icon={CheckCircle2}
           >
-            {submitting ? 'Đang lưu...' : (isEditing ? 'Lưu Thay Đổi' : 'Tạo Mốc Công Tác')}
+            {editingRecord ? 'Cập nhật mốc công tác' : 'Lưu mốc công tác'}
           </Button>
         </div>
       </form>

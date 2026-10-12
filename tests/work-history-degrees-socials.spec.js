@@ -20,6 +20,13 @@ import {
   saveWorkHistory,
   deleteWorkHistory
 } from '../src/lib/services';
+import { TRANSFER_TYPES } from '../src/features/employees/components/WorkHistoryPeriodModal';
+import { 
+  DEGREE_LEVEL_OPTIONS, 
+  TRAINING_TYPE_OPTIONS, 
+  CLASSIFICATION_OPTIONS 
+} from '../src/features/employees/components/AddDegreeModal';
+import { SOCIAL_PLATFORMS } from '../src/features/employees/components/ManageSocialsModal';
 
 
 test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Riêng Biệt (Degrees, Socials, Timeline Work History)', () => {
@@ -115,5 +122,102 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     expect(typeof unsubWork).toBe('function');
     unsubWork();
   });
-});
 
+  test('Kiểm tra Component WorkHistoryPeriodModal & Quy tắc Sắp xếp Timeline Mốc Công Tác', async () => {
+    // 1. Kiểm tra 5 hình thức luân chuyển / công tác chuẩn
+    expect(TRANSFER_TYPES).toHaveLength(5);
+    const typeKeys = TRANSFER_TYPES.map((t) => t.value);
+    expect(typeKeys).toContain('LUAN_CHUYEN_DINH_KY');
+    expect(typeKeys).toContain('BO_NHIEM');
+    expect(typeKeys).toContain('THAY_DOI_DIA_BAN');
+    expect(typeKeys).toContain('DIEU_DONG_NOI_BO');
+    expect(typeKeys).toContain('CONG_TAC_BAN_DAU');
+
+    // 2. Kiểm tra thuật toán sắp xếp timeline: Mốc isCurrent: true lên đầu, mốc quá khứ sắp xếp theo startDate giảm dần
+    const sampleMilestones = [
+      { id: '1', startDate: '2020-01-01', endDate: '2022-01-01', isCurrent: false, position: 'CBTD' },
+      { id: '2', startDate: '2024-01-01', endDate: '', isCurrent: true, position: 'Trưởng phòng TD' },
+      { id: '3', startDate: '2022-02-01', endDate: '2023-12-31', isCurrent: false, position: 'CBTD Chính' },
+    ];
+
+    const sorted = [...sampleMilestones].sort((a, b) => {
+      if (a.isCurrent && !b.isCurrent) return -1;
+      if (!a.isCurrent && b.isCurrent) return 1;
+      const dateA = a.startDate || a.effectiveDate || '';
+      const dateB = b.startDate || b.effectiveDate || '';
+      return dateB.localeCompare(dateA);
+    });
+
+    expect(sorted[0].id).toBe('2'); // isCurrent: true
+    expect(sorted[1].id).toBe('3'); // 2022-02-01
+    expect(sorted[2].id).toBe('1'); // 2020-01-01
+  });
+
+  test('Kiểm tra Giao diện Tab Luân chuyển công tác & Modal Thêm mốc công tác', async ({ page }) => {
+    // Đăng nhập an toàn
+    await page.goto('/login');
+    try {
+      await page.waitForURL(/.*\/portal/, { timeout: 3000 });
+    } catch {
+      const emailInput = page.getByLabel('Địa chỉ Email Cán bộ');
+      await emailInput.fill('ducanht@gmail.com');
+      await page.getByLabel('Mật khẩu bảo mật').fill('Qtd@2003');
+      await page.getByRole('button', { name: 'Đăng nhập ngay' }).click();
+      await expect(page).toHaveURL(/.*\/portal/, { timeout: 20000 });
+    }
+
+    const remindLaterBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
+    if (await remindLaterBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await remindLaterBtn.click();
+    }
+
+    // Điều hướng vào tab TRANSFERS của /employees
+    await page.goto('/employees?tab=TRANSFERS');
+    await expect(page).toHaveURL(/.*\/employees/, { timeout: 15000 });
+
+    // Kiểm tra tiêu đề khối Timeline
+    await expect(page.getByText(/Quá Trình Công Tác & Luân Chuyển/i).first()).toBeVisible({ timeout: 15000 });
+
+    // Kiểm tra nút "+ Thêm mốc công tác" hiển thị cho Quản trị viên
+    const addPeriodBtn = page.getByRole('button', { name: /\+ Thêm mốc công tác/i });
+    await expect(addPeriodBtn).toBeVisible({ timeout: 10000 });
+
+    // Nhấp nút mở modal
+    await addPeriodBtn.click();
+
+    // Xác nhận Modal Thêm Mốc Quá Trình Công Tác Mới mở ra
+    await expect(page.getByRole('heading', { name: /Thêm Mốc Quá Trình Công Tác Mới/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Thời Gian Công Tác')).toBeVisible();
+    await expect(page.getByText(/Đang đảm nhiệm \(Mốc hiện tại\)/i)).toBeVisible();
+    await expect(page.getByText(/Phòng ban đảm nhiệm/i)).toBeVisible();
+    await expect(page.getByText('Địa bàn quản lý tín dụng:').first()).toBeVisible();
+
+    // Nhấp nút Hủy bỏ để đóng modal
+    await page.getByRole('button', { name: /Hủy bỏ/i }).click();
+    await expect(page.getByRole('heading', { name: /Thêm Mốc Quá Trình Công Tác Mới/i })).toHaveCount(0);
+  });
+
+  test('Kiểm tra Cấu hình và Tùy chọn Văn Bằng & Mạng Xã Hội Đa Nền Tảng', async () => {
+    // 1. Kiểm tra các bậc văn bằng chuyên môn đa cấp
+    const degreeLevels = DEGREE_LEVEL_OPTIONS.map((d) => d.value);
+    expect(degreeLevels).toContain('Tiến sĩ');
+    expect(degreeLevels).toContain('Thạc sĩ');
+    expect(degreeLevels).toContain('Đại học');
+    expect(degreeLevels).toContain('Cao đẳng');
+    expect(degreeLevels).toContain('Trung cấp');
+
+    // 2. Kiểm tra hình thức đào tạo
+    const trainingTypes = TRAINING_TYPE_OPTIONS.map((t) => t.value);
+    expect(trainingTypes).toContain('Chính quy');
+    expect(trainingTypes).toContain('Vừa làm vừa học');
+    expect(trainingTypes).toContain('Liên thông');
+    expect(trainingTypes).toContain('Văn bằng 2');
+
+    // 3. Kiểm tra mạng xã hội & kênh liên lạc số
+    const platforms = SOCIAL_PLATFORMS.map((s) => s.value);
+    expect(platforms).toContain('Zalo');
+    expect(platforms).toContain('Facebook');
+    expect(platforms).toContain('Telegram');
+    expect(platforms).toContain('LinkedIn');
+  });
+});

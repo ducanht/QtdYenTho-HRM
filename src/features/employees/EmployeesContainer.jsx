@@ -9,7 +9,9 @@ import {
   subscribeEmployeeTraining, 
   subscribeDepartments,
   subscribePositions,
-  subscribeSubsystemConfig
+  subscribeSubsystemConfig,
+  subscribeEmployeeDegrees,
+  subscribeEmployeeSocials
 } from '../../lib/services';
 import { DEFAULT_POSITIONS } from '../../lib/systemDefaults';
 import { getOfficialStaff } from '../../lib/evaluationUtils';
@@ -51,6 +53,8 @@ const EmployeesContainer = () => {
   const [positions, setPositions] = useState(DEFAULT_POSITIONS);
   const [workHistory, setWorkHistory] = useState([]);
   const [trainings, setTrainings] = useState([]);
+  const [degrees, setDegrees] = useState([]);
+  const [socials, setSocials] = useState([]);
   const [hrConfig, setHrConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -208,6 +212,14 @@ const EmployeesContainer = () => {
       setHrConfig(cfg || null);
     });
 
+    const unsubDegrees = subscribeEmployeeDegrees(null, (list) => {
+      setDegrees(list || []);
+    });
+
+    const unsubSocials = subscribeEmployeeSocials(null, (list) => {
+      setSocials(list || []);
+    });
+
     return () => {
       unsubEmp();
       unsubDept();
@@ -215,6 +227,8 @@ const EmployeesContainer = () => {
       unsubWork();
       unsubTrain();
       unsubConfig();
+      unsubDegrees();
+      unsubSocials();
     };
   }, []);
 
@@ -300,6 +314,8 @@ const EmployeesContainer = () => {
                 }}
                 workHistory={workHistory}
                 trainings={trainings}
+                degrees={degrees}
+                socials={socials}
                 canManage={canManage}
               />
             )}
@@ -328,6 +344,7 @@ const EmployeesContainer = () => {
               <EmployeeAnalyticsTab
                 employees={viewableEmployees}
                 departments={departments}
+                degrees={degrees}
                 hrConfig={hrConfig}
                 onSelectEmployeeForTransfer={handleSelectEmployeeForTransfer}
               />
@@ -393,6 +410,8 @@ const EmployeesContainer = () => {
           emp={printTargetEmp || currentEmp}
           workHistory={workHistory}
           trainings={trainings}
+          degrees={degrees}
+          socials={socials}
         />
       )}
     </div>
