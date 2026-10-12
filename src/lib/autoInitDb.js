@@ -88,6 +88,8 @@ import {
   OFFICIAL_WORK_HISTORY,
   OFFICIAL_STAFF_EMPLOYEES,
   DEFAULT_ACCOUNTS,
+  DEFAULT_EMPLOYEE_DEGREES,
+  DEFAULT_EMPLOYEE_SOCIALS,
 } from './systemDefaults';
 import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
 
@@ -95,10 +97,10 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.5_period_hours_and_credit_officer_area_tenure';
+export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.6_degrees_socials_and_timeline_tables';
 
 /**
- * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (18 Collections chuẩn hóa)
+ * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (20 Collections chuẩn hóa)
  */
 export const CORE_COLLECTIONS = [
   'accounts',
@@ -114,6 +116,8 @@ export const CORE_COLLECTIONS = [
   'period_configs',
   'users',
   'work_history',
+  'employee_degrees',
+  'employee_socials',
   'evaluations_trust',
   'evaluations_kpi',
   'evaluations_planning',
@@ -142,6 +146,8 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       if (localSynced !== CURRENT_SCHEMA_VERSION || force) {
         localStorage.setItem('qtd_hrm_users', JSON.stringify(OFFICIAL_EMPLOYEES));
         localStorage.setItem('qtd_hrm_work_history', JSON.stringify(OFFICIAL_WORK_HISTORY));
+        localStorage.setItem('qtd_hrm_employee_degrees', JSON.stringify(DEFAULT_EMPLOYEE_DEGREES));
+        localStorage.setItem('qtd_hrm_employee_socials', JSON.stringify(DEFAULT_EMPLOYEE_SOCIALS));
         localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(DEFAULT_EVALUATION_PERIODS));
         localStorage.setItem('qtd_hrm_trust_criteria', JSON.stringify(DEFAULT_TRUST_CRITERIA));
         localStorage.setItem('qtd_hrm_departments', JSON.stringify(DEFAULT_DEPARTMENTS));
@@ -353,12 +359,46 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       }, { merge: true });
     }
 
-    // 9. Lịch sử luân chuyển công tác (work_history)
+    // 11. Lịch sử luân chuyển công tác & Timeline vị trí (work_history)
     const historySnap = await getDocs(collection(db, 'work_history')).catch(() => null);
-    if (!historySnap || historySnap.empty) {
+    if (!historySnap || historySnap.empty || force) {
       for (const trans of OFFICIAL_WORK_HISTORY) {
         await setDoc(doc(db, 'work_history', trans.id), {
           ...trans,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } else {
+      for (const trans of OFFICIAL_WORK_HISTORY) {
+        await setDoc(doc(db, 'work_history', trans.id), {
+          startDate: trans.startDate,
+          endDate: trans.endDate,
+          isCurrent: trans.isCurrent,
+          position: trans.position,
+          department: trans.department,
+          assignedArea: trans.assignedArea,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
+    // 12. Danh mục văn bằng chuyên môn đa cấp (employee_degrees)
+    const degreesSnap = await getDocs(collection(db, 'employee_degrees')).catch(() => null);
+    if (!degreesSnap || degreesSnap.empty || force) {
+      for (const deg of DEFAULT_EMPLOYEE_DEGREES) {
+        await setDoc(doc(db, 'employee_degrees', deg.id), {
+          ...deg,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
+    // 13. Danh mục mạng xã hội & kênh liên lạc cán bộ (employee_socials)
+    const socialsSnap = await getDocs(collection(db, 'employee_socials')).catch(() => null);
+    if (!socialsSnap || socialsSnap.empty || force) {
+      for (const soc of DEFAULT_EMPLOYEE_SOCIALS) {
+        await setDoc(doc(db, 'employee_socials', soc.id), {
+          ...soc,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -468,11 +508,13 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
   };
 
   if (!isFirebaseConfigured || !db) {
-    onProgress('Hệ thống đang hoạt động ở chế độ lưu trữ cục bộ. Đang đồng bộ cấu trúc 16 bảng...');
+    onProgress('Hệ thống đang hoạt động ở chế độ lưu trữ cục bộ. Đang đồng bộ cấu trúc 20 bảng...');
     localStorage.setItem('qtd_hrm_users', JSON.stringify(OFFICIAL_EMPLOYEES));
     localStorage.setItem('qtd_hrm_employees', JSON.stringify(OFFICIAL_STAFF_EMPLOYEES));
     localStorage.setItem('qtd_hrm_accounts', JSON.stringify(DEFAULT_ACCOUNTS));
     localStorage.setItem('qtd_hrm_work_history', JSON.stringify(OFFICIAL_WORK_HISTORY));
+    localStorage.setItem('qtd_hrm_employee_degrees', JSON.stringify(DEFAULT_EMPLOYEE_DEGREES));
+    localStorage.setItem('qtd_hrm_employee_socials', JSON.stringify(DEFAULT_EMPLOYEE_SOCIALS));
     localStorage.setItem('qtd_hrm_evaluation_periods', JSON.stringify(DEFAULT_EVALUATION_PERIODS));
     localStorage.setItem('qtd_hrm_period_configs', JSON.stringify(DEFAULT_EVALUATION_PERIODS));
     localStorage.setItem('qtd_hrm_trust_criteria', JSON.stringify(DEFAULT_TRUST_CRITERIA));
@@ -496,6 +538,8 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       period_configs: DEFAULT_EVALUATION_PERIODS.length,
       users: OFFICIAL_EMPLOYEES.length,
       work_history: OFFICIAL_WORK_HISTORY.length,
+      employee_degrees: DEFAULT_EMPLOYEE_DEGREES.length,
+      employee_socials: DEFAULT_EMPLOYEE_SOCIALS.length,
       evaluations_trust: 0,
       evaluations_kpi: 0,
       evaluations_planning: 0,
@@ -505,7 +549,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
 
     result.success = true;
     result.details = localCounts;
-    result.message = 'Đã tự động khởi tạo và đồng bộ toàn bộ 18 bảng dữ liệu cục bộ thành công!';
+    result.message = 'Đã tự động khởi tạo và đồng bộ toàn bộ 20 bảng dữ liệu cục bộ thành công!';
     return result;
   }
 
@@ -515,7 +559,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
   }
 
   try {
-    onProgress('Bước 1/14: Thiết lập Siêu dữ liệu phiên bản CSDL (system_metadata)...');
+    onProgress('Bước 1/16: Thiết lập Siêu dữ liệu phiên bản CSDL (system_metadata)...');
     await setDoc(doc(db, 'system_metadata', 'schema'), {
       version: CURRENT_SCHEMA_VERSION,
       status: 'HEALTHY',
@@ -524,7 +568,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       updatedAt: serverTimestamp(),
     }, { merge: true });
 
-    onProgress('Bước 2/14: Khởi tạo Danh mục 8 phân hệ mở rộng (system_modules)...');
+    onProgress('Bước 2/16: Khởi tạo Danh mục 8 phân hệ mở rộng (system_modules)...');
     for (const key of Object.keys(SYSTEM_MODULES)) {
       const mod = SYSTEM_MODULES[key];
       await setDoc(doc(db, 'system_modules', mod.code), {
@@ -533,7 +577,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 3/14: Thiết lập Ma trận 4 cấp phân quyền chi tiết (roles_permissions)...');
+    onProgress('Bước 3/16: Thiết lập Ma trận 4 cấp phân quyền chi tiết (roles_permissions)...');
     for (const roleKey of Object.keys(ROLE_PERMISSIONS)) {
       await setDoc(doc(db, 'roles_permissions', roleKey), {
         role: roleKey,
@@ -542,7 +586,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 4/14: Cấu hình Danh mục Phòng ban & Chức danh (departments, positions)...');
+    onProgress('Bước 4/16: Cấu hình Danh mục Phòng ban & Chức danh (departments, positions)...');
     for (const dept of DEFAULT_DEPARTMENTS) {
       await setDoc(doc(db, 'departments', dept.id), { ...dept, updatedAt: serverTimestamp() }, { merge: true });
     }
@@ -550,7 +594,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       await setDoc(doc(db, 'positions', pos.id), { ...pos, updatedAt: serverTimestamp() }, { merge: true });
     }
 
-    onProgress('Bước 5/14: Thiết lập Cấu hình Tham số Hệ thống & 7 Phân hệ (system_settings)...');
+    onProgress('Bước 5/16: Thiết lập Cấu hình Tham số Hệ thống & 7 Phân hệ (system_settings)...');
     await setDoc(doc(db, 'system_settings', 'general'), {
       ...DEFAULT_SYSTEM_SETTINGS,
       updatedAt: serverTimestamp(),
@@ -572,7 +616,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 6/14: Chuẩn hóa 10 Tiêu chí đánh giá tín nhiệm (trust_criteria)...');
+    onProgress('Bước 6/16: Chuẩn hóa 10 Tiêu chí đánh giá tín nhiệm (trust_criteria)...');
     for (const crit of DEFAULT_TRUST_CRITERIA) {
       await setDoc(doc(db, 'trust_criteria', crit.code), {
         ...crit,
@@ -580,7 +624,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 7/14: Cấu hình Đợt đánh giá & Bảng Cấu Hình Riêng (evaluation_periods & period_configs)...');
+    onProgress('Bước 7/16: Cấu hình Đợt đánh giá & Bảng Cấu Hình Riêng (evaluation_periods & period_configs)...');
     const validStaffIds = OFFICIAL_STAFF_EMPLOYEES.map((e) => e.id);
     for (const period of DEFAULT_EVALUATION_PERIODS) {
       await setDoc(doc(db, 'evaluation_periods', period.id), {
@@ -610,7 +654,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 8/14: Khởi tạo Danh bạ Cán bộ Nhân viên chính thức (employees)...');
+    onProgress('Bước 8/16: Khởi tạo Danh bạ Cán bộ Nhân viên chính thức (employees)...');
     for (const emp of OFFICIAL_STAFF_EMPLOYEES) {
       await setDoc(doc(db, 'employees', emp.id), {
         ...emp,
@@ -618,7 +662,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 9/14: Khởi tạo Danh sách Tài khoản Đăng nhập riêng biệt (accounts)...');
+    onProgress('Bước 9/16: Khởi tạo Danh sách Tài khoản Đăng nhập riêng biệt (accounts)...');
     for (const acc of DEFAULT_ACCOUNTS) {
       await setDoc(doc(db, 'accounts', acc.id), {
         ...acc,
@@ -626,7 +670,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 10/14: Cập nhật Hồ sơ Cán bộ Nhân viên (users - Tương thích ngược)...');
+    onProgress('Bước 10/16: Cập nhật Hồ sơ Cán bộ Nhân viên (users - Tương thích ngược)...');
     for (const emp of OFFICIAL_EMPLOYEES) {
       await setDoc(doc(db, 'users', emp.id), {
         ...emp,
@@ -634,7 +678,7 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 11/14: Cập nhật Lịch sử luân chuyển công tác (work_history)...');
+    onProgress('Bước 11/16: Cập nhật Lịch sử luân chuyển công tác & Timeline (work_history)...');
     for (const trans of OFFICIAL_WORK_HISTORY) {
       await setDoc(doc(db, 'work_history', trans.id), {
         ...trans,
@@ -642,9 +686,25 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 12/14: Xác nhận tính toàn vẹn các bảng phân hệ đánh giá...');
+    onProgress('Bước 12/16: Khởi tạo Danh mục văn bằng chuyên môn đa cấp (employee_degrees)...');
+    for (const deg of DEFAULT_EMPLOYEE_DEGREES) {
+      await setDoc(doc(db, 'employee_degrees', deg.id), {
+        ...deg,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
 
-    onProgress('Bước 13/14: Thống kê và tổng hợp số liệu 18 bảng CSDL Firestore...');
+    onProgress('Bước 13/16: Khởi tạo Danh mục mạng xã hội & kênh liên lạc (employee_socials)...');
+    for (const soc of DEFAULT_EMPLOYEE_SOCIALS) {
+      await setDoc(doc(db, 'employee_socials', soc.id), {
+        ...soc,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 14/16: Xác nhận tính toàn vẹn các bảng phân hệ đánh giá...');
+
+    onProgress('Bước 15/16: Thống kê và tổng hợp số liệu 20 bảng CSDL Firestore...');
     const details = {};
     for (const colName of CORE_COLLECTIONS) {
       try {
@@ -660,9 +720,9 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       sessionStorage.setItem('qtd_hrm_schema_synced_ver', CURRENT_SCHEMA_VERSION);
     }
 
-    onProgress('Bước 14/14: Hoàn tất 100%! Toàn bộ 18 bảng CSDL Firestore đã sẵn sàng vận hành.');
+    onProgress('Bước 16/16: Hoàn tất 100%! Toàn bộ 20 bảng CSDL Firestore đã sẵn sàng vận hành.');
     result.success = true;
-    result.message = 'Khởi tạo và đồng bộ 18 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
+    result.message = 'Khởi tạo và đồng bộ 20 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
     return result;
   } catch (error) {
     console.error('Lỗi tự động khởi tạo CSDL Firebase:', error);
@@ -671,3 +731,8 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
     return result;
   }
 };
+
+/**
+ * Bí danh tương thích chuẩn hóa cho hàm autoInitializeFirebaseDatabase
+ */
+export const autoInitializeDatabase = autoInitializeFirebaseDatabase;
