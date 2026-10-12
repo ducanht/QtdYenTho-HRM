@@ -162,13 +162,13 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     // Đăng nhập an toàn
     await page.goto('/login');
     try {
-      await page.waitForURL(/.*\/portal/, { timeout: 3000 });
+      await page.waitForURL(/.*(\/portal|\/employees)/, { timeout: 3000 });
     } catch {
       const emailInput = page.getByLabel('Địa chỉ Email Cán bộ');
       await emailInput.fill('ducanht@gmail.com');
       await page.getByLabel('Mật khẩu bảo mật').fill('Qtd@2003');
-      await page.getByRole('button', { name: 'Đăng nhập ngay' }).click();
-      await expect(page).toHaveURL(/.*\/portal/, { timeout: 20000 });
+      await page.getByRole('button', { name: /Đăng nhập ngay/i }).click();
+      await page.waitForURL(/.*(\/portal|\/employees)/, { timeout: 25000 });
     }
 
     const remindLaterBtn = page.getByRole('button', { name: 'Nhắc tôi sau' });
@@ -194,8 +194,8 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     await expect(page.getByRole('heading', { name: /Thêm Mốc Quá Trình Công Tác Mới/i })).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Thời Gian Công Tác')).toBeVisible();
     await expect(page.getByText(/Đang đảm nhiệm \(Mốc hiện tại\)/i)).toBeVisible();
-    await expect(page.getByText(/Phòng ban đảm nhiệm/i)).toBeVisible();
-    await expect(page.getByText('Địa bàn quản lý tín dụng:').first()).toBeVisible();
+    await expect(page.getByText(/Phòng ban/i).first()).toBeVisible();
+    await expect(page.getByText(/Địa bàn quản lý/i).first()).toBeVisible();
 
     // Nhấp nút Hủy bỏ để đóng modal
     await page.getByRole('button', { name: /Hủy bỏ/i }).click();

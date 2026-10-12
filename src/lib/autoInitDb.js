@@ -97,7 +97,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.7_editable_it_language_and_secondary_phone';
+export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.8_skills_it_language_and_secondary_phone';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (20 Collections chuẩn hóa)
@@ -353,8 +353,14 @@ export const autoSyncDatabaseSchema = async (force = false) => {
 
     // 10. ĐỒNG BỘ BẢNG users (GƯƠNG CHIẾU TƯƠNG THÍCH NGƯỢC - BACKWARD COMPATIBILITY MIRROR)
     for (const emp of OFFICIAL_EMPLOYEES) {
+      const itLevel = emp.itLevel || 'Ứng dụng CNTT cơ bản';
+      const foreignLanguage = emp.foreignLanguage || 'Tiếng Anh';
+      const secondaryPhone = emp.secondaryPhone || '';
       await setDoc(doc(db, 'users', emp.id), {
         ...emp,
+        itLevel,
+        foreignLanguage,
+        secondaryPhone,
         updatedAt: serverTimestamp(),
       }, { merge: true });
     }

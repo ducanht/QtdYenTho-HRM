@@ -250,18 +250,15 @@ const WorkHistoryPeriodModal = ({
           </div>
 
           {isCurrent && (
-            <div className="p-2.5 rounded-lg bg-emerald-100/60 border border-emerald-300 flex items-start gap-2">
+            <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer select-none">
               <input
                 type="checkbox"
-                id="sync-profile-checkbox"
                 checked={syncToProfile}
                 onChange={(e) => setSyncToProfile(e.target.checked)}
-                className="mt-0.5 rounded border-emerald-400 text-emerald-700 focus:ring-emerald-600"
+                className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
               />
-              <label htmlFor="sync-profile-checkbox" className="text-[11px] text-emerald-950 font-medium leading-snug cursor-pointer select-none">
-                <span className="font-extrabold text-emerald-900">Đồng bộ sang Hồ sơ cán bộ:</span> Tự động cập nhật chức vụ, phòng ban và địa bàn quản lý này thành thông tin công tác hiện tại trong hồ sơ của cán bộ.
-              </label>
-            </div>
+              <span className="font-medium">Đồng bộ chức vụ và địa bàn vào hồ sơ cán bộ</span>
+            </label>
           )}
         </div>
 
@@ -270,7 +267,7 @@ const WorkHistoryPeriodModal = ({
           <div>
             <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Phòng ban đảm nhiệm: <span className="text-rose-500">*</span></span>
+              <span>Phòng ban: <span className="text-rose-500">*</span></span>
             </label>
             <select
               value={department}
@@ -288,13 +285,13 @@ const WorkHistoryPeriodModal = ({
           <div>
             <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1">
               <Briefcase className="w-3.5 h-3.5 text-slate-500" />
-              <span>Chức vụ / Vị trí công tác: <span className="text-rose-500">*</span></span>
+              <span>Chức vụ: <span className="text-rose-500">*</span></span>
             </label>
             <input
               type="text"
               list="work-history-positions"
               required
-              placeholder="VD: Cán bộ tín dụng / Kế toán viên"
+              placeholder="VD: Cán bộ tín dụng"
               value={position}
               onChange={(e) => setPosition(e.target.value)}
               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
@@ -307,39 +304,20 @@ const WorkHistoryPeriodModal = ({
           </div>
         </div>
 
-        {/* Khối 3: Địa bàn quản lý tín dụng (Bắt buộc và nổi bật với CBTD) */}
-        <div className={`p-3.5 rounded-xl border transition-all ${
-          isCreditOfficer 
-            ? 'bg-emerald-50/70 border-emerald-300' 
-            : 'bg-slate-50/80 border-slate-200'
-        }`}>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <MapPin className={`w-4 h-4 ${isCreditOfficer ? 'text-emerald-700' : 'text-slate-500'}`} />
-              <span>Địa bàn quản lý tín dụng:</span>
-              {isCreditOfficer && <span className="text-rose-500">*</span>}
-            </label>
-            {isCreditOfficer && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                Theo dõi luân chuyển NHNN (36 tháng)
-              </span>
-            )}
-          </div>
+        {/* Khối 3: Địa bàn quản lý */}
+        <div>
+          <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-slate-500" />
+            <span>Địa bàn quản lý: {isCreditOfficer && <span className="text-rose-500">*</span>}</span>
+          </label>
           <input
             type="text"
             required={isCreditOfficer}
-            placeholder="VD: Thôn Tân Lộc, Thôn 1 Quý Lộc / Toàn xã Yên Thọ"
+            placeholder={isCreditOfficer ? "Nhập địa bàn phụ trách (thôn/xã)" : "Địa bàn phụ trách (nếu có)"}
             value={assignedArea}
             onChange={(e) => setAssignedArea(e.target.value)}
-            className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 ${
-              isCreditOfficer ? 'border-emerald-300 font-bold' : 'border-slate-200'
-            }`}
+            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
           />
-          <p className="text-[11px] text-slate-500 mt-1">
-            {isCreditOfficer
-              ? '* Bắt buộc phân công địa bàn quản lý (thôn/xã) đối với Cán bộ Tín dụng để tính chu kỳ luân chuyển định kỳ.'
-              : 'Phạm vi công việc hoặc cơ sở phụ trách (nếu có).'}
-          </p>
         </div>
 
         {/* Khối 4: Hình thức điều chuyển, Quyết định & Người ký */}

@@ -33,6 +33,7 @@ import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
 import AddDegreeModal from './AddDegreeModal';
 import ManageSocialsModal, { SOCIAL_PLATFORMS } from './ManageSocialsModal';
+import EditSkillsModal from './EditSkillsModal';
 
 /**
  * EmployeeProfileDetail: Cột Phải cho Tab PROFILE
@@ -57,10 +58,11 @@ const EmployeeProfileDetail = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Modal văn bằng & mạng xã hội
+  // Modal văn bằng, mạng xã hội & kỹ năng
   const [isAddDegreeModalOpen, setIsAddDegreeModalOpen] = useState(false);
   const [editingDegree, setEditingDegree] = useState(null);
   const [isManageSocialsModalOpen, setIsManageSocialsModalOpen] = useState(false);
+  const [isEditSkillsModalOpen, setIsEditSkillsModalOpen] = useState(false);
   const [viewingScanImage, setViewingScanImage] = useState(null);
 
   if (!emp) {
@@ -647,14 +649,31 @@ const EmployeeProfileDetail = ({
             )}
 
             {/* Trình độ Tin học & Ngoại ngữ */}
-            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 text-xs">
-              <div>
-                <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Tin học:</span>
-                <span className="font-medium text-slate-800">{emp.itLevel || 'Ứng dụng CNTT cơ bản'}</span>
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Trình độ Tin học &amp; Ngoại ngữ
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditSkillsModalOpen(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-200 transition-colors cursor-pointer shadow-2xs"
+                  title="Cập nhật trình độ tin học và ngoại ngữ"
+                >
+                  <Edit2 className="w-2.5 h-2.5" />
+                  <span>Chỉnh sửa</span>
+                </button>
               </div>
-              <div>
-                <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Ngoại ngữ:</span>
-                <span className="font-medium text-slate-800">{emp.foreignLanguage || 'Tiếng Anh'}</span>
+
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Tin học:</span>
+                  <span className="font-semibold text-slate-800">{emp.itLevel || 'Ứng dụng CNTT cơ bản'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Ngoại ngữ:</span>
+                  <span className="font-semibold text-slate-800">{emp.foreignLanguage || 'Tiếng Anh'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -729,6 +748,18 @@ const EmployeeProfileDetail = ({
           emp={emp}
           socials={socials}
           onSuccess={() => {}}
+        />
+      )}
+
+      {/* Modal Cập Nhật Trình Độ Kỹ Năng & Liên Hệ */}
+      {isEditSkillsModalOpen && (
+        <EditSkillsModal
+          isOpen={isEditSkillsModalOpen}
+          onClose={() => setIsEditSkillsModalOpen(false)}
+          emp={emp}
+          onSuccess={(updated) => {
+            Object.assign(emp, updated);
+          }}
         />
       )}
 

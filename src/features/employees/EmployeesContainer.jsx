@@ -378,7 +378,19 @@ const EmployeesContainer = () => {
           departments={departments}
           positions={positions}
           existingEmployees={officialEmployees}
-          onSuccess={() => {}}
+          onSuccess={(saved) => {
+            if (saved) {
+              setEmployees((prev) => {
+                const idx = prev.findIndex((e) => e.id === saved.id || (saved.code && e.code === saved.code));
+                if (idx >= 0) {
+                  const copy = [...prev];
+                  copy[idx] = { ...copy[idx], ...saved };
+                  return copy;
+                }
+                return [...prev, saved];
+              });
+            }
+          }}
         />
       )}
 
