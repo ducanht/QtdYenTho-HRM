@@ -329,7 +329,10 @@ const EmployeeFormModal = ({
               >
                 <option value="Không xác định thời hạn">Không xác định thời hạn</option>
                 <option value="Theo nhiệm kỳ">Theo nhiệm kỳ bầu cử</option>
-                <option value="Xác định thời hạn 36 tháng">Xác định thời hạn 36 tháng</option>
+                <option value="Hợp đồng xác định thời hạn">Hợp đồng xác định thời hạn</option>
+                {contractType === 'Xác định thời hạn 36 tháng' && (
+                  <option value="Xác định thời hạn 36 tháng">Hợp đồng xác định thời hạn</option>
+                )}
                 <option value="Thử việc / Học việc">Thử việc / Tập sự</option>
               </select>
             </div>

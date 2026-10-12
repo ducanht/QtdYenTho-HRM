@@ -317,6 +317,7 @@ const EmployeesContainer = () => {
                 degrees={degrees}
                 socials={socials}
                 canManage={canManage}
+                hrConfig={hrConfig}
               />
             )}
 

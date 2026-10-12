@@ -122,14 +122,22 @@ const HrSubsystemSettings = ({ hrConfig = {}, setHrConfig, onSaveConfig, isSavin
             <div className="flex items-center gap-3">
               <input
                 type="number"
-                value={hrConfig.transferCycleMonths ?? 36}
-                onChange={(e) =>
-                  setHrConfig((prev) => ({ ...prev, transferCycleMonths: Number(e.target.value) }))
-                }
+                min="6"
+                max="60"
+                value={hrConfig.creditRotationMonths ?? hrConfig.transferCycleMonths ?? hrConfig.transferMaxMonths ?? 36}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setHrConfig((prev) => ({ 
+                    ...prev, 
+                    creditRotationMonths: val,
+                    transferCycleMonths: val,
+                    transferMaxMonths: val
+                  }));
+                }}
                 className="w-20 p-2 text-sm font-bold bg-white border border-teal-300 rounded-xl text-center tabular-nums"
               />
               <span className="text-xs font-bold text-teal-900">
-                tháng (tương đương 3 năm theo chỉ đạo NHNN)
+                tháng
               </span>
             </div>
             <p className="text-[11px] text-teal-700">
@@ -144,13 +152,22 @@ const HrSubsystemSettings = ({ hrConfig = {}, setHrConfig, onSaveConfig, isSavin
             <div className="flex items-center gap-3">
               <input
                 type="number"
-                value={hrConfig.warningDaysBefore ?? 90}
-                onChange={(e) =>
-                  setHrConfig((prev) => ({ ...prev, warningDaysBefore: Number(e.target.value) }))
-                }
+                min="1"
+                max="12"
+                value={hrConfig.creditWarningMonths ?? hrConfig.transferWarningMonths ?? hrConfig.warningMonths ?? 6}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setHrConfig((prev) => ({ 
+                    ...prev, 
+                    creditWarningMonths: val,
+                    transferWarningMonths: val,
+                    warningMonths: val,
+                    warningDaysBefore: val * 30,
+                  }));
+                }}
                 className="w-20 p-2 text-sm font-bold bg-white border border-amber-300 rounded-xl text-center tabular-nums"
               />
-              <span className="text-xs font-bold text-amber-900">ngày trước khi hết chu kỳ</span>
+              <span className="text-xs font-bold text-amber-900">tháng trước khi hết chu kỳ</span>
             </div>
             <p className="text-[11px] text-amber-700">
               Hệ thống tự động phát cảnh báo màu vàng tại trang Nhân sự để Ban Lãnh đạo chủ động xây dựng phương án nhân sự.

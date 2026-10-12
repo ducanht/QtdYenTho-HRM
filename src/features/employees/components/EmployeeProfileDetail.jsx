@@ -50,6 +50,7 @@ const EmployeeProfileDetail = ({
   degrees = [],
   socials = [],
   canManage = false,
+  hrConfig = null,
 }) => {
   const toast = useToast();
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -79,7 +80,10 @@ const EmployeeProfileDetail = ({
 
   const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department);
 
-  const areaInfo = isCreditOfficer ? calculateAreaTenureAndDueDate(emp.areaStartDate || effectiveStart) : null;
+  const cycleMonths = Number(hrConfig?.creditRotationMonths || hrConfig?.transferMaxMonths || hrConfig?.transferCycleMonths || 36);
+  const warningMonths = Number(hrConfig?.creditWarningMonths || hrConfig?.transferWarningMonths || hrConfig?.warningMonths || 6);
+
+  const areaInfo = isCreditOfficer ? calculateAreaTenureAndDueDate(emp.areaStartDate || effectiveStart, cycleMonths, warningMonths) : null;
 
   const empDegrees = degrees.filter(
     (d) => d.employeeId === emp?.id || d.employeeUuid === emp?.id
@@ -479,7 +483,7 @@ const EmployeeProfileDetail = ({
                   <div>
                     <span className="text-slate-500 block text-[11px]">Thời điểm luân chuyển định kỳ:</span>
                     <strong className={`tabular-nums ${areaInfo.isDue ? 'text-rose-700 font-black' : areaInfo.isNear ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
-                      {areaInfo.dueDateText} (Chu kỳ 36 tháng)
+                      {areaInfo.dueDateText} (Chu kỳ {cycleMonths} tháng)
                     </strong>
                   </div>
                 </div>

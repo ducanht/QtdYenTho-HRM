@@ -235,7 +235,7 @@ const EmployeeSettingsTab = ({
                 <CalendarClock className="w-4 h-4 text-emerald-700" />
                 <h4 className="font-bold text-slate-900">Chu Kỳ Luân Chuyển Địa Bàn</h4>
               </div>
-              <span className="text-[11px] font-semibold text-slate-500">Mặc định 36 tháng</span>
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Thời hạn cấu hình</span>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -269,7 +269,7 @@ const EmployeeSettingsTab = ({
                 <Clock className="w-4 h-4 text-amber-600" />
                 <h4 className="font-bold text-slate-900">Thời Gian Cảnh Báo Trước</h4>
               </div>
-              <span className="text-[11px] font-semibold text-slate-500">Mặc định 6 tháng</span>
+              <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Thời hạn cảnh báo</span>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed">

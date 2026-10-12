@@ -443,11 +443,11 @@ export const checkPeriodActiveStatus = (period) => {
 
 /**
  * Tính thâm niên quản lý địa bàn và thời điểm đến hạn luân chuyển địa bàn (Dành riêng cho Cán bộ Tín dụng)
- * Theo quy định: Cán bộ tín dụng thực hiện luân chuyển địa bàn định kỳ (chu kỳ 36 tháng).
+ * Theo quy định: Cán bộ tín dụng thực hiện luân chuyển địa bàn định kỳ theo chu kỳ do Quỹ cấu hình.
  * 
  * @param {string} areaStartDate - Ngày bắt đầu nhận quản lý địa bàn (YYYY-MM-DD)
- * @param {number} cycleMonths - Chu kỳ luân chuyển địa bàn (mặc định 36 tháng)
- * @param {number} warningMonths - Số tháng cảnh báo trước (mặc định 6 tháng)
+ * @param {number} cycleMonths - Chu kỳ luân chuyển địa bàn theo cấu hình phân hệ
+ * @param {number} warningMonths - Số tháng cảnh báo trước theo cấu hình phân hệ
  * @returns {{
  *   tenureText: string,
  *   tenureMonths: number,

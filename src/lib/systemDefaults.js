@@ -170,7 +170,7 @@ export const DEFAULT_SYSTEM_SETTINGS = {
   website: 'https://qtdyentho-hrm.web.app',
   chairmanName: 'Trịnh Đức Anh',
   directorName: 'Nguyễn Văn Sơn',
-  transferCycleMonths: 36, // Chu kỳ luân chuyển cán bộ tín dụng (36 tháng)
+  transferCycleMonths: 36, // Chu kỳ luân chuyển cán bộ tín dụng (cấu hình động)
   planningThresholdPercent: 50, // Ngưỡng trúng quy hoạch (>= 50%)
   kpiWeightSelf: 40,
   kpiWeightManager: 30,
@@ -209,8 +209,8 @@ export const DEFAULT_MODULE_TRUST_SETTINGS = {
 export const DEFAULT_MODULE_HR_SETTINGS = {
   allowStaffViewDirectory: true,  // Cho phép CBNV xem danh bạ toàn Quỹ
   canStaffUploadTraining: true,   // Cho phép CBNV tự gửi chứng chỉ đào tạo
-  transferMaxMonths: 36,          // Chu kỳ luân chuyển chung (36 tháng)
-  transferWarningMonths: 6,       // Cảnh báo trước hạn luân chuyển (6 tháng)
+  transferMaxMonths: 36,          // Chu kỳ luân chuyển cán bộ tín dụng (cấu hình động)
+  transferWarningMonths: 6,       // Cảnh báo trước hạn luân chuyển (cấu hình động)
   transferCycleMonths: 36,        // Legacy alias
   warningDaysBefore: 90,          // Legacy alias
   requireDebtHandover: true,      // Yêu cầu biên bản bàn giao nợ trước khi chuyển địa bàn
@@ -729,7 +729,7 @@ export const OFFICIAL_WORK_HISTORY = [
     fromAssignedArea: 'Cụm thôn xã Quý Lộc',
     toAssignedArea: 'Toàn địa bàn xã Yên Thọ',
     signer: 'Trịnh Đức Anh (Chủ tịch HĐQT)',
-    reason: 'Thực hiện quy định NHNN về luân chuyển định kỳ cán bộ tín dụng sau 3 năm.',
+    reason: 'Thực hiện quy định luân chuyển định kỳ địa bàn quản lý của cán bộ tín dụng theo chu kỳ cấu hình.',
     handoverStatus: 'DA_BAN_GIAO',
     notes: 'Đã hoàn tất bàn giao hồ sơ tín dụng và tài sản bảo đảm.',
   },
