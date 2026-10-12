@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ArrowRightLeft, 
   FileText, 
@@ -6,12 +6,18 @@ import {
   ShieldAlert, 
   CheckCircle2, 
   Clock, 
-  Trash2 
+  Trash2,
+  Plus,
+  Edit3,
+  Calendar,
+  Building2,
+  Briefcase
 } from 'lucide-react';
 import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { deleteWorkHistory } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
+import WorkHistoryPeriodModal from './WorkHistoryPeriodModal';
 
 /**
  * EmployeeTransferHistory: Cột Phải cho Tab TRANSFERS
@@ -21,9 +27,13 @@ const EmployeeTransferHistory = ({
   emp,
   workHistory = [],
   hrConfig = null,
+  departments = [],
+  positions = [],
   canManage = false,
 }) => {
   const toast = useToast();
+  const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
+  const [editingPeriodData, setEditingPeriodData] = useState(null);
 
   // Nhận diện quy tắc luân chuyển theo chức vụ cấu hình
   const positionRule = useMemo(() => {
@@ -82,12 +92,19 @@ const EmployeeTransferHistory = ({
     : null;
   const areaPercent = areaInfo ? Math.min(100, Math.round((areaInfo.tenureMonths / maxMonths) * 100)) : 0;
 
-  // Lọc lịch sử luân chuyển của cán bộ đang chọn
+  // Lọc và sắp xếp lịch sử quá trình công tác của cán bộ đang chọn
+  // Mốc hiện tại (isCurrent: true) lên đầu tiên, sau đó theo ngày bắt đầu giảm dần
   const empHistory = useMemo(() => {
     if (!emp) return [];
     return workHistory
       .filter((rec) => rec.employeeId === emp.id || (rec.employeeCode && rec.employeeCode === emp.code))
-      .sort((a, b) => (b.effectiveDate || '').localeCompare(a.effectiveDate || ''));
+      .sort((a, b) => {
+        if (a.isCurrent && !b.isCurrent) return -1;
+        if (!a.isCurrent && b.isCurrent) return 1;
+        const dateA = a.startDate || a.effectiveDate || '';
+        const dateB = b.startDate || b.effectiveDate || '';
+        return dateB.localeCompare(dateA);
+      });
   }, [workHistory, emp?.id, emp?.code]);
 
   if (!emp) {
@@ -99,16 +116,26 @@ const EmployeeTransferHistory = ({
   }
 
   // Xóa bản ghi lịch sử luân chuyển
-  const handleDelete = async (recordId, decNo) => {
-    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa bản ghi luân chuyển "${decNo || recordId}" không?`)) {
+  const handleDelete = async (recordId, label) => {
+    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa mốc công tác "${label || recordId}" không?`)) {
       return;
     }
     try {
       await deleteWorkHistory(recordId);
-      toast?.showSuccess?.('Đã xóa bản ghi luân chuyển thành công');
+      toast?.showSuccess?.('Đã xóa mốc quá trình công tác thành công');
     } catch (err) {
-      toast?.showError?.(err.message || 'Lỗi khi xóa quyết định');
+      toast?.showError?.(err.message || 'Lỗi khi xóa mốc công tác');
     }
+  };
+
+  const handleOpenAddPeriod = () => {
+    setEditingPeriodData(null);
+    setIsPeriodModalOpen(true);
+  };
+
+  const handleOpenEditPeriod = (record) => {
+    setEditingPeriodData(record);
+    setIsPeriodModalOpen(true);
   };
 
   return (
@@ -278,145 +305,246 @@ const EmployeeTransferHistory = ({
         )}
       </div>
 
-      {/* 2. Timeline Quá Trình Luân Chuyển & Điều Động */}
+      {/* 2. Timeline Quá Trình Công Tác & Luân Chuyển Chi Tiết */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-          <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-emerald-700" />
-            <span>Lịch Sử Quyết Định Điều Động & Luân Chuyển ({empHistory.length})</span>
-          </h3>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-emerald-700" />
+              <span>Quá Trình Công Tác & Lịch Sử Luân Chuyển ({empHistory.length})</span>
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Toàn bộ các mốc bổ nhiệm, luân chuyển công tác và thay đổi địa bàn phụ trách
+            </p>
+          </div>
+
+          {canManage && (
+            <button
+              type="button"
+              onClick={handleOpenAddPeriod}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Mốc Công Tác</span>
+            </button>
+          )}
         </div>
 
         {empHistory.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 text-xs">
-            Chưa có bản ghi quyết định luân chuyển nào cho cán bộ này.
+          <div className="py-12 text-center text-slate-400 text-xs space-y-2">
+            <p>Chưa có bản ghi mốc quá trình công tác nào cho cán bộ này.</p>
+            {canManage && (
+              <button
+                type="button"
+                onClick={handleOpenAddPeriod}
+                className="inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Bấm vào đây để tạo mốc công tác đầu tiên</span>
+              </button>
+            )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="relative pl-6 space-y-4 before:absolute before:top-3 before:bottom-3 before:left-[11px] before:w-0.5 before:bg-slate-200">
             {empHistory.map((item, idx) => {
-              const isLatest = idx === 0;
+              const isCurrentPeriod = Boolean(item.isCurrent || (!item.endDate && idx === 0));
+              const currentPosition = item.position || item.toPosition || emp.position;
+              const currentDepartment = item.department || item.toDepartment || emp.department;
+              const currentArea = item.assignedArea || item.toAssignedArea;
 
               return (
-                <div
-                  key={item.id}
-                  className={`p-4 rounded-xl border transition-all text-xs space-y-3 ${
-                    isLatest 
-                      ? 'bg-emerald-50/40 border-emerald-200 shadow-2xs' 
+                <div key={item.id} className="relative group">
+                  {/* Timeline Dot Indicator */}
+                  <div className="absolute -left-6 top-4 -translate-x-1/2 flex items-center justify-center">
+                    {isCurrentPeriod ? (
+                      <span className="relative flex h-4 w-4">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-600 border-2 border-white shadow-xs" />
+                      </span>
+                    ) : (
+                      <span className="h-3 w-3 rounded-full bg-slate-300 border-2 border-white ring-1 ring-slate-300" />
+                    )}
+                  </div>
+
+                  {/* Card nội dung mốc công tác */}
+                  <div className={`p-4 rounded-xl border transition-all text-xs space-y-3 ${
+                    isCurrentPeriod 
+                      ? 'bg-emerald-50/40 border-emerald-300/80 shadow-2xs' 
                       : 'bg-white border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                        {item.decisionNumber || 'Chưa ghi số QĐ'}
-                      </span>
-                      <span className="font-bold text-emerald-900 bg-emerald-100/70 px-2 py-0.5 rounded-md">
-                        {item.transferType === 'LUAN_CHUYEN_DINH_KY'
-                          ? 'Luân chuyển định kỳ'
-                          : item.transferType === 'BO_NHIEM'
-                          ? 'Bổ nhiệm chức vụ'
-                          : item.transferType === 'THAY_DOI_DIA_BAN'
-                          ? 'Thay đổi địa bàn tín dụng'
-                          : 'Điều động nội bộ'}
-                      </span>
-                      {isLatest && (
-                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-200 px-1.5 py-0.5 rounded-md">
-                          Gần nhất
+                  }`}>
+                    {/* Header Card: Khoảng thời gian & Badges */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Thời gian hiển thị chuẩn */}
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-bold tabular-nums ${
+                          isCurrentPeriod 
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
+                            : 'bg-slate-100 text-slate-800'
+                        }`}>
+                          <Calendar className="w-3.5 h-3.5 opacity-70" />
+                          <span>
+                            {formatDateVN(item.startDate || item.effectiveDate)} — {isCurrentPeriod ? 'Đến nay' : (item.endDate ? formatDateVN(item.endDate) : '—')}
+                          </span>
+                        </div>
+
+                        {/* Badge loại điều động */}
+                        <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80">
+                          {item.transferTypeLabel || (
+                            item.transferType === 'LUAN_CHUYEN_DINH_KY'
+                              ? 'Luân chuyển định kỳ'
+                              : item.transferType === 'BO_NHIEM'
+                              ? 'Bổ nhiệm chức danh'
+                              : item.transferType === 'THAY_DOI_DIA_BAN'
+                              ? 'Thay đổi địa bàn tín dụng'
+                              : item.transferType === 'CONG_TAC_BAN_DAU'
+                              ? 'Tiếp nhận ban đầu'
+                              : 'Điều động nội bộ'
+                          )}
                         </span>
-                      )}
+
+                        {isCurrentPeriod && (
+                          <span className="text-[10px] font-black text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 animate-pulse" />
+                            <span>Đang đảm nhiệm</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Tác vụ Quản trị: Sửa / Xóa */}
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        {item.decisionNumber && (
+                          <span className="text-[11px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                            Số QĐ: {item.decisionNumber}
+                          </span>
+                        )}
+
+                        {canManage && (
+                          <div className="flex items-center gap-1 pl-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditPeriod(item)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                              title="Chỉnh sửa mốc công tác này"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item.id, item.decisionNumber || currentPosition)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Xóa mốc công tác này"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3 text-slate-400 text-[11px]">
-                      <span>Ngày ký: {formatDateVN(item.decisionDate)}</span>
-                      <span>•</span>
-                      <span className="font-bold text-slate-700">Hiệu lực: {formatDateVN(item.effectiveDate)}</span>
-
-                      {canManage && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item.id, item.decisionNumber)}
-                          className="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
-                          title="Xóa quyết định này"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Chi tiết thay đổi chức danh & địa bàn */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-150 space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Trước điều động:</span>
-                      <p className="font-bold text-slate-700">
-                        {item.fromPosition || 'Chưa xác định'}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        {item.fromDepartment || '—'}
-                      </p>
-                      {item.fromAssignedArea && (
-                        <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-slate-400" />
-                          <span>{item.fromAssignedArea}</span>
+                    {/* Vị Trí & Địa Bàn */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                      {/* Cột Vị trí & Phòng ban */}
+                      <div className="p-3 rounded-lg bg-white border border-slate-200/80 space-y-1">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                          Chức Danh & Phòng Ban
+                        </span>
+                        <p className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                          <Briefcase className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>{currentPosition}</span>
                         </p>
-                      )}
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200/80 space-y-1">
-                      <span className="text-[10px] font-bold text-emerald-800 block uppercase">Tiếp nhận mới:</span>
-                      <p className="font-bold text-emerald-950">
-                        {item.toPosition || emp.position}
-                      </p>
-                      <p className="text-[11px] text-emerald-800">
-                        {item.toDepartment || emp.department}
-                      </p>
-                      {item.toAssignedArea && (
-                        <p className="text-[11px] text-emerald-800 flex items-center gap-1 font-medium">
-                          <MapPin className="w-3 h-3 text-emerald-600" />
-                          <span>{item.toAssignedArea}</span>
+                        <p className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{currentDepartment}</span>
                         </p>
-                      )}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* Thông tin bàn giao và người ký */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400">Người ký:</span>
-                      <span className="font-bold text-slate-800">{item.signer || 'Chủ tịch HĐQT'}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400">Bàn giao hồ sơ nợ & sổ sách:</span>
-                      <span className={`font-bold px-2 py-0.5 rounded-md ${
-                        item.handoverStatus === 'DA_BAN_GIAO'
-                          ? 'text-emerald-800 bg-emerald-100'
-                          : item.handoverStatus === 'DANG_BAN_GIAO'
-                          ? 'text-amber-800 bg-amber-100'
-                          : 'text-rose-800 bg-rose-100'
+                      {/* Cột Địa bàn quản lý */}
+                      <div className={`p-3 rounded-lg border space-y-1 ${
+                        currentArea 
+                          ? 'bg-emerald-50/50 border-emerald-200/80' 
+                          : 'bg-slate-50 border-slate-200/80'
                       }`}>
-                        {item.handoverStatus === 'DA_BAN_GIAO'
-                          ? 'Đã hoàn tất bàn giao'
-                          : item.handoverStatus === 'DANG_BAN_GIAO'
-                          ? 'Đang tiến hành bàn giao'
-                          : 'Chưa bàn giao'}
-                      </span>
+                        <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">
+                          Địa Bàn Quản Lý & Phụ Trách
+                        </span>
+                        {currentArea ? (
+                          <p className="font-bold text-emerald-950 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                            <span>{currentArea}</span>
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 italic">
+                            Chưa phân công địa bàn cụ thể
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {item.reason && (
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                      <span className="font-bold text-slate-600">Căn cứ điều động:</span> {item.reason}
+                    {/* Trường hợp có chi tiết chuyển dịch chức danh trước/sau */}
+                    {item.fromPosition && item.fromPosition !== currentPosition && (
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-150 text-[11px] text-slate-600 flex flex-wrap items-center gap-1.5">
+                        <span className="text-slate-400">Điều động từ:</span>
+                        <span className="font-bold text-slate-700">{item.fromPosition}</span>
+                        {item.fromDepartment && <span>({item.fromDepartment})</span>}
+                        <ArrowRightLeft className="w-3 h-3 text-emerald-600 mx-1" />
+                        <span className="font-bold text-emerald-900">{currentPosition}</span>
+                      </div>
+                    )}
+
+                    {/* Người ký, Bàn giao & Ghi chú */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600">
+                      {item.signer && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-400">Thẩm quyền ký:</span>
+                          <span className="font-bold text-slate-800">{item.signer}</span>
+                        </div>
+                      )}
+
+                      {item.handoverStatus && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-400">Bàn giao:</span>
+                          <span className={`font-bold px-2 py-0.5 rounded-md ${
+                            item.handoverStatus === 'DA_BAN_GIAO'
+                              ? 'text-emerald-800 bg-emerald-100'
+                              : item.handoverStatus === 'DANG_BAN_GIAO'
+                              ? 'text-amber-800 bg-amber-100'
+                              : 'text-rose-800 bg-rose-100'
+                          }`}>
+                            {item.handoverStatus === 'DA_BAN_GIAO'
+                              ? 'Đã bàn giao đầy đủ'
+                              : item.handoverStatus === 'DANG_BAN_GIAO'
+                              ? 'Đang bàn giao'
+                              : 'Chưa bàn giao'}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {item.notes && (
+                      <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-150">
+                        <strong className="text-slate-700 font-bold">Nhiệm vụ / Ghi chú:</strong> {item.notes}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Modal Thêm / Sửa Mốc Quá Trình Công Tác */}
+      <WorkHistoryPeriodModal
+        isOpen={isPeriodModalOpen}
+        onClose={() => setIsPeriodModalOpen(false)}
+        emp={emp}
+        initialData={editingPeriodData}
+        departments={departments}
+        positions={positions}
+      />
     </div>
   );
 };
 
 export default React.memo(EmployeeTransferHistory);
+
