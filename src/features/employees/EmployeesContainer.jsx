@@ -66,12 +66,19 @@ const EmployeesContainer = () => {
     return (
       r === 'admin' ||
       r === 'superadmin' ||
+      r === 'manager' ||
+      r === 'chairman' ||
+      r === 'director' ||
+      r === 'board' ||
       email === 'qtdyentho@gmail.com' ||
       email === 'ducanht@gmail.com' ||
       email === 'sonqtdyt@gmail.com' ||
       email.includes('admin') ||
       email.includes('chutich') ||
-      email.includes('giamdoc')
+      email.includes('giamdoc') ||
+      email.includes('hdqt') ||
+      email.includes('vuhien') ||
+      email.includes('thao')
     );
   }, [currentUser, role]);
 

@@ -46,9 +46,9 @@ const EmployeeFormModal = ({
   const [partyDate, setPartyDate] = useState('');
   const [partyOfficialDate, setPartyOfficialDate] = useState('');
   const [politicalRole, setPoliticalRole] = useState('Đảng viên');
-  const [education, setEducation] = useState('Đại học chuyên ngành Tài chính - Ngân hàng');
-  const [itLevel, setItLevel] = useState('Ứng dụng CNTT cơ bản');
-  const [foreignLanguage, setForeignLanguage] = useState('Tiếng Anh');
+  const [education, setEducation] = useState('');
+  const [itLevel, setItLevel] = useState('');
+  const [foreignLanguage, setForeignLanguage] = useState('');
   const [role, setRole] = useState('staff');
 
   useEffect(() => {
@@ -75,8 +75,8 @@ const EmployeeFormModal = ({
       setPartyOfficialDate(initialData.partyOfficialDate || '');
       setPoliticalRole(initialData.politicalRole || 'Đảng viên');
       setEducation(initialData.education || '');
-      setItLevel(initialData.itLevel || 'Ứng dụng CNTT cơ bản');
-      setForeignLanguage(initialData.foreignLanguage || 'Tiếng Anh');
+      setItLevel(initialData.itLevel || '');
+      setForeignLanguage(initialData.foreignLanguage || '');
       setRole(initialData.role || 'staff');
     } else {
       const newUuid = generateUUID();
@@ -150,8 +150,8 @@ const EmployeeFormModal = ({
         partyOfficialDate: partyMember ? partyOfficialDate : '',
         politicalRole: partyMember ? politicalRole : '',
         education: education.trim(),
-        itLevel: itLevel.trim() || 'Ứng dụng CNTT cơ bản',
-        foreignLanguage: foreignLanguage.trim() || 'Tiếng Anh',
+        itLevel: itLevel.trim(),
+        foreignLanguage: foreignLanguage.trim(),
         role: role || 'staff',
         status: initialData?.status || 'ACTIVE',
       };
@@ -445,10 +445,10 @@ const EmployeeFormModal = ({
             4. Trình độ học vấn &amp; Chuyên môn đào tạo
           </h4>
           <div>
-            <label className="block text-slate-700 font-bold mb-1">Văn bằng / Học vị chính:</label>
+            <label className="block text-slate-700 font-bold mb-1">Văn bằng / Học vị chính (Không bắt buộc):</label>
             <input
               type="text"
-              placeholder="VD: Đại học chuyên ngành Tài chính - Ngân hàng (Học viện Ngân hàng)"
+              placeholder="VD: Đại học chuyên ngành Tài chính - Ngân hàng"
               value={education}
               onChange={(e) => setEducation(e.target.value)}
               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
@@ -456,20 +456,20 @@ const EmployeeFormModal = ({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Trình độ Tin học:</label>
+              <label className="block text-slate-700 font-bold mb-1">Trình độ Tin học (Không bắt buộc):</label>
               <input
                 type="text"
-                placeholder="VD: Ứng dụng CNTT cơ bản / Nâng cao"
+                placeholder="VD: Ứng dụng CNTT cơ bản"
                 value={itLevel}
                 onChange={(e) => setItLevel(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Trình độ Ngoại ngữ:</label>
+              <label className="block text-slate-700 font-bold mb-1">Trình độ Ngoại ngữ (Không bắt buộc):</label>
               <input
                 type="text"
-                placeholder="VD: Tiếng Anh / B1 / Giao tiếp"
+                placeholder="VD: Tiếng Anh / B1"
                 value={foreignLanguage}
                 onChange={(e) => setForeignLanguage(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"

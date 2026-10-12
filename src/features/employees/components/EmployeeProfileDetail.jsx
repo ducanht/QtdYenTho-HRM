@@ -676,11 +676,11 @@ const EmployeeProfileDetail = ({
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Tin học:</span>
-                  <span className="font-semibold text-slate-800">{emp.itLevel || 'Ứng dụng CNTT cơ bản'}</span>
+                  <span className="font-semibold text-slate-800">{emp.itLevel || '—'}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Ngoại ngữ:</span>
-                  <span className="font-semibold text-slate-800">{emp.foreignLanguage || 'Tiếng Anh'}</span>
+                  <span className="font-semibold text-slate-800">{emp.foreignLanguage || '—'}</span>
                 </div>
               </div>
             </div>

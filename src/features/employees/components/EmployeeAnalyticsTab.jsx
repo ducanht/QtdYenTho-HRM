@@ -197,7 +197,7 @@ const EmployeeAnalyticsTab = ({
               <span>Bảng Giám Sát Luân Chuyển Địa Bàn Cán Bộ Tín Dụng (CBTD)</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Theo dõi thời gian phụ trách địa bàn và chu kỳ luân chuyển cán bộ tín dụng theo quy định của Ngân hàng Nhà nước &amp; Quỹ TDND Yên Thọ
+              Theo dõi thời gian phụ trách địa bàn và chu kỳ luân chuyển cán bộ tín dụng
             </p>
           </div>
 

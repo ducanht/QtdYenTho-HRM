@@ -26,6 +26,11 @@ export const ToastProvider = ({ children }) => {
     error: (msg, dur) => addToast('error', msg, dur),
     info: (msg, dur) => addToast('info', msg, dur),
     warning: (msg, dur) => addToast('warning', msg, dur),
+    // Bí danh tương thích cho các component gọi showSuccess / showError
+    showSuccess: (msg, dur) => addToast('success', msg, dur),
+    showError: (msg, dur) => addToast('error', msg, dur),
+    showInfo: (msg, dur) => addToast('info', msg, dur),
+    showWarning: (msg, dur) => addToast('warning', msg, dur),
   };
 
   const getToastIcon = (type) => {

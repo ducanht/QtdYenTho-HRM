@@ -7,18 +7,17 @@ import {
   Eye,
   MapPin,
   CalendarClock,
-  Clock,
-  AlertCircle
+  Clock
 } from 'lucide-react';
 import { saveSubsystemConfig } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
 
 /**
  * EmployeeSettingsTab: Cột Phải cho Tab SETTINGS
- * - Quản lý Cấu hình & Phân quyền truy cập thông tin nhân sự (Xem toàn Quỹ vs Xem cá nhân)
- * - Quản lý Tham số chu kỳ luân chuyển theo quy định NHNN
- * - Quản lý Danh mục Phòng ban và Danh mục Chức vụ chuẩn mực của Quỹ TDND Yên Thọ
- * - Tuân thủ: Ẩn toàn bộ mã vị trí, mã code, font-mono.
+ * - Quản lý Cấu hình & Phân quyền truy cập thông tin nhân sự
+ * - Quản lý Chu kỳ luân chuyển địa bàn Cán bộ tín dụng (CBTD)
+ * - Quản lý Danh mục Phòng ban hoạt động của Quỹ TDND Yên Thọ
+ * - Tuân thủ: Ẩn mã vị trí, mã code, font-mono. Chuẩn hóa nhãn nghiệp vụ cơ quan tín dụng.
  */
 const EmployeeSettingsTab = ({
   departments = [],
@@ -45,29 +44,31 @@ const EmployeeSettingsTab = ({
       }
       const rotMonths = hrConfig.creditRotationMonths ?? hrConfig.transferMaxMonths ?? hrConfig.transferCycleMonths ?? 36;
       const warnMonths = hrConfig.creditWarningMonths ?? hrConfig.transferWarningMonths ?? hrConfig.warningMonths ?? 6;
-      setCreditRotationMonths(Number(rotMonths) || 36);
-      setCreditWarningMonths(Number(warnMonths) || 6);
+      setCreditRotationMonths(rotMonths);
+      setCreditWarningMonths(warnMonths);
     }
   }, [hrConfig]);
 
   const handleSaveConfig = async (e) => {
     e?.preventDefault?.();
     if (!canManage) {
-      toast?.showError?.('Chỉ Quản trị viên và Ban Lãnh đạo mới có quyền lưu cấu hình');
+      const msg = 'Chỉ Quản trị viên và Ban Lãnh đạo mới có quyền lưu cấu hình';
+      if (toast?.error) toast.error(msg);
+      else if (toast?.showError) toast.showError(msg);
       return;
     }
 
     setSaving(true);
     try {
-      const rotMonths = Number(creditRotationMonths) || 36;
-      const warnMonths = Number(creditWarningMonths) || 6;
+      const rotMonths = parseInt(creditRotationMonths, 10) || 36;
+      const warnMonths = parseInt(creditWarningMonths, 10) || 6;
 
-      await saveSubsystemConfig('hr', {
+      const payload = {
         allowStaffViewDirectory,
         canStaffUploadTraining,
         creditRotationMonths: rotMonths,
         creditWarningMonths: warnMonths,
-        // Giữ các trường tương thích ngược 100%
+        // Tương thích ngược các bảng liên quan
         transferMaxMonths: rotMonths,
         transferWarningMonths: warnMonths,
         transferCycleMonths: rotMonths,
@@ -75,27 +76,45 @@ const EmployeeSettingsTab = ({
         transferRules: [
           { positionName: 'Cán bộ tín dụng', requiresTransfer: true, maxMonths: rotMonths, warningMonths: warnMonths },
         ],
-      });
-      toast?.showSuccess?.('Đã lưu cấu hình phân hệ và thời hạn luân chuyển địa bàn CBTD thành công!');
+      };
+
+      await saveSubsystemConfig('hr', payload);
+
+      // Lưu đệm localStorage để cập nhật tức thì
+      try {
+        localStorage.setItem('qtd_hr_subsystem_config', JSON.stringify(payload));
+      } catch {
+        // bỏ qua lỗi storage nếu có
+      }
+
+      const successMsg = 'Đã lưu cấu hình phân hệ và thời hạn luân chuyển địa bàn CBTD thành công!';
+      if (toast?.success) toast.success(successMsg);
+      else if (toast?.showSuccess) toast.showSuccess(successMsg);
     } catch (err) {
-      toast?.showError?.(err.message || 'Lỗi khi lưu cấu hình');
+      console.error('Lỗi khi lưu cấu hình:', err);
+      const errorMsg = err.message || 'Lỗi khi lưu cấu hình';
+      if (toast?.error) toast.error(errorMsg);
+      else if (toast?.showError) toast.showError(errorMsg);
     } finally {
       setSaving(false);
     }
   };
 
+  const parsedRotMonths = parseInt(creditRotationMonths, 10) || 36;
+  const parsedWarnMonths = parseInt(creditWarningMonths, 10) || 6;
+
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
-      {/* 1. Phân Quyền Truy Cập & Hiển Thị Thông Tin Nhân Sự */}
+      {/* 1. Phân Quyền Truy Cập Phân Hệ Nhân Sự */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-700" />
-              <span>Cấu Hình &amp; Phân Quyền Truy Cập Phân Hệ Nhân Sự</span>
+              <span>Cấu Hình &amp; Phân Quyền Truy Cập Phân Hệ</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Thiết lập phạm vi xem danh bạ, quyền sửa hồ sơ và chu kỳ luân chuyển
+              Phạm vi xem danh bạ và quyền cập nhật văn bằng chứng chỉ
             </p>
           </div>
 
@@ -121,38 +140,28 @@ const EmployeeSettingsTab = ({
             </div>
 
             <div className="space-y-2">
-              <label className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer">
                 <input
                   type="radio"
                   name="allowStaffViewDirectory"
                   checked={allowStaffViewDirectory === true}
                   onChange={() => setAllowStaffViewDirectory(true)}
                   disabled={!canManage}
-                  className="mt-0.5 text-emerald-700 focus:ring-emerald-700"
+                  className="text-emerald-700 focus:ring-emerald-700"
                 />
-                <div>
-                  <span className="font-bold text-slate-800 block">Xem toàn Quỹ (Mặc định)</span>
-                  <span className="text-[11px] text-slate-500">
-                    Mọi cán bộ đều có thể tra cứu thông tin cơ bản của đồng nghiệp trong Quỹ.
-                  </span>
-                </div>
+                <span className="font-bold text-slate-800">Xem toàn Quỹ</span>
               </label>
 
-              <label className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer">
                 <input
                   type="radio"
                   name="allowStaffViewDirectory"
                   checked={allowStaffViewDirectory === false}
                   onChange={() => setAllowStaffViewDirectory(false)}
                   disabled={!canManage}
-                  className="mt-0.5 text-emerald-700 focus:ring-emerald-700"
+                  className="text-emerald-700 focus:ring-emerald-700"
                 />
-                <div>
-                  <span className="font-bold text-slate-800 block">Bảo mật cá nhân (Chỉ xem hồ sơ của mình)</span>
-                  <span className="text-[11px] text-slate-500">
-                    Cán bộ chỉ xem hồ sơ của bản thân. Ban Lãnh đạo, BKS và Quản trị viên xem toàn bộ.
-                  </span>
-                </div>
+                <span className="font-bold text-slate-800">Chỉ xem hồ sơ cá nhân</span>
               </label>
             </div>
           </div>
@@ -165,22 +174,17 @@ const EmployeeSettingsTab = ({
             </div>
 
             <div className="p-2 rounded-lg hover:bg-white transition-colors">
-              <label className="flex items-start gap-2.5 cursor-pointer">
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={canStaffUploadTraining}
                   onChange={(e) => setCanStaffUploadTraining(e.target.checked)}
                   disabled={!canManage}
-                  className="mt-0.5 w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+                  className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
                 />
-                <div>
-                  <span className="text-slate-800 font-bold block">
-                    Cho phép cán bộ tự cập nhật văn bằng, chứng chỉ đào tạo
-                  </span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
-                    Khi bật, cán bộ nhân viên có thể chủ động bổ sung các chứng chỉ tập huấn, bồi dưỡng nghiệp vụ vào hồ sơ cá nhân.
-                  </span>
-                </div>
+                <span className="text-slate-800 font-bold">
+                  Cho phép cán bộ tự cập nhật văn bằng, chứng chỉ đào tạo
+                </span>
               </label>
             </div>
           </div>
@@ -217,7 +221,7 @@ const EmployeeSettingsTab = ({
               <span>Cấu Hình Luân Chuyển Địa Bàn Cán Bộ Tín Dụng (CBTD)</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Thiết lập chu kỳ luân chuyển địa bàn quản lý định kỳ và thời hạn phát cảnh báo theo quy định phòng ngừa rủi ro tín dụng của NHNN
+              Chu kỳ luân chuyển và thời hạn phát cảnh báo
             </p>
           </div>
 
@@ -235,29 +239,31 @@ const EmployeeSettingsTab = ({
                 <CalendarClock className="w-4 h-4 text-emerald-700" />
                 <h4 className="font-bold text-slate-900">Chu Kỳ Luân Chuyển Địa Bàn</h4>
               </div>
-              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Thời hạn cấu hình</span>
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                Thời hạn
+              </span>
             </div>
 
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Thời gian tối đa một Cán bộ tín dụng phụ trách một địa bàn (thôn/cụm/xã) trước khi thực hiện luân chuyển sang địa bàn khác.
-            </p>
-
-            <div className="pt-1 flex items-center gap-2">
+            <div className="pt-2 flex items-center gap-2">
               <div className="relative flex-1 max-w-[160px]">
                 <input
                   type="number"
-                  min="6"
-                  max="60"
+                  min="1"
+                  max="120"
                   step="1"
                   value={creditRotationMonths}
-                  onChange={(e) => setCreditRotationMonths(Math.max(6, Math.min(60, Number(e.target.value) || 36)))}
+                  onChange={(e) => setCreditRotationMonths(e.target.value)}
+                  onBlur={() => {
+                    const v = parseInt(creditRotationMonths, 10);
+                    setCreditRotationMonths(!isNaN(v) && v > 0 ? v : 36);
+                  }}
                   disabled={!canManage}
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 disabled:bg-slate-100"
                 />
               </div>
               <span className="text-xs font-bold text-slate-700">tháng</span>
-              <span className="text-[11px] text-slate-400">
-                ({Math.round((creditRotationMonths / 12) * 10) / 10} năm)
+              <span className="text-[11px] text-slate-500 font-medium">
+                ({Math.round((parsedRotMonths / 12) * 10) / 10} năm)
               </span>
             </div>
           </div>
@@ -269,42 +275,33 @@ const EmployeeSettingsTab = ({
                 <Clock className="w-4 h-4 text-amber-600" />
                 <h4 className="font-bold text-slate-900">Thời Gian Cảnh Báo Trước</h4>
               </div>
-              <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Thời hạn cảnh báo</span>
+              <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                Thời hạn
+              </span>
             </div>
 
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Hệ thống phát thông báo cảnh báo sớm trước khi đến hạn để Ban Điều hành chuẩn bị nhân sự và phương án bàn giao nợ tín dụng.
-            </p>
-
-            <div className="pt-1 flex items-center gap-2">
+            <div className="pt-2 flex items-center gap-2">
               <div className="relative flex-1 max-w-[160px]">
                 <input
                   type="number"
                   min="1"
-                  max="12"
+                  max="36"
                   step="1"
                   value={creditWarningMonths}
-                  onChange={(e) => setCreditWarningMonths(Math.max(1, Math.min(12, Number(e.target.value) || 6)))}
+                  onChange={(e) => setCreditWarningMonths(e.target.value)}
+                  onBlur={() => {
+                    const v = parseInt(creditWarningMonths, 10);
+                    setCreditWarningMonths(!isNaN(v) && v > 0 ? v : 6);
+                  }}
                   disabled={!canManage}
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 disabled:bg-slate-100"
                 />
               </div>
               <span className="text-xs font-bold text-slate-700">tháng</span>
-              <span className="text-[11px] text-slate-400">
-                (từ tháng thứ {Math.max(1, creditRotationMonths - creditWarningMonths)})
+              <span className="text-[11px] text-slate-500 font-medium">
+                (từ tháng thứ {Math.max(1, parsedRotMonths - parsedWarnMonths)})
               </span>
             </div>
-          </div>
-        </div>
-
-        {/* Khối Ghi chú nghiệp vụ rõ ràng */}
-        <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-900 flex items-start gap-2.5 text-xs">
-          <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-bold text-amber-950">Quy định nghiệp vụ Quỹ tín dụng nhân dân:</p>
-            <p className="text-[11px] text-amber-900 leading-relaxed">
-              Quy định luân chuyển định kỳ địa bàn quản lý chỉ áp dụng bắt buộc đối với vị trí <strong>Cán bộ tín dụng (CBTD)</strong> nhằm phòng ngừa rủi ro tín dụng và rủi ro đạo đức theo quy định của Ngân hàng Nhà nước. Các chức danh thuộc <strong>Hội đồng quản trị, Ban Kiểm soát, Ban Điều hành</strong> hoạt động theo nhiệm kỳ bầu cử và phê chuẩn của NHNN; các vị trí <strong>Kế toán, Thủ quỹ</strong> hoạt động theo phân công nhiệm vụ nội bộ của Ban Giám đốc, không áp dụng luân chuyển địa bàn.
-            </p>
           </div>
         </div>
       </div>

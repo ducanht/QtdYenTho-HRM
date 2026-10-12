@@ -222,7 +222,7 @@ const EmployeeTransferHistory = ({
                 Vị trí công tác hiện tại theo dõi theo nhiệm kỳ / HĐLĐ
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Chức danh này hoạt động theo nhiệm kỳ bầu cử hoặc phân công nhiệm vụ nội bộ, không áp dụng luân chuyển địa bàn.
+                Theo dõi theo nhiệm kỳ hoặc phân công nội bộ, không áp dụng luân chuyển địa bàn.
               </p>
             </div>
           </div>

@@ -39,16 +39,16 @@ const EditSkillsModal = ({
   onSuccess,
 }) => {
   const toast = useToast();
-  const [itLevel, setItLevel] = useState('Ứng dụng CNTT cơ bản');
-  const [foreignLanguage, setForeignLanguage] = useState('Tiếng Anh');
+  const [itLevel, setItLevel] = useState('');
+  const [foreignLanguage, setForeignLanguage] = useState('');
   const [secondaryPhone, setSecondaryPhone] = useState('');
   const [education, setEducation] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen && emp) {
-      setItLevel(emp.itLevel || 'Ứng dụng CNTT cơ bản');
-      setForeignLanguage(emp.foreignLanguage || 'Tiếng Anh');
+      setItLevel(emp.itLevel || '');
+      setForeignLanguage(emp.foreignLanguage || '');
       setSecondaryPhone(emp.secondaryPhone || emp.phone2 || '');
       setEducation(emp.education || '');
     }
@@ -57,27 +57,34 @@ const EditSkillsModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!emp?.id) {
-      toast?.showError?.('Không tìm thấy thông tin cán bộ');
+      const msg = 'Không tìm thấy thông tin cán bộ';
+      if (toast?.error) toast.error(msg);
+      else if (toast?.showError) toast.showError(msg);
       return;
     }
 
     setSubmitting(true);
     try {
       const payload = {
-        itLevel: itLevel.trim() || 'Ứng dụng CNTT cơ bản',
-        foreignLanguage: foreignLanguage.trim() || 'Tiếng Anh',
+        itLevel: itLevel.trim(),
+        foreignLanguage: foreignLanguage.trim(),
         secondaryPhone: secondaryPhone.trim(),
         education: education.trim(),
       };
 
       await updateEmployeeProfile(emp.id, payload);
-      toast?.showSuccess?.(`Đã cập nhật kỹ năng & liên hệ cho cán bộ ${emp.name} thành công!`);
+
+      const successMsg = `Đã cập nhật kỹ năng & liên hệ cho cán bộ ${emp.name} thành công!`;
+      if (toast?.success) toast.success(successMsg);
+      else if (toast?.showSuccess) toast.showSuccess(successMsg);
 
       onSuccess?.(payload);
       onClose();
     } catch (err) {
       console.error('Lỗi cập nhật kỹ năng & ngoại ngữ:', err);
-      toast?.showError?.(err.message || 'Lỗi khi cập nhật dữ liệu');
+      const errorMsg = err.message || 'Lỗi khi cập nhật dữ liệu';
+      if (toast?.error) toast.error(errorMsg);
+      else if (toast?.showError) toast.showError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -96,12 +103,11 @@ const EditSkillsModal = ({
         <div>
           <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
             <Laptop className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Trình độ Tin học / CNTT: <span className="text-rose-500">*</span></span>
+            <span>Trình độ Tin học (Không bắt buộc):</span>
           </label>
           <input
             type="text"
             list="it-level-suggestions"
-            required
             value={itLevel}
             onChange={(e) => setItLevel(e.target.value)}
             placeholder="VD: Ứng dụng CNTT cơ bản"
@@ -112,21 +118,17 @@ const EditSkillsModal = ({
               <option key={i} value={opt} />
             ))}
           </datalist>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Gợi ý: Chọn theo chứng chỉ chuẩn chức danh nghề nghiệp NHNN hoặc nhập trực tiếp.
-          </p>
         </div>
 
         {/* 2. Trình độ Ngoại ngữ */}
         <div>
           <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
             <Languages className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Trình độ Ngoại ngữ: <span className="text-rose-500">*</span></span>
+            <span>Trình độ Ngoại ngữ (Không bắt buộc):</span>
           </label>
           <input
             type="text"
             list="language-suggestions"
-            required
             value={foreignLanguage}
             onChange={(e) => setForeignLanguage(e.target.value)}
             placeholder="VD: Tiếng Anh / B1"
@@ -152,16 +154,13 @@ const EditSkillsModal = ({
             placeholder="VD: 0912345678"
             className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl tabular-nums text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
           />
-          <p className="text-[11px] text-slate-400 mt-1">
-            Số điện thoại dự phòng dùng liên lạc khi hotline chính không tiếp cận được.
-          </p>
         </div>
 
         {/* 4. Trình độ đào tạo / Học vị tóm tắt */}
         <div>
           <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
             <GraduationCap className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Chuyên môn đào tạo / Học vị (Tóm tắt hồ sơ):</span>
+            <span>Chuyên môn đào tạo / Trình độ chuyên môn:</span>
           </label>
           <input
             type="text"

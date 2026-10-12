@@ -23,10 +23,17 @@ service cloud.firestore {
 
     // 3. Kiểm tra vai trò quản lý trong CSDL doc
     function hasAdminRoleInDoc() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+      return (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
           'superadmin', 'SUPERADMIN', 'admin', 'ADMIN', 'manager', 'MANAGER', 'chairman', 'CHAIRMAN'
-        ];
+        ]
+      ) || (
+        exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role in [
+          'superadmin', 'SUPERADMIN', 'admin', 'ADMIN', 'manager', 'MANAGER', 'chairman', 'CHAIRMAN'
+        ]
+      );
     }
 
     // 4. Ban Quản trị & Điều hành (Admin: CT HĐQT, Giám đốc, TV HĐQT + SuperAdmin)
@@ -40,12 +47,19 @@ service cloud.firestore {
           'ducanht.gemini@gmail.com',
           'sonqtdyt@gmail.com',
           'nguyenvansontdyt@gmail.com',
-          'qtdyentho.vuhien@gmail.com'
+          'qtdyentho.vuhien@gmail.com',
+          'Sinhtdyt@gmail.com',
+          'Mennguyen0201@gmail.com',
+          'Thaoqtdyt@gmail.com',
+          'Nhanqtdyt@gmail.com',
+          'hieuqtdyt@gmail.com',
+          'huynhqtdyt@gmail.com',
+          'Huyennhutran@gmail.com',
+          'hoanglan1289@gmail.com',
+          'qtdyentho.phamthao@gmail.com',
+          'qtdyentho.luudinh@gmail.com'
         ] ||
-        request.auth.token.email.matches('.*admin.*') ||
-        request.auth.token.email.matches('.*chutich.*') ||
-        request.auth.token.email.matches('.*giamdoc.*') ||
-        request.auth.token.email.matches('.*hdqt.*') ||
+        request.auth.token.email.matches('(?i).*(admin|chutich|giamdoc|hdqt|qtdyentho|ducanh|sonqtdyt|nguyenducthao|vuhien).*') ||
         hasAdminRoleInDoc()
       );
     }
@@ -174,11 +188,11 @@ service cloud.firestore {
 
     // ===============================================================
     // 9. Ma trận Phân quyền (roles_permissions)
-    // BẢO MẬT: Chỉ SuperAdmin mới có quyền sửa đổi ma trận quyền hệ thống
+    // BẢO MẬT: SuperAdmin và Ban Lãnh đạo có quyền lưu phân quyền hệ thống
     // ===============================================================
     match /roles_permissions/{roleKey} {
       allow read: if isAuthenticated();
-      allow write: if isSuperAdmin();
+      allow write: if isBoardOrAdmin();
     }
 
     // ===============================================================
