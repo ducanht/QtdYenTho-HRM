@@ -552,5 +552,45 @@ export const calculateAreaTenureAndDueDate = (areaStartDate, cycleMonths = 36, w
   }
 };
 
+/**
+ * Kiểm tra chức danh / cán bộ có phải là Cán bộ Tín dụng (CBTD) phụ trách địa bàn hay không.
+ * Các chức danh lãnh đạo (HĐQT, BKS, Ban Điều hành) và nghiệp vụ Kế toán/Thủ quỹ 
+ * TUYỆT ĐỐI KHÔNG thuộc diện quản lý địa bàn tín dụng hay luân chuyển địa bàn.
+ * 
+ * @param {string} position - Tên chức vụ / vị trí công tác
+ * @param {string} department - Tên phòng ban công tác
+ * @returns {boolean}
+ */
+export const isCreditOfficerRole = (position = '', department = '') => {
+  const posLower = String(position || '').toLowerCase().trim();
+  const deptLower = String(department || '').toLowerCase().trim();
+
+  // 1. Loại trừ dứt khoát các chức danh HĐQT, BKS, Ban Điều hành, Kế toán, Thủ quỹ
+  if (
+    posLower.includes('hội đồng quản trị') ||
+    posLower.includes('hđqt') ||
+    posLower.includes('chủ tịch') ||
+    posLower.includes('giám đốc') ||
+    posLower.includes('kiểm soát') ||
+    posLower.includes('bks') ||
+    posLower.includes('kế toán') ||
+    posLower.includes('thủ quỹ') ||
+    deptLower.includes('hội đồng quản trị') ||
+    deptLower.includes('kiểm soát') ||
+    deptLower.includes('kế toán')
+  ) {
+    return false;
+  }
+
+  // 2. Chức danh Cán bộ Tín dụng chuyên trách
+  return (
+    posLower.includes('tín dụng') ||
+    posLower.includes('thẩm định') ||
+    posLower.includes('cbtd') ||
+    posLower.includes('khách hàng') ||
+    deptLower.includes('tín dụng')
+  );
+};
+
 
 

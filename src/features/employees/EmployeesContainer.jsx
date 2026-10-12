@@ -378,6 +378,7 @@ const EmployeesContainer = () => {
           departments={departments}
           positions={positions}
           existingEmployees={officialEmployees}
+          hrConfig={hrConfig}
           onSuccess={(saved) => {
             if (saved) {
               setEmployees((prev) => {
@@ -402,6 +403,7 @@ const EmployeesContainer = () => {
           employees={officialEmployees}
           departments={departments}
           positions={positions}
+          hrConfig={hrConfig}
           onSuccess={() => {}}
         />
       )}

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
-import { generateUUID } from '../../../lib/evaluationUtils';
+import { generateUUID, isCreditOfficerRole } from '../../../lib/evaluationUtils';
+import { DEFAULT_MODULE_HR_SETTINGS } from '../../../lib/systemDefaults';
 import { createEmployeeProfile, updateEmployeeProfile } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
 
@@ -16,6 +17,7 @@ const EmployeeFormModal = ({
   departments = [],
   positions = [],
   existingEmployees = [],
+  hrConfig = null,
   onSuccess,
 }) => {
   const toast = useToast();
@@ -37,6 +39,7 @@ const EmployeeFormModal = ({
   const [positionStartDate, setPositionStartDate] = useState('');
   const [joinDate, setJoinDate] = useState('');
   const [contractType, setContractType] = useState('Không xác định thời hạn');
+  const [workLocation, setWorkLocation] = useState('Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)');
   const [assignedArea, setAssignedArea] = useState('');
   const [areaStartDate, setAreaStartDate] = useState('');
   const [partyMember, setPartyMember] = useState(false);
@@ -64,6 +67,7 @@ const EmployeeFormModal = ({
       setPositionStartDate(initialData.positionStartDate || initialData.joinDate || '');
       setJoinDate(initialData.joinDate || '');
       setContractType(initialData.contractType || 'Không xác định thời hạn');
+      setWorkLocation(initialData.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)');
       setAssignedArea(initialData.assignedArea || '');
       setAreaStartDate(initialData.areaStartDate || '');
       setPartyMember(Boolean(initialData.partyMember));
@@ -99,6 +103,7 @@ const EmployeeFormModal = ({
       setPositionStartDate(today);
       setJoinDate(today);
       setContractType('Không xác định thời hạn');
+      setWorkLocation('Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)');
       setAssignedArea('');
       setAreaStartDate(today);
       setPartyMember(false);
@@ -119,6 +124,7 @@ const EmployeeFormModal = ({
       return;
     }
 
+    const isCreditOfficer = isCreditOfficerRole(position, department);
     setSubmitting(true);
     try {
       const payload = {
@@ -136,8 +142,9 @@ const EmployeeFormModal = ({
         positionStartDate,
         joinDate,
         contractType,
-        assignedArea: assignedArea.trim(),
-        areaStartDate: areaStartDate || '',
+        workLocation: workLocation.trim() || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+        assignedArea: isCreditOfficer ? assignedArea.trim() : '',
+        areaStartDate: isCreditOfficer ? (areaStartDate || '') : '',
         partyMember,
         partyDate: partyMember ? partyDate : '',
         partyOfficialDate: partyMember ? partyOfficialDate : '',
@@ -166,6 +173,8 @@ const EmployeeFormModal = ({
       setSubmitting(false);
     }
   };
+
+  const isCreditOfficer = isCreditOfficerRole(position, department);
 
   return (
     <Modal
@@ -324,25 +333,55 @@ const EmployeeFormModal = ({
                 <option value="Thử việc / Học việc">Thử việc / Tập sự</option>
               </select>
             </div>
-            <div className="sm:col-span-2">
-              <label className="block text-slate-700 font-bold mb-1">Địa bàn phụ trách tín dụng:</label>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <label className="block text-slate-700 font-bold mb-1">
+                Nơi làm việc (Địa bàn hoạt động):
+              </label>
               <input
                 type="text"
-                placeholder="VD: Phụ trách thành viên vay vốn xã Quý Lộc / Cụm 3 thôn xã Yên Thọ"
-                value={assignedArea}
-                onChange={(e) => setAssignedArea(e.target.value)}
+                list="form-work-locations-list"
+                placeholder="VD: Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)"
+                value={workLocation}
+                onChange={(e) => setWorkLocation(e.target.value)}
+                required
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
+              <datalist id="form-work-locations-list">
+                {(hrConfig?.workLocations || DEFAULT_MODULE_HR_SETTINGS.workLocations || []).map((loc) => (
+                  <option key={loc} value={loc} />
+                ))}
+              </datalist>
             </div>
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Ngày bắt đầu nhận địa bàn:</label>
-              <input
-                type="date"
-                value={areaStartDate}
-                onChange={(e) => setAreaStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-              />
-            </div>
+
+            {isCreditOfficer && (
+              <>
+                <div className="sm:col-span-2">
+                  <label className="block text-slate-700 font-bold mb-1">Địa bàn phụ trách tín dụng:</label>
+                  <input
+                    type="text"
+                    list="form-credit-areas-list"
+                    placeholder="VD: Phụ trách thành viên vay vốn xã Quý Lộc / Cụm 3 thôn xã Yên Thọ"
+                    value={assignedArea}
+                    onChange={(e) => setAssignedArea(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                  <datalist id="form-credit-areas-list">
+                    {(hrConfig?.creditAreas || DEFAULT_MODULE_HR_SETTINGS.creditAreas || []).map((area) => (
+                      <option key={area} value={area} />
+                    ))}
+                  </datalist>
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Ngày bắt đầu nhận địa bàn:</label>
+                  <input
+                    type="date"
+                    value={areaStartDate}
+                    onChange={(e) => setAreaStartDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 

@@ -3,7 +3,7 @@ import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
 import { Printer, FileSpreadsheet, FileText } from 'lucide-react';
 import { formatDateVN } from '../../../lib/dateUtils';
-import { calculatePositionTenure } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { exportEmployeeProfileToDocx, exportEmployeeProfileToExcel } from '../../../lib/exportUtils';
 import { useToast } from '../../../context/ToastContext';
 
@@ -31,6 +31,7 @@ const EmployeeA4PrintModal = ({
   const effectiveStart = emp.positionStartDate || emp.joinDate;
   const tenureText = calculatePositionTenure(effectiveStart);
   const totalTenureText = calculatePositionTenure(emp.joinDate);
+  const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department);
 
   const empHistory = workHistory
     .filter((h) => h.employeeId === emp.id || h.employeeCode === emp.code)
@@ -186,8 +187,11 @@ const EmployeeA4PrintModal = ({
               <p>5. Ngày vào Quỹ: <span>{emp.joinDate ? formatDateVN(emp.joinDate) : '—'}</span></p>
               <p>6. Tổng thâm niên: <span>{totalTenureText}</span></p>
               <p>7. Loại hợp đồng: <span>{emp.contractType || 'Không xác định thời hạn'}</span></p>
-              <p>8. Trạng thái: <span>{emp.status === 'ACTIVE' ? 'Đang công tác' : 'Nghỉ việc'}</span></p>
-              <p className="col-span-2">9. Địa bàn phụ trách tín dụng: <span>{emp.assignedArea || 'Chưa phân công địa bàn'}</span></p>
+              <p>8. Nơi làm việc (Địa bàn hoạt động): <span className="font-semibold">{emp.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)'}</span></p>
+              <p>9. Trạng thái: <span>{emp.status === 'ACTIVE' ? 'Đang công tác' : 'Nghỉ việc'}</span></p>
+              {isCreditOfficer && (
+                <p className="col-span-2">10. Địa bàn phụ trách tín dụng: <span>{emp.assignedArea || 'Chưa phân công địa bàn'}</span></p>
+              )}
             </div>
 
             {empHistory.length > 0 && (
@@ -200,7 +204,7 @@ const EmployeeA4PrintModal = ({
                       <th className="border border-slate-300 p-1 text-center w-28">Thời gian</th>
                       <th className="border border-slate-300 p-1 text-left">Chức danh đảm nhiệm</th>
                       <th className="border border-slate-300 p-1 text-left">Phòng ban</th>
-                      <th className="border border-slate-300 p-1 text-left">Địa bàn quản lý</th>
+                      <th className="border border-slate-300 p-1 text-left">Nơi làm việc / Địa bàn</th>
                       <th className="border border-slate-300 p-1 text-center w-20">Số QĐ</th>
                     </tr>
                   </thead>
@@ -208,13 +212,14 @@ const EmployeeA4PrintModal = ({
                     {empHistory.map((item, idx) => {
                       const startText = item.startDate ? formatDateVN(item.startDate) : (item.effectiveDate ? formatDateVN(item.effectiveDate) : '—');
                       const endText = item.isCurrent ? 'Đến nay' : (item.endDate ? formatDateVN(item.endDate) : '—');
+                      const locArea = [item.workLocation, item.assignedArea || item.toAssignedArea].filter(Boolean).join(' • ') || 'Trụ sở chính';
                       return (
                         <tr key={item.id || idx}>
                           <td className="border border-slate-300 p-1 text-center tabular-nums">{idx + 1}</td>
                           <td className="border border-slate-300 p-1 text-center tabular-nums">{startText} - {endText}</td>
                           <td className="border border-slate-300 p-1 font-semibold">{item.position || item.toPosition || emp.position}</td>
                           <td className="border border-slate-300 p-1">{item.department || item.toDepartment || emp.department}</td>
-                          <td className="border border-slate-300 p-1">{item.assignedArea || item.toAssignedArea || '—'}</td>
+                          <td className="border border-slate-300 p-1">{locArea}</td>
                           <td className="border border-slate-300 p-1 text-center">{item.decisionNumber || '—'}</td>
                         </tr>
                       );

@@ -15,7 +15,7 @@
  */
 
 import { formatDateVN } from './dateUtils';
-import { calculatePositionTenure } from './evaluationUtils';
+import { calculatePositionTenure, isCreditOfficerRole } from './evaluationUtils';
 
 // Helper tải file Blob về máy client
 export const downloadBlob = (blob, filename) => {
@@ -697,11 +697,15 @@ export const exportEmployeeProfileToExcel = async (
   }
   wsData.push([]);
 
+  const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department);
   wsData.push(['II. QUÁ TRÌNH CÔNG TÁC & VỊ TRÍ ĐẢM NHIỆM']);
   wsData.push(['Phòng ban công tác:', emp.department || '', 'Chức danh hiện tại:', emp.position || '']);
   wsData.push(['Ngày đảm nhiệm chức vụ:', effectiveStart ? formatDateVN(effectiveStart) : '', 'Thâm niên chức vụ:', tenureText]);
   wsData.push(['Ngày tuyển dụng vào Quỹ:', emp.joinDate ? formatDateVN(emp.joinDate) : '', 'Tổng thâm niên tại Quỹ:', totalTenureText]);
-  wsData.push(['Loại hợp đồng lao động:', emp.contractType || 'Không xác định thời hạn', 'Địa bàn phụ trách:', emp.assignedArea || '']);
+  wsData.push(['Loại hợp đồng lao động:', emp.contractType || 'Không xác định thời hạn', 'Nơi làm việc:', emp.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)']);
+  if (isCreditOfficer) {
+    wsData.push(['Địa bàn phụ trách tín dụng:', emp.assignedArea || 'Chưa phân công địa bàn']);
+  }
   wsData.push([]);
 
   wsData.push(['III. CHÍNH TRỊ & ĐẢNG - ĐOÀN THỂ']);
@@ -1056,6 +1060,8 @@ export const exportEmployeeProfileToDocx = async (
     contentParagraphs.push(makeInfoLine('7. Kênh mạng xã hội / Liên hệ số:', socSummary));
   }
 
+  const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department);
+
   contentParagraphs.push(
     makeSectionHeading('II. QUÁ TRÌNH CÔNG TÁC & VỊ TRÍ ĐẢM NHIỆM'),
     makeInfoLine('1. Phòng ban công tác:', emp.department || '—', true),
@@ -1065,7 +1071,8 @@ export const exportEmployeeProfileToDocx = async (
     makeInfoLine('5. Ngày tuyển dụng vào Quỹ:', emp.joinDate ? formatDateVN(emp.joinDate) : '—'),
     makeInfoLine('6. Tổng thâm niên công tác tại Quỹ:', totalTenureText),
     makeInfoLine('7. Loại hợp đồng lao động:', emp.contractType || 'Không xác định thời hạn'),
-    makeInfoLine('8. Địa bàn phụ trách tín dụng:', emp.assignedArea || 'Chưa phân công địa bàn'),
+    makeInfoLine('8. Nơi làm việc (Địa bàn hoạt động):', emp.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)'),
+    ...(isCreditOfficer ? [makeInfoLine('9. Địa bàn phụ trách tín dụng:', emp.assignedArea || 'Chưa phân công địa bàn')] : []),
 
     makeSectionHeading('III. CHÍNH TRỊ & ĐẢNG - ĐOÀN THỂ'),
     makeInfoLine('1. Tình trạng Đảng viên ĐCSVN:', emp.partyMember ? 'Đảng viên chính thức' : 'Chưa kết nạp', true),

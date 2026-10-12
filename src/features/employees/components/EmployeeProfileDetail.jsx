@@ -19,7 +19,7 @@ import {
   Eye,
   BookOpen
 } from 'lucide-react';
-import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, calculateAreaTenureAndDueDate, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { compressImage } from '../../../lib/imageUtils';
 import { 
@@ -77,9 +77,7 @@ const EmployeeProfileDetail = ({
   const tenureText = calculatePositionTenure(effectiveStart);
   const totalTenureText = calculatePositionTenure(emp.joinDate);
 
-  const isCreditOfficer = (emp.department || '').includes('Tín dụng') || 
-    (emp.position || '').toLowerCase().includes('tín dụng') || 
-    Boolean(emp.assignedArea);
+  const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department);
 
   const areaInfo = isCreditOfficer ? calculateAreaTenureAndDueDate(emp.areaStartDate || effectiveStart) : null;
 
@@ -434,6 +432,12 @@ const EmployeeProfileDetail = ({
             <div>
               <span className="text-slate-400 block text-[11px] mb-0.5">Tổng thâm niên tại Quỹ:</span>
               <span className="font-bold text-slate-700">{totalTenureText}</span>
+            </div>
+            <div className="col-span-2">
+              <span className="text-slate-400 block text-[11px] mb-0.5">Nơi làm việc (Địa bàn hoạt động):</span>
+              <span className="font-semibold text-slate-800">
+                {emp.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)'}
+              </span>
             </div>
             <div className="col-span-2">
               <span className="text-slate-400 block text-[11px] mb-0.5">Loại hợp đồng lao động:</span>

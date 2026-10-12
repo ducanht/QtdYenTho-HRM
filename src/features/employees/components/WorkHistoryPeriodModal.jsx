@@ -10,9 +10,14 @@ import {
 } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
-import { saveWorkHistory } from '../../../lib/services';
+import { saveWorkHistory, updateEmployeeProfile } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
-import { DEFAULT_DEPARTMENTS, DEFAULT_POSITIONS } from '../../../lib/systemDefaults';
+import { isCreditOfficerRole } from '../../../lib/evaluationUtils';
+import { 
+  DEFAULT_DEPARTMENTS, 
+  DEFAULT_POSITIONS, 
+  DEFAULT_MODULE_HR_SETTINGS 
+} from '../../../lib/systemDefaults';
 
 export const TRANSFER_TYPES = [
   { value: 'LUAN_CHUYEN_DINH_KY', label: 'Luân chuyển định kỳ' },
@@ -24,7 +29,7 @@ export const TRANSFER_TYPES = [
 
 /**
  * WorkHistoryPeriodModal: Modal Thêm Mới & Chỉnh Sửa Mốc Quá Trình Công Tác (Timeline)
- * Phục vụ theo dõi thâm niên vị trí, địa bàn tín dụng và giám sát luân chuyển theo quy định NHNN
+ * Phục vụ theo dõi thâm niên vị trí, nơi làm việc, địa bàn tín dụng và giám sát luân chuyển theo quy định NHNN
  */
 const WorkHistoryPeriodModal = ({
   isOpen,
@@ -33,6 +38,7 @@ const WorkHistoryPeriodModal = ({
   editingRecord = null,
   departments = [],
   positions = [],
+  hrConfig = null,
   onSuccess,
 }) => {
   const toast = useToast();
@@ -53,12 +59,35 @@ const WorkHistoryPeriodModal = ({
     return DEFAULT_POSITIONS.map((p) => p.name);
   }, [positions]);
 
+  // Danh mục nơi làm việc & địa bàn tín dụng từ cấu hình phân hệ
+  const workLocationList = useMemo(() => {
+    return hrConfig?.workLocations || DEFAULT_MODULE_HR_SETTINGS.workLocations || [
+      'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+      'Phòng Giao dịch số 1 (Yên Thọ)',
+      'Điểm giao dịch lưu động',
+    ];
+  }, [hrConfig]);
+
+  const creditAreaList = useMemo(() => {
+    return hrConfig?.creditAreas || DEFAULT_MODULE_HR_SETTINGS.creditAreas || [
+      'Thôn Tân Lộc (xã Yên Thọ)',
+      'Thôn Tân Hưng (xã Yên Thọ)',
+      'Cụm Thôn 1, 2, 3 (xã Yên Thọ)',
+      'Cụm Thôn 4, 5, 6 (xã Yên Thọ)',
+      'Cụm Thôn 7, 8 (xã Quý Lộc)',
+      'Địa bàn xã Quý Lộc',
+      'Địa bàn xã Yên Thọ',
+      'Địa bàn liên xã mở rộng',
+    ];
+  }, [hrConfig]);
+
   // Form State
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isCurrent, setIsCurrent] = useState(true);
   const [position, setPosition] = useState('');
   const [department, setDepartment] = useState('');
+  const [workLocation, setWorkLocation] = useState('');
   const [assignedArea, setAssignedArea] = useState('');
   const [transferType, setTransferType] = useState('LUAN_CHUYEN_DINH_KY');
   const [decisionNumber, setDecisionNumber] = useState('');
@@ -67,12 +96,11 @@ const WorkHistoryPeriodModal = ({
   const [notes, setNotes] = useState('');
   const [syncToProfile, setSyncToProfile] = useState(true);
 
-  // Nhận diện Cán bộ Tín dụng để làm nổi bật địa bàn
+  // Nhận diện Cán bộ Tín dụng theo chức danh:
+  // CHỈ CBTD mới có địa bàn quản lý tín dụng. Các chức danh HĐQT, BKS, Giám đốc, Kế toán... KHÔNG có địa bàn.
   const isCreditOfficer = useMemo(() => {
-    const dept = (department || '').toLowerCase();
-    const pos = (position || '').toLowerCase();
-    return dept.includes('tín dụng') || pos.includes('tín dụng') || Boolean(assignedArea);
-  }, [department, position, assignedArea]);
+    return isCreditOfficerRole(position, department);
+  }, [position, department]);
 
   // Khởi tạo và đồng bộ dữ liệu form khi mở modal
   useEffect(() => {
@@ -83,6 +111,7 @@ const WorkHistoryPeriodModal = ({
         setIsCurrent(editingRecord.isCurrent !== undefined ? Boolean(editingRecord.isCurrent) : !editingRecord.endDate);
         setPosition(editingRecord.position || editingRecord.toPosition || '');
         setDepartment(editingRecord.department || editingRecord.toDepartment || deptList[0] || 'Phòng Tín dụng');
+        setWorkLocation(editingRecord.workLocation || selectedEmp?.workLocation || workLocationList[0]);
         setAssignedArea(editingRecord.assignedArea || editingRecord.toAssignedArea || '');
         setTransferType(editingRecord.transferType || 'LUAN_CHUYEN_DINH_KY');
         setDecisionNumber(editingRecord.decisionNumber || '');
@@ -97,6 +126,7 @@ const WorkHistoryPeriodModal = ({
         setIsCurrent(true);
         setPosition(selectedEmp?.position || '');
         setDepartment(selectedEmp?.department || deptList[0] || 'Phòng Tín dụng');
+        setWorkLocation(selectedEmp?.workLocation || workLocationList[0]);
         setAssignedArea(selectedEmp?.assignedArea || '');
         setTransferType('LUAN_CHUYEN_DINH_KY');
         setDecisionNumber('');
@@ -106,7 +136,7 @@ const WorkHistoryPeriodModal = ({
         setSyncToProfile(true);
       }
     }
-  }, [isOpen, editingRecord, selectedEmp, deptList]);
+  }, [isOpen, editingRecord, selectedEmp, deptList, workLocationList]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -122,6 +152,10 @@ const WorkHistoryPeriodModal = ({
       toast?.showError?.('Vui lòng chọn phòng ban công tác');
       return;
     }
+    if (!workLocation.trim()) {
+      toast?.showError?.('Vui lòng nhập hoặc chọn nơi làm việc / địa bàn hoạt động');
+      return;
+    }
     if (!startDate) {
       toast?.showError?.('Vui lòng chọn ngày bắt đầu mốc công tác');
       return;
@@ -135,12 +169,14 @@ const WorkHistoryPeriodModal = ({
       return;
     }
     if (isCreditOfficer && !assignedArea.trim()) {
-      toast?.showError?.('Vui lòng nhập địa bàn quản lý đối với chức vụ Cán bộ Tín dụng');
+      toast?.showError?.('Vui lòng chọn hoặc nhập địa bàn quản lý đối với chức danh Cán bộ Tín dụng');
       return;
     }
 
     setSubmitting(true);
     try {
+      const cleanAssignedArea = isCreditOfficer ? assignedArea.trim() : '';
+
       const payload = {
         ...(editingRecord?.id ? { id: editingRecord.id } : {}),
         employeeId: selectedEmp.id,
@@ -153,10 +189,12 @@ const WorkHistoryPeriodModal = ({
         effectiveDate: startDate,
         position: position.trim(),
         department: department.trim(),
-        assignedArea: assignedArea.trim(),
+        workLocation: workLocation.trim(),
+        assignedArea: cleanAssignedArea,
         toPosition: position.trim(),
         toDepartment: department.trim(),
-        toAssignedArea: assignedArea.trim(),
+        toWorkLocation: workLocation.trim(),
+        toAssignedArea: cleanAssignedArea,
         transferType,
         transferTypeLabel: TRANSFER_TYPES.find((t) => t.value === transferType)?.label || transferType,
         decisionNumber: decisionNumber.trim(),
@@ -168,6 +206,24 @@ const WorkHistoryPeriodModal = ({
       };
 
       await saveWorkHistory(payload);
+
+      // Đồng bộ thông tin hiện tại sang hồ sơ cán bộ nếu checkbox được chọn
+      if (isCurrent && syncToProfile) {
+        const updateData = {
+          position: position.trim(),
+          department: department.trim(),
+          positionStartDate: startDate,
+          workLocation: workLocation.trim(),
+          assignedArea: cleanAssignedArea,
+        };
+        if (isCreditOfficer && cleanAssignedArea) {
+          updateData.areaStartDate = startDate;
+        }
+        await updateEmployeeProfile(selectedEmp.id, updateData).catch((err) => {
+          console.warn('Lỗi đồng bộ hồ sơ cán bộ:', err);
+        });
+      }
+
       toast?.showSuccess?.(
         editingRecord 
           ? 'Đã cập nhật mốc công tác thành công' 
@@ -187,31 +243,29 @@ const WorkHistoryPeriodModal = ({
       isOpen={isOpen}
       onClose={onClose}
       title={editingRecord ? 'Chỉnh Sửa Mốc Quá Trình Công Tác' : 'Thêm Mốc Quá Trình Công Tác Mới'}
-      subtitle={selectedEmp ? `Cán bộ: ${selectedEmp.name} • Quỹ TDND Yên Thọ` : 'Quỹ TDND Yên Thọ'}
+      subtitle={`Cán bộ: ${selectedEmp?.name || '—'} • Quỹ Tín Dụng Nhân Dân Yên Thọ`}
       maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-        {/* Khối 1: Khoảng thời gian & Trạng thái đảm nhiệm */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-3">
+        {/* Khối 1: Thời gian công tác */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+            <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-emerald-800 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
               <span>Thời Gian Công Tác</span>
-            </span>
-            <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs hover:bg-emerald-50 transition-colors">
+            </h4>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={isCurrent}
                 onChange={(e) => {
-                  const checked = e.target.checked;
-                  setIsCurrent(checked);
-                  if (checked) {
-                    setEndDate('');
-                  }
+                  const val = e.target.checked;
+                  setIsCurrent(val);
+                  if (val) setEndDate('');
                 }}
-                className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
               />
-              <span>Đang đảm nhiệm (Mốc hiện tại)</span>
+              <span className="font-bold text-slate-800">Đang đảm nhiệm (Mốc hiện tại)</span>
             </label>
           </div>
 
@@ -257,7 +311,7 @@ const WorkHistoryPeriodModal = ({
                 onChange={(e) => setSyncToProfile(e.target.checked)}
                 className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
               />
-              <span className="font-medium">Đồng bộ chức vụ và địa bàn vào hồ sơ cán bộ</span>
+              <span className="font-medium">Đồng bộ chức vụ, nơi làm việc và địa bàn vào hồ sơ cán bộ</span>
             </label>
           )}
         </div>
@@ -291,7 +345,7 @@ const WorkHistoryPeriodModal = ({
               type="text"
               list="work-history-positions"
               required
-              placeholder="VD: Cán bộ tín dụng"
+              placeholder="VD: Cán bộ tín dụng / Kế toán viên"
               value={position}
               onChange={(e) => setPosition(e.target.value)}
               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
@@ -304,23 +358,56 @@ const WorkHistoryPeriodModal = ({
           </div>
         </div>
 
-        {/* Khối 3: Địa bàn quản lý */}
+        {/* Khối 3: Nơi làm việc / Địa bàn hoạt động (Áp dụng chung cho TẤT CẢ chức danh) */}
         <div>
           <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-slate-500" />
-            <span>Địa bàn quản lý: {isCreditOfficer && <span className="text-rose-500">*</span>}</span>
+            <Building2 className="w-3.5 h-3.5 text-slate-500" />
+            <span>Nơi làm việc / Địa bàn hoạt động: <span className="text-rose-500">*</span></span>
           </label>
           <input
             type="text"
-            required={isCreditOfficer}
-            placeholder={isCreditOfficer ? "Nhập địa bàn phụ trách (thôn/xã)" : "Địa bàn phụ trách (nếu có)"}
-            value={assignedArea}
-            onChange={(e) => setAssignedArea(e.target.value)}
+            list="work-history-locations"
+            required
+            placeholder="VD: Trụ sở chính - Quỹ TDND Yên Thọ / Phòng Giao dịch số 1"
+            value={workLocation}
+            onChange={(e) => setWorkLocation(e.target.value)}
             className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
           />
+          <datalist id="work-history-locations">
+            {workLocationList.map((loc, idx) => (
+              <option key={idx} value={loc} />
+            ))}
+          </datalist>
         </div>
 
-        {/* Khối 4: Hình thức điều chuyển, Quyết định & Người ký */}
+        {/* Khối 4: Địa bàn quản lý tín dụng (CHỈ áp dụng đối với Cán bộ Tín dụng. Các chức danh HĐQT, BKS, Kế toán... KHÔNG hiển thị) */}
+        {isCreditOfficer && (
+          <div className="p-3 bg-emerald-50/70 border border-emerald-300 rounded-xl space-y-1.5">
+            <label className="block text-slate-900 font-bold flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Địa bàn quản lý tín dụng: <span className="text-rose-500">*</span></span>
+            </label>
+            <input
+              type="text"
+              list="credit-area-suggestions"
+              required={isCreditOfficer}
+              placeholder="Chọn hoặc nhập địa bàn tín dụng phụ trách (thôn/xã)..."
+              value={assignedArea}
+              onChange={(e) => setAssignedArea(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-slate-900 font-semibold focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+            />
+            <datalist id="credit-area-suggestions">
+              {creditAreaList.map((area, idx) => (
+                <option key={idx} value={area} />
+              ))}
+            </datalist>
+            <p className="text-[11px] text-emerald-800">
+              * Áp dụng bắt buộc phân công địa bàn chuyên trách và giám sát chu kỳ luân chuyển định kỳ đối với Cán bộ Tín dụng.
+            </p>
+          </div>
+        )}
+
+        {/* Khối 5: Hình thức điều chuyển, Quyết định & Người ký */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-slate-700 font-bold mb-1">Hình thức công tác:</label>
@@ -362,7 +449,7 @@ const WorkHistoryPeriodModal = ({
           </div>
         </div>
 
-        {/* Khối 5: Người ký & Ghi chú */}
+        {/* Khối 6: Người ký & Ghi chú */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1">

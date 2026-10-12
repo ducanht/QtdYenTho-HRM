@@ -4,7 +4,9 @@ import {
   DEFAULT_EMPLOYEE_SOCIALS, 
   OFFICIAL_WORK_HISTORY,
   OFFICIAL_STAFF_EMPLOYEES,
+  DEFAULT_MODULE_HR_SETTINGS,
 } from '../src/lib/systemDefaults';
+import { isCreditOfficerRole } from '../src/lib/evaluationUtils';
 import { 
   CURRENT_SCHEMA_VERSION, 
   CORE_COLLECTIONS, 
@@ -260,6 +262,41 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     expect(regularEmp).toBeDefined();
     expect(regularEmp.itLevel).toBe('Ứng dụng CNTT cơ bản');
     expect(regularEmp.foreignLanguage).toBe('Tiếng Anh');
+  });
+
+  test('Kiểm tra Nơi làm việc, Danh mục Địa bàn Tín dụng và Xác định Cán bộ Tín dụng (isCreditOfficerRole)', async () => {
+    // 1. Kiểm tra hàm isCreditOfficerRole loại trừ dứt khoát các chức danh HĐQT, BKS, Ban Điều hành, Kế toán, Thủ quỹ
+    expect(isCreditOfficerRole('Chủ tịch HĐQT', 'Hội đồng Quản trị')).toBe(false);
+    expect(isCreditOfficerRole('Thành viên HĐQT chuyên trách', 'Hội đồng Quản trị')).toBe(false);
+    expect(isCreditOfficerRole('Trưởng ban Kiểm soát', 'Ban Kiểm soát')).toBe(false);
+    expect(isCreditOfficerRole('Thành viên BKS', 'Ban Kiểm soát')).toBe(false);
+    expect(isCreditOfficerRole('Giám đốc điều hành', 'Ban Điều hành')).toBe(false);
+    expect(isCreditOfficerRole('Phó Giám đốc', 'Ban Điều hành')).toBe(false);
+    expect(isCreditOfficerRole('Kế toán trưởng', 'Phòng Kế toán - Ngân quỹ')).toBe(false);
+    expect(isCreditOfficerRole('Thủ quỹ', 'Phòng Kế toán - Ngân quỹ')).toBe(false);
+    expect(isCreditOfficerRole('Kế toán viên', 'Phòng Kế toán - Ngân quỹ')).toBe(false);
+
+    // 2. Kiểm tra hàm isCreditOfficerRole trả về true cho Cán bộ Tín dụng
+    expect(isCreditOfficerRole('Cán bộ tín dụng', 'Phòng Tín dụng')).toBe(true);
+    expect(isCreditOfficerRole('Cán bộ Tín dụng phụ trách địa bàn', 'Phòng Tín dụng')).toBe(true);
+    expect(isCreditOfficerRole('Thẩm định tín dụng', 'Phòng Tín dụng')).toBe(true);
+
+    // 3. Kiểm tra DEFAULT_MODULE_HR_SETTINGS có danh mục creditAreas và workLocations
+    expect(DEFAULT_MODULE_HR_SETTINGS).toHaveProperty('creditAreas');
+    expect(DEFAULT_MODULE_HR_SETTINGS).toHaveProperty('workLocations');
+    expect(Array.isArray(DEFAULT_MODULE_HR_SETTINGS.creditAreas)).toBe(true);
+    expect(Array.isArray(DEFAULT_MODULE_HR_SETTINGS.workLocations)).toBe(true);
+    expect(DEFAULT_MODULE_HR_SETTINGS.creditAreas.length).toBeGreaterThan(0);
+    expect(DEFAULT_MODULE_HR_SETTINGS.workLocations.length).toBeGreaterThan(0);
+
+    // 4. Kiểm tra toàn bộ OFFICIAL_STAFF_EMPLOYEES đều có workLocation
+    for (const emp of OFFICIAL_STAFF_EMPLOYEES) {
+      expect(emp.workLocation).toBeDefined();
+      expect(emp.workLocation).toContain('Trụ sở chính');
+    }
+
+    // 5. Kiểm tra Schema Version mới v5.9
+    expect(CURRENT_SCHEMA_VERSION).toBe('2026.10.12_v5.9_work_locations_and_credit_areas_subsystem');
   });
 });
 

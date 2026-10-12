@@ -282,6 +282,9 @@ export const saveWorkHistory = async (transferRecord) => {
     isCurrent: cleanData.isCurrent !== undefined ? Boolean(cleanData.isCurrent) : false,
     position: cleanData.position || cleanData.toPosition || '',
     department: cleanData.department || cleanData.toDepartment || '',
+    workLocation: cleanData.workLocation || cleanData.toWorkLocation || '',
+    fromWorkLocation: cleanData.fromWorkLocation || '',
+    toWorkLocation: cleanData.toWorkLocation || cleanData.workLocation || '',
     assignedArea: cleanData.assignedArea || cleanData.toAssignedArea || '',
     updatedAt: nowIso,
     serverTime: serverTimestamp(),
@@ -313,12 +316,14 @@ export const saveWorkHistory = async (transferRecord) => {
       const profileUpdate = {};
       const pos = transferRecord.position || transferRecord.toPosition;
       const dept = transferRecord.department || transferRecord.toDepartment;
-      const area = transferRecord.assignedArea || transferRecord.toAssignedArea;
+      const area = transferRecord.assignedArea !== undefined ? transferRecord.assignedArea : transferRecord.toAssignedArea;
       const sDate = transferRecord.startDate || transferRecord.effectiveDate;
+      const wLoc = transferRecord.workLocation || transferRecord.toWorkLocation;
 
       if (pos) profileUpdate.position = pos;
       if (dept) profileUpdate.department = dept;
-      if (area) profileUpdate.assignedArea = area;
+      if (wLoc) profileUpdate.workLocation = wLoc;
+      if (area !== undefined) profileUpdate.assignedArea = area;
       if (sDate) profileUpdate.positionStartDate = sDate;
 
       if (Object.keys(profileUpdate).length > 0) {

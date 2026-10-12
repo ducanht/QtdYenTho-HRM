@@ -3,6 +3,7 @@ import {
   ArrowRightLeft, 
   FileText, 
   MapPin, 
+  Building2,
   ShieldAlert, 
   CheckCircle2, 
   Clock, 
@@ -11,7 +12,7 @@ import {
   Pencil,
   Calendar
 } from 'lucide-react';
-import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, calculateAreaTenureAndDueDate, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import { deleteWorkHistory } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
@@ -97,10 +98,8 @@ const EmployeeTransferHistory = ({
   const isDue = requiresTransfer && tenureMonths >= maxMonths;
   const isNear = requiresTransfer && tenureMonths >= (maxMonths - warningMonths) && tenureMonths < maxMonths;
 
-  // Theo dõi tiến độ quản lý địa bàn dành riêng cho Cán bộ Tín dụng
-  const isCreditOfficer = (emp?.department || '').includes('Tín dụng') || 
-    (emp?.position || '').toLowerCase().includes('tín dụng') || 
-    Boolean(emp?.assignedArea);
+  // Theo dõi tiến độ quản lý địa bàn dành riêng cho Cán bộ Tín dụng (HĐQT, BKS, Giám đốc, Kế toán... KHÔNG áp dụng)
+  const isCreditOfficer = isCreditOfficerRole(emp?.position, emp?.department);
 
   const areaInfo = isCreditOfficer 
     ? calculateAreaTenureAndDueDate(emp?.areaStartDate || effectiveStart, maxMonths, warningMonths) 
@@ -427,13 +426,21 @@ const EmployeeTransferHistory = ({
                     </p>
                   </div>
 
-                  {/* Địa bàn quản lý tín dụng */}
-                  {areaName && (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100/70 border border-emerald-300 text-emerald-950 text-xs font-bold">
-                      <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                      <span>Địa bàn quản lý: {areaName}</span>
-                    </div>
-                  )}
+                  {/* Nơi làm việc & Địa bàn quản lý tín dụng */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {item.workLocation && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-[11px] font-semibold">
+                        <Building2 className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                        <span>Nơi làm việc: {item.workLocation}</span>
+                      </div>
+                    )}
+                    {isCreditOfficerRole(posName, deptName) && areaName && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100/70 border border-emerald-300 text-emerald-950 text-[11px] font-bold">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>Địa bàn tín dụng: {areaName}</span>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Chi tiết thay đổi chức danh & địa bàn nếu là quyết định điều chuyển */}
                   {item.fromPosition && item.fromPosition !== posName && (
@@ -539,6 +546,7 @@ const EmployeeTransferHistory = ({
         editingRecord={editingPeriod}
         departments={departments}
         positions={positions}
+        hrConfig={hrConfig}
         onSuccess={() => {
           // Callback khi lưu thành công mốc công tác
         }}

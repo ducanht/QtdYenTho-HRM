@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
 import { saveWorkHistory } from '../../../lib/services';
+import { isCreditOfficerRole } from '../../../lib/evaluationUtils';
+import { DEFAULT_MODULE_HR_SETTINGS } from '../../../lib/systemDefaults';
 import { useToast } from '../../../context/ToastContext';
 
 /**
@@ -15,6 +17,7 @@ const TransferDecisionModal = ({
   employees = [],
   departments = [],
   positions = [],
+  hrConfig = null,
   onSuccess,
 }) => {
   const toast = useToast();
@@ -28,6 +31,7 @@ const TransferDecisionModal = ({
   const [transferType, setTransferType] = useState('LUAN_CHUYEN_DINH_KY');
   const [toDepartment, setToDepartment] = useState('');
   const [toPosition, setToPosition] = useState('');
+  const [toWorkLocation, setToWorkLocation] = useState('');
   const [toAssignedArea, setToAssignedArea] = useState('');
   const [signer, setSigner] = useState('Trịnh Đức Anh - Chủ tịch HĐQT');
   const [handoverStatus, setHandoverStatus] = useState('DANG_BAN_GIAO');
@@ -41,11 +45,13 @@ const TransferDecisionModal = ({
       setTargetEmpId(selectedEmp.id);
       setToDepartment(selectedEmp.department || '');
       setToPosition(selectedEmp.position || '');
+      setToWorkLocation(selectedEmp.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)');
       setToAssignedArea(selectedEmp.assignedArea || '');
     }
   }, [selectedEmp]);
 
   const currentTargetEmp = employees.find((e) => e.id === targetEmpId) || selectedEmp;
+  const isTargetCreditOfficer = isCreditOfficerRole(toPosition, toDepartment);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,8 +83,12 @@ const TransferDecisionModal = ({
         toDepartment: toDepartment || currentTargetEmp.department || '',
         fromPosition: currentTargetEmp.position || '',
         toPosition: toPosition.trim(),
+        fromWorkLocation: currentTargetEmp.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+        toWorkLocation: toWorkLocation.trim() || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+        workLocation: toWorkLocation.trim() || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
         fromAssignedArea: currentTargetEmp.assignedArea || '',
-        toAssignedArea: toAssignedArea.trim(),
+        toAssignedArea: isTargetCreditOfficer ? toAssignedArea.trim() : '',
+        assignedArea: isTargetCreditOfficer ? toAssignedArea.trim() : '',
         signer,
         handoverStatus,
         reason: reason.trim(),
@@ -120,6 +130,7 @@ const TransferDecisionModal = ({
               if (found) {
                 setToDepartment(found.department || '');
                 setToPosition(found.position || '');
+                setToWorkLocation(found.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)');
                 setToAssignedArea(found.assignedArea || '');
               }
             }}
@@ -230,20 +241,49 @@ const TransferDecisionModal = ({
           </div>
         </div>
 
+        {/* Nơi làm việc mới (Địa bàn hoạt động) */}
+        <div>
+          <label className="block text-slate-700 font-bold mb-1">
+            Nơi làm việc tiếp nhận mới (Địa bàn hoạt động):
+          </label>
+          <input
+            type="text"
+            list="transfer-work-locations-list"
+            value={toWorkLocation}
+            onChange={(e) => setToWorkLocation(e.target.value)}
+            placeholder="VD: Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)"
+            required
+            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+          />
+          <datalist id="transfer-work-locations-list">
+            {(hrConfig?.workLocations || DEFAULT_MODULE_HR_SETTINGS.workLocations || []).map((loc) => (
+              <option key={loc} value={loc} />
+            ))}
+          </datalist>
+        </div>
+
         {/* Địa bàn mới & Tình trạng bàn giao */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={`grid grid-cols-1 ${isTargetCreditOfficer ? 'sm:grid-cols-2' : ''} gap-3`}>
+          {isTargetCreditOfficer && (
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Địa bàn phụ trách tín dụng mới:</label>
+              <input
+                type="text"
+                list="transfer-credit-areas-list"
+                value={toAssignedArea}
+                onChange={(e) => setToAssignedArea(e.target.value)}
+                placeholder="VD: Xã Quý Lộc / Cụm 3 thôn xã Yên Thọ"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+              />
+              <datalist id="transfer-credit-areas-list">
+                {(hrConfig?.creditAreas || DEFAULT_MODULE_HR_SETTINGS.creditAreas || []).map((area) => (
+                  <option key={area} value={area} />
+                ))}
+              </datalist>
+            </div>
+          )}
           <div>
-            <label className="block text-slate-700 font-bold mb-1">Địa bàn phụ trách mới:</label>
-            <input
-              type="text"
-              value={toAssignedArea}
-              onChange={(e) => setToAssignedArea(e.target.value)}
-              placeholder="VD: Xã Quý Lộc / Cụm 3 thôn xã Yên Thọ"
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-            />
-          </div>
-          <div>
-            <label className="block text-slate-700 font-bold mb-1">Tình trạng bàn giao hồ sơ nợ & sổ sách:</label>
+            <label className="block text-slate-700 font-bold mb-1">Tình trạng bàn giao hồ sơ & sổ sách:</label>
             <select
               value={handoverStatus}
               onChange={(e) => setHandoverStatus(e.target.value)}

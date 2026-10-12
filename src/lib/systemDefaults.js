@@ -234,6 +234,23 @@ export const DEFAULT_MODULE_HR_SETTINGS = {
     { code: 'PHAN_CONG_CHUYEN_TRACH', label: 'Phân công chuyên trách nghiệp vụ' },
     { code: 'DIEU_DONG_NOI_BO', label: 'Điều động nội bộ phòng ban' },
   ],
+  // 1. Danh mục Địa bàn Tín dụng (Chuyên biệt áp dụng cho Cán bộ Tín dụng)
+  creditAreas: [
+    'Thôn Tân Lộc (xã Yên Thọ)',
+    'Thôn Tân Hưng (xã Yên Thọ)',
+    'Cụm Thôn 1, 2, 3 (xã Yên Thọ)',
+    'Cụm Thôn 4, 5, 6 (xã Yên Thọ)',
+    'Cụm Thôn 7, 8 (xã Quý Lộc)',
+    'Địa bàn xã Quý Lộc',
+    'Địa bàn xã Yên Thọ',
+    'Địa bàn liên xã mở rộng',
+  ],
+  // 2. Danh mục Nơi làm việc / Địa bàn hoạt động (Áp dụng chung toàn đơn vị, HĐQT, BKS, các phòng ban)
+  workLocations: [
+    'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+    'Phòng Giao dịch số 1 (Yên Thọ)',
+    'Điểm giao dịch lưu động',
+  ],
 };
 
 // Phân hệ Đánh Giá KPI 3 Cấp (MODULE_KPI)
@@ -887,6 +904,7 @@ export const OFFICIAL_STAFF_EMPLOYEES = OFFICIAL_EMPLOYEES.filter(
   (emp) => emp.id !== 'emp-root' && emp.code !== 'ROOT'
 ).map(({ role, mustChangePassword, ...profile }) => ({
   ...profile,
+  workLocation: profile.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
   secondaryPhone: profile.secondaryPhone || '',
   itLevel: profile.itLevel || 'Ứng dụng CNTT cơ bản',
   foreignLanguage: profile.foreignLanguage || 'Tiếng Anh',
