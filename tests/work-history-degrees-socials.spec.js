@@ -27,6 +27,10 @@ import {
   CLASSIFICATION_OPTIONS 
 } from '../src/features/employees/components/AddDegreeModal';
 import { SOCIAL_PLATFORMS } from '../src/features/employees/components/ManageSocialsModal';
+import { 
+  exportEmployeeProfileToDocx, 
+  exportEmployeeProfileToExcel 
+} from '../src/lib/exportUtils';
 
 
 test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Riêng Biệt (Degrees, Socials, Timeline Work History)', () => {
@@ -220,4 +224,26 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     expect(platforms).toContain('Telegram');
     expect(platforms).toContain('LinkedIn');
   });
+
+  test('Kiểm tra hàm xuất Báo cáo Word & Excel đa sheet tích hợp Timeline, Văn bằng, Mạng xã hội', async () => {
+    // 1. Kiểm tra tính sẵn sàng của hàm xuất Docx và Excel
+    expect(typeof exportEmployeeProfileToDocx).toBe('function');
+    expect(typeof exportEmployeeProfileToExcel).toBe('function');
+
+    // 2. Kiểm tra dữ liệu đầu vào cho các sheet Excel
+    const sampleEmp = {
+      id: 'emp-001',
+      name: 'Nguyễn Thị Sinh',
+      position: 'Cán bộ Tín dụng',
+      department: 'Phòng Tín dụng'
+    };
+    const sampleDegrees = DEFAULT_EMPLOYEE_DEGREES.filter((d) => d.employeeId === 'emp-001');
+    const sampleSocials = DEFAULT_EMPLOYEE_SOCIALS.filter((s) => s.employeeId === 'emp-001');
+    const sampleWorkHistory = OFFICIAL_WORK_HISTORY.filter((w) => w.employeeId === 'emp-001');
+
+    expect(sampleDegrees.length).toBeGreaterThan(0);
+    expect(sampleSocials.length).toBeGreaterThan(0);
+    expect(sampleWorkHistory.length).toBeGreaterThan(0);
+  });
 });
+

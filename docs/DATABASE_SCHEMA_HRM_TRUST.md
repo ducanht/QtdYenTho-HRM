@@ -14,7 +14,9 @@
 
 ```mermaid
 erDiagram
-    EMPLOYEE ||--o{ WORK_HISTORY : "có quá trình luân chuyển"
+    EMPLOYEE ||--o{ WORK_HISTORY : "có quá trình luân chuyển & mốc công tác"
+    EMPLOYEE ||--o{ EMPLOYEE_DEGREES : "có văn bằng chuyên môn đa cấp"
+    EMPLOYEE ||--o{ EMPLOYEE_SOCIALS : "có kênh mạng xã hội & liên lạc số"
     EMPLOYEE ||--o{ EMPLOYEE_TRAINING : "có chứng chỉ đào tạo"
     EMPLOYEE ||--o{ EMPLOYEE_KPI_HISTORY : "có lịch sử KPI"
     EMPLOYEE ||--o{ TRUST_EVALUATION : "thực hiện đánh giá (người chấm)"
@@ -49,6 +51,36 @@ erDiagram
         string role "staff | manager | chairman"
         string status "ACTIVE | LEAVE | INACTIVE"
         string avatar "Chuỗi Base64 ảnh chân dung đã nén qua Canvas (< 50KB)"
+    }
+
+    EMPLOYEE_DEGREES {
+        string id PK "Mã bản ghi bằng cấp (degree-uuid)"
+        string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
+        string employeeName "Họ tên cán bộ"
+        string degreeLevel "TIEN_SI | THAC_SI | DAI_HOC | CAO_DANG | TRUNG_CAP | SO_CAP | KHAC"
+        string degreeName "Tên văn bằng (Cử nhân Kinh tế, Kỹ sư Tin học...)"
+        string major "Chuyên ngành đào tạo chuyên môn"
+        string institution "Cơ sở / Trường đại học đào tạo"
+        string trainingMode "CHINH_QUY | VUA_LAM_VUA_HOC | LIEN_THONG | TU_XA"
+        int graduationYear "Năm tốt nghiệp"
+        string classification "XUAT_SAC | GIOI | KHA | TRUNG_BINH_KHA | TRUNG_BINH"
+        string certificateNumber "Số hiệu văn bằng / Số vào sổ cấp bằng"
+        boolean isHighest "true: Văn bằng cao nhất của CBNV"
+        string scanUrl "Chuỗi ảnh scan văn bằng nén WebP (< 50KB)"
+        timestamp createdAt "Thời gian khởi tạo"
+    }
+
+    EMPLOYEE_SOCIALS {
+        string id PK "Mã bản ghi mạng xã hội (soc-uuid)"
+        string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
+        string employeeName "Họ tên cán bộ"
+        string platform "ZALO | FACEBOOK | TELEGRAM | LINKEDIN | VIBER | OTHER"
+        string usernameOrPhone "Tên tài khoản / Số điện thoại liên kết"
+        string profileUrl "Đường dẫn liên kết trang cá nhân trực tiếp"
+        boolean isPublicInternal "true: Công khai cho đồng nghiệp xem"
+        timestamp createdAt "Thời gian khởi tạo"
     }
 
     EMPLOYEE_TRAINING {
@@ -88,15 +120,21 @@ erDiagram
     }
 
     WORK_HISTORY {
-        string id PK "Mã bản ghi luân chuyển (TRANS_ID)"
-        string employeeId FK "Mã cán bộ (FK -> users.id)"
+        string id PK "Mã bản ghi mốc công tác (wh-uuid / TRANS_ID)"
+        string employeeId FK "Mã cán bộ (FK -> employees.id)"
         string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
         string employeeCode "Mã cán bộ (CB01, CB02...)"
         string employeeName "Họ tên cán bộ"
+        string startDate "Ngày bắt đầu mốc công tác (YYYY-MM-DD)"
+        string endDate "Ngày kết thúc mốc công tác (YYYY-MM-DD)"
+        boolean isCurrent "true: Đang đảm nhiệm vị trí này"
+        string position "Chức danh đảm nhiệm trong giai đoạn"
+        string department "Phòng ban công tác trong giai đoạn"
+        string assignedArea "Địa bàn tín dụng phụ trách trong giai đoạn"
+        string transferType "LUAN_CHUYEN_DINH_KY | BO_NHIEM | DIEU_DONG | THAY_DOI_DIA_BAN | TUYEN_DUNG"
         string decisionNumber "Số quyết định (VD: 15/QĐ-HĐQT-2024)"
         date decisionDate "Ngày ký quyết định"
         date effectiveDate "Ngày quyết định có hiệu lực"
-        string transferType "LUAN_CHUYEN_DINH_KY | BO_NHIEM | DIEU_DONG | THAY_DOI_DIA_BAN"
         string fromDepartment "Phòng ban cũ"
         string toDepartment "Phòng ban mới"
         string fromPosition "Chức vụ cũ"
@@ -104,6 +142,7 @@ erDiagram
         string fromAssignedArea "Địa bàn phụ trách cũ"
         string toAssignedArea "Địa bàn phụ trách mới"
         string signer "Người ký quyết định (Chủ tịch HĐQT / Giám đốc)"
+        string handoverStatus "DA_BAN_GIAO | DANG_BAN_GIAO | CHUA_BAN_GIAO"
         string reason "Căn cứ & lý do luân chuyển"
         string notes "Ghi chú quá trình bàn giao công việc"
         string attachmentUrl "Đường dẫn file scan quyết định (PDF/Image)"
@@ -168,32 +207,40 @@ erDiagram
 
 ---
 
-## 📑 2. Chi Tiết Thực Thể Mới: Quá Trình Luân Chuyển Công Tác (`work_history`)
+## 📑 2. Chi Tiết Thực Thể: Quá Trình Luân Chuyển & Mốc Công Tác (`work_history`)
 
-Collection Firestore: `work_history` (hoặc Sub-collection `users/{userId}/work_history`)  
-Theo chỉ đạo của Ngân hàng Nhà nước, các vị trí nhạy cảm tại Quỹ tín dụng nhân dân (CBTD, Kế toán, Thủ quỹ, BKS) **bắt buộc phải thực hiện luân chuyển định kỳ** từ 2 đến 3 năm một lần để triệt tiêu rủi ro câu kết và tiêu cực tín dụng.
+Collection Firestore: `work_history`  
+Quản lý xuyên suốt lịch sử quá trình công tác của cán bộ từ khi tuyển dụng, qua các giai đoạn đảm nhiệm chức danh, phòng ban, địa bàn tín dụng, cũng như các quyết định bổ nhiệm và luân chuyển định kỳ phòng ngừa rủi ro theo chỉ đạo của Ngân hàng Nhà nước.
 
 ### Cấu trúc dữ liệu:
 | Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
 | :--- | :--- | :--- | :--- |
-| `id` | `string` | **PK** | Mã định danh bản ghi luân chuyển (VD: `trans-001`). |
-| `employeeId` | `string` | **FK -> users.id** | Cán bộ được điều động, luân chuyển. |
+| `id` | `string` | **PK** | Mã định danh bản ghi mốc công tác (VD: `wh-001`, `trans-001`). |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ được điều động, luân chuyển hoặc ghi nhận mốc công tác. |
 | `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
 | `employeeCode` | `string` | Snapshot | Mã cán bộ (VD: `CB03`). |
 | `employeeName` | `string` | Snapshot | Họ tên cán bộ. |
-| `decisionNumber` | `string` | **Not Null** | Số Quyết định chính thức (VD: `18/QĐ-HĐQT-2025`). |
+| `startDate` | `string` | `YYYY-MM-DD` | Ngày bắt đầu mốc công tác / đảm nhiệm chức vụ. |
+| `endDate` | `string` | `YYYY-MM-DD` | Ngày kết thúc mốc công tác (để trống nếu đang đảm nhiệm). |
+| `isCurrent` | `boolean` | `true/false` | Đánh dấu mốc công tác / vị trí hiện tại đang đảm nhiệm. |
+| `position` | `string` | **Not Null** | Chức vụ đảm nhiệm trong giai đoạn (VD: Cán bộ Tín dụng, Kế toán trưởng). |
+| `department` | `string` | **Not Null** | Phòng ban công tác trong giai đoạn (VD: Phòng Tín dụng, Ban Kiểm soát). |
+| `assignedArea` | `string` | Nullable | Địa bàn tín dụng phụ trách (đặc biệt quan trọng với CBTD: Quý Lộc, Yên Thọ). |
+| `transferType` | `string` | Enum chuẩn | - `LUAN_CHUYEN_DINH_KY`: Luân chuyển định kỳ phòng ngừa rủi ro NHNN<br>- `BO_NHIEM`: Bổ nhiệm chức danh mới<br>- `DIEU_DONG`: Điều động công tác giữa các phòng ban<br>- `THAY_DOI_DIA_BAN`: Luân chuyển địa bàn phụ trách tín dụng các xã<br>- `TUYEN_DUNG`: Tuyển dụng tiếp nhận ban đầu |
+| `isPromotion` | `boolean` | `true/false` | Đánh dấu mốc bổ nhiệm thăng chức / quy hoạch cấp cao. |
+| `decisionNumber` | `string` | Nullable | Số Quyết định chính thức (VD: `18/QĐ-HĐQT-2025`). |
 | `decisionDate` | `string` | `YYYY-MM-DD` | Ngày Chủ tịch HĐQT hoặc Giám đốc ký quyết định. |
 | `effectiveDate` | `string` | `YYYY-MM-DD` | Ngày quyết định chính thức có hiệu lực áp dụng. |
-| `transferType` | `string` | Enum chuẩn | - `LUAN_CHUYEN_DINH_KY`: Luân chuyển định kỳ phòng ngừa rủi ro NHNN<br>- `BO_NHIEM`: Bổ nhiệm chức danh mới<br>- `DIEU_DONG`: Điều động công tác giữa các phòng ban<br>- `THAY_DOI_DIA_BAN`: Luân chuyển địa bàn phụ trách tín dụng các xã |
 | `fromDepartment` | `string` | Nullable | Phòng ban trước khi luân chuyển. |
-| `toDepartment` | `string` | **Not Null** | Phòng ban mới tiếp nhận. |
+| `toDepartment` | `string` | Nullable | Phòng ban mới tiếp nhận. |
 | `fromPosition` | `string` | Nullable | Chức vụ trước khi luân chuyển. |
-| `toPosition` | `string` | **Not Null** | Chức vụ mới được phân công. |
+| `toPosition` | `string` | Nullable | Chức vụ mới được phân công. |
 | `fromAssignedArea`| `string` | Nullable | Địa bàn tín dụng cũ (VD: "Thôn Tân Lộc, xã Quý Lộc"). |
 | `toAssignedArea` | `string` | Nullable | Địa bàn tín dụng mới (VD: "Cụm 3 thôn xã Yên Thọ"). |
-| `signer` | `string` | Not Null | Người ký quyết định (Chủ tịch HĐQT / Giám đốc Quỹ). |
+| `signer` | `string` | Nullable | Người ký quyết định (Chủ tịch HĐQT / Giám đốc Quỹ). |
 | `reason` | `string` | Text | Căn cứ điều động (Nghị quyết HĐQT, Kế hoạch luân chuyển NHNN). |
 | `handoverStatus` | `string` | Enum | `'DA_BAN_GIAO'`, `'DANG_BAN_GIAO'`, `'CHUA_BAN_GIAO'`. |
+| `notes` | `string` | Text | Ghi chú quá trình bàn giao công việc / địa bàn. |
 | `attachmentUrl` | `string` | Nullable | Link tệp PDF/ảnh scan quyết định lưu trữ điện tử. |
 | `createdAt` | `timestamp` | Server Time | Thời điểm cập nhật vào hệ thống. |
 
@@ -268,6 +315,54 @@ Hệ thống quản lý chuẩn hóa 11 chức vụ nòng cốt trong Quỹ tín
 9. `pos-09` (`TP_TD`): Trưởng phòng Tín dụng
 10. `pos-10` (`NV`): Cán bộ chuyên môn / Nhân viên
 11. **`pos-11` (`KSNB`)**: **Kiểm soát nội bộ (Kiểm soát viên chuyên trách)** — Thuộc Ban Kiểm soát, thực hiện kiểm toán và giám sát độc lập các quy trình tín dụng, kế toán và ngân quỹ.
+
+---
+
+## 🎓 2.4. Chi Tiết Thực Thể: Hồ Sơ Văn Bằng Chuyên Môn Đa Cấp (`employee_degrees`)
+
+Collection Firestore: `employee_degrees`  
+Quản lý danh sách toàn bộ các văn bằng giáo dục đại học, sau đại học và đào tạo nghề của cán bộ, nhân viên Quỹ tín dụng nhân dân theo chuẩn Thống đốc NHNN. Mỗi cán bộ có thể sở hữu nhiều văn bằng (ví dụ: Đại học Luật + Đại học Kinh tế, hoặc Đại học + Thạc sĩ), với một văn bằng chính được gắn cờ `isHighest: true`.
+
+### Cấu trúc dữ liệu:
+| Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | **PK** | Mã định danh văn bằng (VD: `deg-001`, `deg-f47ac10b-...`). |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ sở hữu văn bằng. |
+| `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
+| `employeeName` | `string` | Snapshot | Họ tên cán bộ tại thời điểm ghi nhận. |
+| `degreeLevel` | `string` | Enum chuẩn | Cấp bậc văn bằng:<br>- `TIEN_SI`: Tiến sĩ<br>- `THAC_SI`: Thạc sĩ<br>- `DAI_HOC`: Đại học / Cử nhân / Kỹ sư<br>- `CAO_DANG`: Cao đẳng<br>- `TRUNG_CAP`: Trung cấp<br>- `SO_CAP`: Sơ cấp<br>- `KHAC`: Chứng chỉ học thuật khác |
+| `degreeName` | `string` | **Not Null** | Tên văn bằng (VD: "Cử nhân Kinh tế", "Thạc sĩ Tài chính - Ngân hàng"). |
+| `major` | `string` | **Not Null** | Chuyên ngành đào tạo (VD: Tài chính - Ngân hàng, Luật Kinh tế, Kế toán). |
+| `institution` | `string` | **Not Null** | Cơ sở / Trường đại học đào tạo (VD: Học viện Ngân hàng, ĐH Kinh tế Quốc dân). |
+| `trainingMode` | `string` | Enum chuẩn | Hình thức đào tạo:<br>- `CHINH_QUY`: Chính quy<br>- `VUA_LAM_VUA_HOC`: Vừa làm vừa học (Tại chức)<br>- `LIEN_THONG`: Liên thông<br>- `TU_XA`: Đào tạo từ xa |
+| `graduationYear` | `number` | Năm (4 chữ số) | Năm tốt nghiệp ghi trên văn bằng (VD: 2012). |
+| `classification` | `string` | Enum chuẩn | Xếp loại tốt nghiệp: `XUAT_SAC`, `GIOI`, `KHA`, `TRUNG_BINH_KHA`, `TRUNG_BINH`. |
+| `certificateNumber` | `string` | Nullable | Số hiệu văn bằng / Số vào sổ cấp bằng. |
+| `isHighest` | `boolean` | `true/false` | Đánh dấu văn bằng cao nhất để đồng bộ vào trường `education` tóm tắt của cán bộ. |
+| `scanUrl` | `string` | Base64 Text | Ảnh chụp / scan văn bằng nén WebP an toàn qua Canvas (< 50KB). |
+| `createdAt` | `timestamp` | Server Time | Thời điểm tạo bản ghi. |
+| `updatedAt` | `timestamp` | Server Time | Thời điểm cập nhật lần cuối. |
+
+---
+
+## 🌐 2.5. Chi Tiết Thực Thể: Kênh Mạng Xã Hội & Liên Lạc Số (`employee_socials`)
+
+Collection Firestore: `employee_socials`  
+Quản lý các kênh kết nối mạng xã hội và liên lạc số của cán bộ, nhân viên (Zalo, Facebook, Telegram, LinkedIn, Viber...). Phục vụ công tác liên lạc nghiệp vụ nhanh, tạo nhóm điều hành và kết nối hội đồng chuyên môn trong hệ thống Quỹ.
+
+### Cấu trúc dữ liệu:
+| Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | **PK** | Mã định danh kênh mạng xã hội (VD: `soc-001`, `soc-uuid`). |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ sở hữu tài khoản liên lạc số. |
+| `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
+| `employeeName` | `string` | Snapshot | Họ tên cán bộ. |
+| `platform` | `string` | Enum chuẩn | Nền tảng:<br>- `ZALO`: Mạng Zalo<br>- `FACEBOOK`: Facebook<br>- `TELEGRAM`: Telegram<br>- `LINKEDIN`: LinkedIn<br>- `VIBER`: Viber<br>- `OTHER`: Khác |
+| `usernameOrPhone` | `string` | **Not Null** | Tên người dùng / Số điện thoại đăng ký / Handle. |
+| `profileUrl` | `string` | Nullable | Đường dẫn liên kết trực tiếp (URL) đến trang cá nhân. |
+| `isPublicInternal` | `boolean` | `true/false` | Cho phép hiển thị trên danh bạ nội bộ Quỹ để đồng nghiệp kết nối. |
+| `createdAt` | `timestamp` | Server Time | Thời điểm tạo bản ghi. |
+| `updatedAt` | `timestamp` | Server Time | Thời điểm cập nhật lần cuối. |
 
 ---
 
@@ -475,6 +570,21 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
     - Hiển thị thẻ chuyên biệt theo dõi quản lý địa bàn trong Hồ sơ chi tiết (`EmployeeProfileDetail`), Lịch sử luân chuyển (`EmployeeTransferHistory`) và Bảng giám sát toàn Quỹ (`EmployeeAnalyticsTab`).
   - **Tinh Gọn Giao Diện Báo Cáo Phân Tích**:
     - Xóa bỏ hoàn toàn khối thống kê phân bổ nhân sự theo phòng ban (`deptStats`) trong Tab Cơ cấu & Thống kê để loại bỏ nội dung dư thừa, tập trung vào các chỉ số nhân lực cốt lõi và tiến độ luân chuyển định kỳ.
+- **`2026.10.12_v5.6_degrees_socials_and_timeline_tables`**:
+  - **Tách Riêng 2 Bảng CSDL Độc Lập Cho Bằng Cấp & Mạng Xã Hội**:
+    - `employee_degrees`: Quản lý danh mục văn bằng chuyên môn đa cấp (Tiến sĩ, Thạc sĩ, Đại học, Cao đẳng, Trung cấp, Sơ cấp, Khác), hỗ trợ cán bộ có nhiều bằng đại học/sau đại học, phân loại hình thức đào tạo, năm tốt nghiệp, xếp loại, lưu trữ ảnh scan nén WebP Canvas (< 50KB) và gắn cờ bằng cao nhất (`isHighest: true`) tự động đồng bộ vào trường `education` của hồ sơ.
+    - `employee_socials`: Quản lý các kênh kết nối mạng xã hội và liên lạc số (Zalo, Facebook, Telegram, LinkedIn, Viber, Khác), liên kết URL trực tiếp và cờ công khai nội bộ.
+    - Nâng quy mô CSDL nòng cốt lên **20 collections** (`CORE_COLLECTIONS`), đồng bộ qua `autoInitDb.js` và bảo vệ phân quyền tầng CSDL qua `firestore.rules`.
+  - **Nâng Cấp Quá Trình Công Tác Thành Timeline Thời Gian Thực (`work_history`)**:
+    - Mở rộng 6 trường dữ liệu mốc thời gian: `startDate`, `endDate`, `isCurrent`, `position`, `department`, `assignedArea`.
+    - Modal thêm/sửa mốc công tác `WorkHistoryPeriodModal` hỗ trợ chọn 5 hình thức luân chuyển, tự động đồng bộ chức danh & địa bàn hiện tại vào hồ sơ cán bộ khi gắn cờ `isCurrent: true`.
+    - Timeline trực quan với mốc hiện tại nhấp nháy chấm xanh, hiển thị địa bàn tín dụng phụ trách, số quyết định, người ký và tình trạng bàn giao.
+  - **Tích Hợp Đồng Bộ Vào Bộ Công Cụ Xuất Báo Cáo & In Ấn A4**:
+    - Sơ yếu lý lịch trích ngang A4 (`EmployeeA4PrintModal`): Hiển thị Bảng quá trình công tác timeline chuẩn thể thức và Bảng danh mục văn bằng chuyên môn có số hiệu, năm tốt nghiệp, xếp loại.
+    - Xuất file Word (`exportEmployeeProfileToDocx`): Xuất đầy đủ bảng biểu văn bằng chuyên môn và bảng quá trình công tác timeline theo chuẩn văn bản hành chính Việt Nam.
+    - Xuất file Excel (`exportEmployeeProfileToExcel`): Mở rộng xuất file Excel đa sheet chuyên nghiệp gồm 4 sheet: `Trich_ngang_2C`, `Qua_trinh_cong_tac`, `Van_bang_chuyen_mon`, và `Mang_xa_hoi`.
+  - **Phân Tích Động Cơ Cấu Trình Độ Học Vấn Toàn Quỹ**:
+    - Thống kê tỷ lệ và số lượng từng cấp học vấn trong `EmployeeAnalyticsTab` được tính toán trực tiếp từ danh sách văn bằng trong `employee_degrees`, ưu tiên văn bằng cao nhất của mỗi cán bộ, fallback linh hoạt sang trường `education` tóm tắt.
 
 ---
 
