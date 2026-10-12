@@ -121,7 +121,7 @@ const EmployeeProfileDetail = ({
   const handleExportWord = async () => {
     try {
       setExportingWord(true);
-      await exportEmployeeProfileToDocx(emp, workHistory, trainings);
+      await exportEmployeeProfileToDocx(emp, workHistory, trainings, degrees, socials);
       toast?.showSuccess?.('Đã xuất file Word (.docx) thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi xuất file Word');
@@ -133,7 +133,7 @@ const EmployeeProfileDetail = ({
   const handleExportExcel = async () => {
     try {
       setExportingExcel(true);
-      await exportEmployeeProfileToExcel(emp, workHistory, trainings);
+      await exportEmployeeProfileToExcel(emp, workHistory, trainings, degrees, socials);
       toast?.showSuccess?.('Đã xuất file Excel (.xlsx) thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi xuất file Excel');

@@ -629,17 +629,52 @@ export const exportEmployeesDirectoryToExcel = async (employees = []) => {
  * 6. XUẤT SƠ YẾU LÝ LỊCH TRÍCH NGANG CÁN BỘ SANG EXCEL (.xlsx) MẪU 2C/TCTD
  * ----------------------------------------------------------------------------
  */
-export const exportEmployeeProfileToExcel = async (emp, workHistory = [], trainings = []) => {
+export const exportEmployeeProfileToExcel = async (
+  emp,
+  workHistory = [],
+  trainings = [],
+  degrees = [],
+  socials = []
+) => {
   if (!emp) throw new Error('Không có thông tin cán bộ để xuất file Excel');
 
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
-  const wsData = [];
 
   const effectiveStart = emp.positionStartDate || emp.joinDate;
   const tenureText = calculatePositionTenure(effectiveStart);
   const totalTenureText = calculatePositionTenure(emp.joinDate);
 
+  const filteredHistory = workHistory.filter(
+    (rec) => rec.employeeId === emp.id || rec.employeeUuid === emp.id || (rec.employeeCode && rec.employeeCode === emp.code)
+  ).sort((a, b) => {
+    if (a.isCurrent && !b.isCurrent) return -1;
+    if (!a.isCurrent && b.isCurrent) return 1;
+    const dateA = a.startDate || a.effectiveDate || '';
+    const dateB = b.startDate || b.effectiveDate || '';
+    return dateB.localeCompare(dateA);
+  });
+
+  const filteredDegrees = degrees.filter(
+    (d) => d.employeeId === emp.id || d.employeeUuid === emp.id
+  ).sort((a, b) => {
+    if (a.isHighest && !b.isHighest) return -1;
+    if (!a.isHighest && b.isHighest) return 1;
+    const yearA = Number(a.graduationYear) || 0;
+    const yearB = Number(b.graduationYear) || 0;
+    return yearB - yearA;
+  });
+
+  const filteredSocials = socials.filter(
+    (s) => s.employeeId === emp.id || s.employeeUuid === emp.id
+  );
+
+  const filteredTrainings = trainings.filter(
+    (t) => t.employeeId === emp.id || (t.employeeCode && t.employeeCode === emp.code)
+  );
+
+  // --- SHEET 1: Trich_ngang_2C (Bản in trích ngang tổng hợp) ---
+  const wsData = [];
   wsData.push(['QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ']);
   wsData.push(['Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa']);
   wsData.push([]);
@@ -651,6 +686,10 @@ export const exportEmployeeProfileToExcel = async (emp, workHistory = [], traini
   wsData.push(['Họ và tên khai sinh:', emp.name, 'Giới tính:', emp.gender || 'Nam']);
   wsData.push(['Ngày sinh:', emp.birthDate ? formatDateVN(emp.birthDate) : '', 'Số CCCD:', emp.cccd ? `'${emp.cccd}` : '']);
   wsData.push(['Số điện thoại:', emp.phone ? `'${emp.phone}` : '', 'Hộp thư điện tử:', emp.email || '']);
+  if (filteredSocials.length > 0) {
+    const socSummary = filteredSocials.map((s) => `${s.platform}: ${s.accountName || s.username || ''}`).join('; ');
+    wsData.push(['Kênh liên lạc mạng xã hội:', socSummary]);
+  }
   wsData.push([]);
 
   wsData.push(['II. QUÁ TRÌNH CÔNG TÁC & VỊ TRÍ ĐẢM NHIỆM']);
@@ -665,36 +704,52 @@ export const exportEmployeeProfileToExcel = async (emp, workHistory = [], traini
   wsData.push(['Ngày vào Đảng dự bị:', emp.partyDate ? formatDateVN(emp.partyDate) : '', 'Ngày chính thức:', emp.partyOfficialDate ? formatDateVN(emp.partyOfficialDate) : '']);
   wsData.push([]);
 
-  wsData.push(['IV. TRÌNH ĐỘ HỌC VẤN & CHUYÊN MÔN']);
-  wsData.push(['Trình độ chuyên môn / Học vị:', emp.education || 'Đại học chuyên ngành']);
+  wsData.push(['IV. TRÌNH ĐỘ HỌC VẤN & VĂN BẰNG CHUYÊN MÔN']);
+  wsData.push(['Trình độ chuyên môn tóm tắt:', emp.education || 'Đại học chuyên ngành']);
   wsData.push(['Tin học:', 'Ứng dụng CNTT cơ bản', 'Ngoại ngữ:', 'Tiếng Anh']);
 
-  const filteredHistory = workHistory.filter(
-    (rec) => rec.employeeId === emp.id || (rec.employeeCode && rec.employeeCode === emp.code)
-  );
+  if (filteredDegrees.length > 0) {
+    wsData.push([]);
+    wsData.push(['DANH MỤC VĂN BẰNG CHUYÊN MÔN:']);
+    wsData.push(['STT', 'Cấp bậc', 'Chuyên ngành đào tạo', 'Cơ sở đào tạo', 'Hình thức', 'Năm TN', 'Xếp loại', 'Số hiệu bằng']);
+    filteredDegrees.forEach((deg, idx) => {
+      wsData.push([
+        idx + 1,
+        deg.degreeLevel || 'Đại học',
+        deg.major || '',
+        deg.institution || '',
+        deg.trainingType || 'Chính quy',
+        deg.graduationYear || '',
+        deg.classification || '',
+        deg.degreeNumber ? `'${deg.degreeNumber}` : '',
+      ]);
+    });
+  }
+
   if (filteredHistory.length > 0) {
     wsData.push([]);
-    wsData.push(['V. LỊCH SỬ ĐIỀU ĐỘNG & LUÂN CHUYỂN CÔNG TÁC']);
-    wsData.push(['Số Quyết định', 'Ngày ký', 'Ngày hiệu lực', 'Hình thức điều động', 'Chức vụ tiếp nhận', 'Địa bàn mới', 'Người ký']);
-    filteredHistory.forEach((h) => {
+    wsData.push(['V. QUÁ TRÌNH CÔNG TÁC & LUÂN CHUYỂN (TIMELINE)']);
+    wsData.push(['STT', 'Từ ngày', 'Đến ngày / Hiện tại', 'Chức danh', 'Phòng ban', 'Địa bàn tín dụng', 'Hình thức', 'Số QĐ', 'Người ký']);
+    filteredHistory.forEach((h, idx) => {
+      const startText = h.startDate ? formatDateVN(h.startDate) : (h.effectiveDate ? formatDateVN(h.effectiveDate) : '');
+      const endText = h.isCurrent ? 'Đến nay' : (h.endDate ? formatDateVN(h.endDate) : '');
       wsData.push([
+        idx + 1,
+        startText,
+        endText,
+        h.position || h.toPosition || emp.position,
+        h.department || h.toDepartment || emp.department,
+        h.assignedArea || h.toAssignedArea || '',
+        h.transferType === 'LUAN_CHUYEN_DINH_KY' ? 'Luân chuyển định kỳ' : h.transferType === 'BO_NHIEM' ? 'Bổ nhiệm' : 'Điều động',
         h.decisionNumber || '',
-        h.decisionDate ? formatDateVN(h.decisionDate) : '',
-        h.effectiveDate ? formatDateVN(h.effectiveDate) : '',
-        h.transferType === 'LUAN_CHUYEN_DINH_KY' ? 'Luân chuyển định kỳ' : 'Điều động',
-        h.toPosition || emp.position,
-        h.toAssignedArea || '',
         h.signer || '',
       ]);
     });
   }
 
-  const filteredTrainings = trainings.filter(
-    (t) => t.employeeId === emp.id || (t.employeeCode && t.employeeCode === emp.code)
-  );
   if (filteredTrainings.length > 0) {
     wsData.push([]);
-    wsData.push(['VI. DANH MỤC VĂN BẰNG & CHỨNG CHỈ ĐÀO TẠO']);
+    wsData.push(['VI. DANH MỤC KHÓA ĐÀO TẠO & BỒI DƯỠNG NGHIỆP VỤ']);
     wsData.push(['STT', 'Tên khóa học / Chứng chỉ', 'Cơ sở đào tạo', 'Số hiệu', 'Ngày cấp', 'Hạn hiệu lực', 'Xếp loại']);
     filteredTrainings.forEach((t, i) => {
       wsData.push([
@@ -716,8 +771,88 @@ export const exportEmployeeProfileToExcel = async (emp, workHistory = [], traini
   wsData.push([emp.name || '', '', '', '']);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 22 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+  ws['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 22 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Trich_ngang_2C');
+
+  // --- SHEET 2: Qua_trinh_cong_tac (Chi tiết các mốc timeline) ---
+  if (filteredHistory.length > 0) {
+    const histData = [
+      ['BẢNG CHI TIẾT QUÁ TRÌNH CÔNG TÁC & LUÂN CHUYỂN (TIMELINE)'],
+      [`Cán bộ: ${emp.name} - ${emp.position} (${emp.department})`],
+      [],
+      ['STT', 'Từ ngày', 'Đến ngày', 'Hiện tại', 'Chức danh', 'Phòng ban', 'Địa bàn tín dụng', 'Hình thức điều động', 'Số Quyết định', 'Ngày ký', 'Người ký', 'Bàn giao', 'Ghi chú'],
+    ];
+    filteredHistory.forEach((h, idx) => {
+      histData.push([
+        idx + 1,
+        h.startDate ? formatDateVN(h.startDate) : '',
+        h.isCurrent ? 'Đến nay' : (h.endDate ? formatDateVN(h.endDate) : ''),
+        h.isCurrent ? 'Đang đảm nhiệm' : 'Đã kết thúc',
+        h.position || h.toPosition || emp.position,
+        h.department || h.toDepartment || emp.department,
+        h.assignedArea || h.toAssignedArea || '',
+        h.transferType || '',
+        h.decisionNumber || '',
+        h.decisionDate ? formatDateVN(h.decisionDate) : '',
+        h.signer || '',
+        h.handoverStatus || '',
+        h.notes || h.reason || '',
+      ]);
+    });
+    const wsHist = XLSX.utils.aoa_to_sheet(histData);
+    wsHist['!cols'] = [{ wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 24 }, { wch: 22 }, { wch: 30 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 16 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, wsHist, 'Qua_trinh_cong_tac');
+  }
+
+  // --- SHEET 3: Van_bang_chuyen_mon ---
+  if (filteredDegrees.length > 0) {
+    const degData = [
+      ['BẢNG DANH MỤC VĂN BẰNG & TRÌNH ĐỘ CHUYÊN MÔN'],
+      [`Cán bộ: ${emp.name} - ${emp.position}`],
+      [],
+      ['STT', 'Cấp bậc / Trình độ', 'Chuyên ngành đào tạo', 'Cơ sở / Trường đào tạo', 'Hình thức đào tạo', 'Năm tốt nghiệp', 'Xếp loại', 'Số hiệu bằng', 'Chuyên môn chính', 'Ghi chú'],
+    ];
+    filteredDegrees.forEach((deg, idx) => {
+      degData.push([
+        idx + 1,
+        deg.degreeLevel || 'Đại học',
+        deg.major || '',
+        deg.institution || '',
+        deg.trainingType || 'Chính quy',
+        deg.graduationYear || '',
+        deg.classification || '',
+        deg.degreeNumber ? `'${deg.degreeNumber}` : '',
+        deg.isHighest ? 'Chuyên môn chính' : '',
+        deg.notes || '',
+      ]);
+    });
+    const wsDeg = XLSX.utils.aoa_to_sheet(degData);
+    wsDeg['!cols'] = [{ wch: 6 }, { wch: 16 }, { wch: 28 }, { wch: 32 }, { wch: 20 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(wb, wsDeg, 'Van_bang_chuyen_mon');
+  }
+
+  // --- SHEET 4: Mang_xa_hoi ---
+  if (filteredSocials.length > 0) {
+    const socData = [
+      ['BẢNG DANH MỤC KÊNH MẠNG XÃ HỘI & LIÊN LẠC SỐ'],
+      [`Cán bộ: ${emp.name} - ${emp.phone || ''}`],
+      [],
+      ['STT', 'Nền tảng / Mạng xã hội', 'Tên tài khoản / Nickname', 'Đường dẫn liên kết (URL)', 'Công khai nội bộ', 'Ghi chú'],
+    ];
+    filteredSocials.forEach((soc, idx) => {
+      socData.push([
+        idx + 1,
+        soc.platform || '',
+        soc.accountName || soc.username || '',
+        soc.url || '',
+        soc.isPublic ? 'Công khai' : 'Nội bộ',
+        soc.notes || '',
+      ]);
+    });
+    const wsSoc = XLSX.utils.aoa_to_sheet(socData);
+    wsSoc['!cols'] = [{ wch: 6 }, { wch: 18 }, { wch: 26 }, { wch: 40 }, { wch: 16 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(wb, wsSoc, 'Mang_xa_hoi');
+  }
 
   const cleanName = (emp.name || 'Can_bo').replace(/\s+/g, '_');
   const filename = `Trich_ngang_2C_${cleanName}.xlsx`;
@@ -730,7 +865,13 @@ export const exportEmployeeProfileToExcel = async (emp, workHistory = [], traini
  * 7. XUẤT TRÍCH NGANG CÁN BỘ SANG MICROSOFT WORD (.docx) CHUẨN MẪU 2C/TCTD
  * ----------------------------------------------------------------------------
  */
-export const exportEmployeeProfileToDocx = async (emp, workHistory = [], trainings = []) => {
+export const exportEmployeeProfileToDocx = async (
+  emp,
+  workHistory = [],
+  trainings = [],
+  degrees = [],
+  socials = []
+) => {
   if (!emp) throw new Error('Không có thông tin cán bộ để xuất file Word');
 
   const {
@@ -751,6 +892,30 @@ export const exportEmployeeProfileToDocx = async (emp, workHistory = [], trainin
   const totalTenureText = calculatePositionTenure(emp.joinDate);
   const today = new Date();
   const dateStr = `Quý Lộc, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+  const filteredHistory = workHistory.filter(
+    (rec) => rec.employeeId === emp.id || rec.employeeUuid === emp.id || (rec.employeeCode && rec.employeeCode === emp.code)
+  ).sort((a, b) => {
+    if (a.isCurrent && !b.isCurrent) return -1;
+    if (!a.isCurrent && b.isCurrent) return 1;
+    const dateA = a.startDate || a.effectiveDate || '';
+    const dateB = b.startDate || b.effectiveDate || '';
+    return dateB.localeCompare(dateA);
+  });
+
+  const filteredDegrees = degrees.filter(
+    (d) => d.employeeId === emp.id || d.employeeUuid === emp.id
+  ).sort((a, b) => {
+    if (a.isHighest && !b.isHighest) return -1;
+    if (!a.isHighest && b.isHighest) return 1;
+    const yearA = Number(a.graduationYear) || 0;
+    const yearB = Number(b.graduationYear) || 0;
+    return yearB - yearA;
+  });
+
+  const filteredSocials = socials.filter(
+    (s) => s.employeeId === emp.id || s.employeeUuid === emp.id
+  );
 
   // 1. Header Table: Cơ quan & Quốc hiệu
   const headerTable = new Table({
@@ -878,7 +1043,14 @@ export const exportEmployeeProfileToDocx = async (emp, workHistory = [], trainin
     makeInfoLine('4. Số Thẻ CCCD:', emp.cccd || '—', true),
     makeInfoLine('5. Số điện thoại liên hệ:', emp.phone || '—'),
     makeInfoLine('6. Hộp thư điện tử (Email):', emp.email || '—'),
+  ];
 
+  if (filteredSocials.length > 0) {
+    const socSummary = filteredSocials.map((s) => `${s.platform}: ${s.accountName || s.username || ''}`).join(' • ');
+    contentParagraphs.push(makeInfoLine('7. Kênh mạng xã hội / Liên hệ số:', socSummary));
+  }
+
+  contentParagraphs.push(
     makeSectionHeading('II. QUÁ TRÌNH CÔNG TÁC & VỊ TRÍ ĐẢM NHIỆM'),
     makeInfoLine('1. Phòng ban công tác:', emp.department || '—', true),
     makeInfoLine('2. Chức vụ hiện tại:', emp.position || '—', true),
@@ -896,23 +1068,20 @@ export const exportEmployeeProfileToDocx = async (emp, workHistory = [], trainin
     makeInfoLine('4. Ngày công nhận chính thức:', emp.partyOfficialDate ? formatDateVN(emp.partyOfficialDate) : '—'),
 
     makeSectionHeading('IV. TRÌNH ĐỘ HỌC VẤN & VĂN BẰNG CHUYÊN MÔN'),
-    makeInfoLine('1. Trình độ chuyên môn / Học vị:', emp.education || 'Đại học chuyên ngành', true),
+    makeInfoLine('1. Trình độ chuyên môn tóm tắt:', emp.education || 'Đại học chuyên ngành', true),
     makeInfoLine('2. Lý luận chính trị:', 'Sơ cấp / Trung cấp'),
-    makeInfoLine('3. Quản lý Nhà nước / Nghiệp vụ Quỹ TDND:', 'Đã hoàn thành bồi dưỡng theo tiêu chuẩn NHNN'),
-  ];
-
-  // Bảng quá trình điều động luân chuyển nếu có
-  const filteredHistory = workHistory.filter(
-    (rec) => rec.employeeId === emp.id || (rec.employeeCode && rec.employeeCode === emp.code)
+    makeInfoLine('3. Quản lý Nhà nước / Nghiệp vụ Quỹ TDND:', 'Đã hoàn thành bồi dưỡng theo tiêu chuẩn NHNN')
   );
-  let historySection = [];
-  if (filteredHistory.length > 0) {
-    const borderThin = { style: BorderStyle.SINGLE, size: 1, color: '999999' };
-    const hBorders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideHorizontal: borderThin, insideVertical: borderThin };
 
-    const histHeader = new TableRow({
+  // Bảng văn bằng chuyên môn nếu có
+  let degreeSection = [];
+  if (filteredDegrees.length > 0) {
+    const borderThin = { style: BorderStyle.SINGLE, size: 1, color: '999999' };
+    const dBorders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideHorizontal: borderThin, insideVertical: borderThin };
+
+    const degHeader = new TableRow({
       tableHeader: true,
-      children: ['Số QĐ', 'Ngày ký', 'Hiệu lực', 'Hình thức', 'Chức vụ tiếp nhận', 'Người ký'].map((h) =>
+      children: ['STT', 'Cấp bậc', 'Chuyên ngành đào tạo', 'Cơ sở đào tạo', 'Hình thức', 'Năm TN', 'Xếp loại'].map((h) =>
         new TableCell({
           shading: { fill: 'E2E8F0' },
           children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: h, bold: true, size: 18, font: 'Times New Roman' })] })]
@@ -920,25 +1089,67 @@ export const exportEmployeeProfileToDocx = async (emp, workHistory = [], trainin
       )
     });
 
-    const histRows = filteredHistory.map((item) =>
+    const degRows = filteredDegrees.map((deg, i) =>
       new TableRow({
         children: [
-          item.decisionNumber || '—',
-          item.decisionDate ? formatDateVN(item.decisionDate) : '—',
-          item.effectiveDate ? formatDateVN(item.effectiveDate) : '—',
-          item.transferType === 'LUAN_CHUYEN_DINH_KY' ? 'Luân chuyển định kỳ' : item.transferType === 'BO_NHIEM' ? 'Bổ nhiệm' : 'Điều động',
-          item.toPosition || emp.position,
-          item.signer || 'HĐQT'
-        ].map((c, i) =>
+          String(i + 1),
+          deg.degreeLevel || 'Đại học',
+          deg.major || '—',
+          deg.institution || '—',
+          deg.trainingType || 'Chính quy',
+          deg.graduationYear ? String(deg.graduationYear) : '—',
+          deg.classification || '—',
+        ].map((c, colIdx) =>
           new TableCell({
-            children: [new Paragraph({ alignment: i === 0 || i === 1 || i === 2 ? AlignmentType.CENTER : AlignmentType.LEFT, children: [new TextRun({ text: String(c), size: 18, font: 'Times New Roman' })] })]
+            children: [new Paragraph({ alignment: colIdx === 0 || colIdx === 1 || colIdx === 4 || colIdx === 5 || colIdx === 6 ? AlignmentType.CENTER : AlignmentType.LEFT, children: [new TextRun({ text: String(c), size: 18, font: 'Times New Roman' })] })]
           })
         )
       })
     );
 
+    degreeSection = [
+      new Paragraph({ text: '', spacing: { before: 80 } }),
+      new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: dBorders, rows: [degHeader, ...degRows] }),
+    ];
+  }
+
+  // Bảng quá trình điều động luân chuyển nếu có
+  let historySection = [];
+  if (filteredHistory.length > 0) {
+    const borderThin = { style: BorderStyle.SINGLE, size: 1, color: '999999' };
+    const hBorders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideHorizontal: borderThin, insideVertical: borderThin };
+
+    const histHeader = new TableRow({
+      tableHeader: true,
+      children: ['STT', 'Thời gian', 'Chức danh đảm nhiệm', 'Phòng ban', 'Địa bàn quản lý', 'Số QĐ'].map((h) =>
+        new TableCell({
+          shading: { fill: 'E2E8F0' },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: h, bold: true, size: 18, font: 'Times New Roman' })] })]
+        })
+      )
+    });
+
+    const histRows = filteredHistory.map((item, idx) => {
+      const startText = item.startDate ? formatDateVN(item.startDate) : (item.effectiveDate ? formatDateVN(item.effectiveDate) : '—');
+      const endText = item.isCurrent ? 'Đến nay' : (item.endDate ? formatDateVN(item.endDate) : '—');
+      return new TableRow({
+        children: [
+          String(idx + 1),
+          `${startText} - ${endText}`,
+          item.position || item.toPosition || emp.position || '—',
+          item.department || item.toDepartment || emp.department || '—',
+          item.assignedArea || item.toAssignedArea || '—',
+          item.decisionNumber || '—'
+        ].map((c, i) =>
+          new TableCell({
+            children: [new Paragraph({ alignment: i === 0 || i === 1 || i === 5 ? AlignmentType.CENTER : AlignmentType.LEFT, children: [new TextRun({ text: String(c), size: 18, font: 'Times New Roman' })] })]
+          })
+        )
+      });
+    });
+
     historySection = [
-      makeSectionHeading('V. QUÁ TRÌNH ĐIỀU ĐỘNG & LUÂN CHUYỂN CÔNG TÁC'),
+      makeSectionHeading('V. QUÁ TRÌNH CÔNG TÁC & LUÂN CHUYỂN (TIMELINE)'),
       new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: hBorders, rows: [histHeader, ...histRows] }),
     ];
   }
@@ -998,6 +1209,7 @@ export const exportEmployeeProfileToDocx = async (emp, workHistory = [], trainin
           headerTable,
           ...titleParagraphs,
           ...contentParagraphs,
+          ...degreeSection,
           ...historySection,
           new Paragraph({ text: '', spacing: { before: 300 } }),
           sigTable,

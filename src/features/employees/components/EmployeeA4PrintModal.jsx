@@ -18,6 +18,8 @@ const EmployeeA4PrintModal = ({
   emp,
   workHistory = [],
   trainings = [],
+  degrees = [],
+  socials = [],
 }) => {
   const toast = useToast();
   const printRef = useRef(null);
@@ -30,6 +32,30 @@ const EmployeeA4PrintModal = ({
   const tenureText = calculatePositionTenure(effectiveStart);
   const totalTenureText = calculatePositionTenure(emp.joinDate);
 
+  const empHistory = workHistory
+    .filter((h) => h.employeeId === emp.id || h.employeeCode === emp.code)
+    .sort((a, b) => {
+      if (a.isCurrent && !b.isCurrent) return -1;
+      if (!a.isCurrent && b.isCurrent) return 1;
+      const dateA = a.startDate || a.effectiveDate || '';
+      const dateB = b.startDate || b.effectiveDate || '';
+      return dateB.localeCompare(dateA);
+    });
+
+  const empDegrees = degrees
+    .filter((d) => d.employeeId === emp.id || d.employeeUuid === emp.id)
+    .sort((a, b) => {
+      if (a.isHighest && !b.isHighest) return -1;
+      if (!a.isHighest && b.isHighest) return 1;
+      const yearA = Number(a.graduationYear) || 0;
+      const yearB = Number(b.graduationYear) || 0;
+      return yearB - yearA;
+    });
+
+  const empSocials = socials.filter(
+    (s) => s.employeeId === emp.id || s.employeeUuid === emp.id
+  );
+
   const handlePrint = () => {
     window.print();
   };
@@ -37,7 +63,7 @@ const EmployeeA4PrintModal = ({
   const handleExportWord = async () => {
     try {
       setExportingWord(true);
-      await exportEmployeeProfileToDocx(emp, workHistory, trainings);
+      await exportEmployeeProfileToDocx(emp, workHistory, trainings, degrees, socials);
       toast?.showSuccess?.('Đã xuất file Word (.docx) thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi xuất file Word');
@@ -49,7 +75,7 @@ const EmployeeA4PrintModal = ({
   const handleExportExcel = async () => {
     try {
       setExportingExcel(true);
-      await exportEmployeeProfileToExcel(emp, workHistory, trainings);
+      await exportEmployeeProfileToExcel(emp, workHistory, trainings, degrees, socials);
       toast?.showSuccess?.('Đã xuất file Excel (.xlsx) thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi xuất file Excel');
@@ -141,6 +167,9 @@ const EmployeeA4PrintModal = ({
               <p>4. Số CCCD: <span className="font-bold tabular-nums">{emp.cccd || '—'}</span></p>
               <p>5. Số điện thoại: <span className="font-bold tabular-nums">{emp.phone || '—'}</span></p>
               <p>6. Hộp thư điện tử (Email): <span>{emp.email || '—'}</span></p>
+              <p className="col-span-2">
+                7. Kênh mạng xã hội / Liên hệ số: <span>{empSocials.length > 0 ? empSocials.map(s => `${s.platform}: ${s.accountName || s.username}`).join(' • ') : 'Chưa cập nhật'}</span>
+              </p>
             </div>
           </div>
 
@@ -160,6 +189,40 @@ const EmployeeA4PrintModal = ({
               <p>8. Trạng thái: <span>{emp.status === 'ACTIVE' ? 'Đang công tác' : 'Nghỉ việc'}</span></p>
               <p className="col-span-2">9. Địa bàn phụ trách tín dụng: <span>{emp.assignedArea || 'Chưa phân công địa bàn'}</span></p>
             </div>
+
+            {empHistory.length > 0 && (
+              <div className="mt-2.5 px-2">
+                <p className="font-bold text-[11px] text-slate-800 mb-1">Bảng chi tiết các mốc quá trình công tác (Timeline):</p>
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800">
+                      <th className="border border-slate-300 p-1 text-center w-7">STT</th>
+                      <th className="border border-slate-300 p-1 text-center w-28">Thời gian</th>
+                      <th className="border border-slate-300 p-1 text-left">Chức danh đảm nhiệm</th>
+                      <th className="border border-slate-300 p-1 text-left">Phòng ban</th>
+                      <th className="border border-slate-300 p-1 text-left">Địa bàn quản lý</th>
+                      <th className="border border-slate-300 p-1 text-center w-20">Số QĐ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {empHistory.map((item, idx) => {
+                      const startText = item.startDate ? formatDateVN(item.startDate) : (item.effectiveDate ? formatDateVN(item.effectiveDate) : '—');
+                      const endText = item.isCurrent ? 'Đến nay' : (item.endDate ? formatDateVN(item.endDate) : '—');
+                      return (
+                        <tr key={item.id || idx}>
+                          <td className="border border-slate-300 p-1 text-center tabular-nums">{idx + 1}</td>
+                          <td className="border border-slate-300 p-1 text-center tabular-nums">{startText} - {endText}</td>
+                          <td className="border border-slate-300 p-1 font-semibold">{item.position || item.toPosition || emp.position}</td>
+                          <td className="border border-slate-300 p-1">{item.department || item.toDepartment || emp.department}</td>
+                          <td className="border border-slate-300 p-1">{item.assignedArea || item.toAssignedArea || '—'}</td>
+                          <td className="border border-slate-300 p-1 text-center">{item.decisionNumber || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* 3. Chính trị & Đảng viên */}
@@ -185,6 +248,38 @@ const EmployeeA4PrintModal = ({
               <p>2. Lý luận chính trị: <span>Sơ cấp / Trung cấp</span></p>
               <p>3. Quản lý nhà nước: <span>Đã hoàn thành bồi dưỡng</span></p>
             </div>
+
+            {empDegrees.length > 0 && (
+              <div className="mt-2.5 px-2">
+                <p className="font-bold text-[11px] text-slate-800 mb-1">Bảng chi tiết các văn bằng chuyên môn:</p>
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800">
+                      <th className="border border-slate-300 p-1 text-center w-7">STT</th>
+                      <th className="border border-slate-300 p-1 text-center w-20">Cấp bậc</th>
+                      <th className="border border-slate-300 p-1 text-left">Chuyên ngành đào tạo</th>
+                      <th className="border border-slate-300 p-1 text-left">Cơ sở / Trường đào tạo</th>
+                      <th className="border border-slate-300 p-1 text-center w-20">Hình thức</th>
+                      <th className="border border-slate-300 p-1 text-center w-14">Năm TN</th>
+                      <th className="border border-slate-300 p-1 text-center w-16">Xếp loại</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {empDegrees.map((deg, idx) => (
+                      <tr key={deg.id || idx}>
+                        <td className="border border-slate-300 p-1 text-center tabular-nums">{idx + 1}</td>
+                        <td className="border border-slate-300 p-1 text-center font-bold">{deg.degreeLevel || 'Đại học'}</td>
+                        <td className="border border-slate-300 p-1 font-semibold">{deg.major}</td>
+                        <td className="border border-slate-300 p-1">{deg.institution}</td>
+                        <td className="border border-slate-300 p-1 text-center">{deg.trainingType || 'Chính quy'}</td>
+                        <td className="border border-slate-300 p-1 text-center tabular-nums">{deg.graduationYear || '—'}</td>
+                        <td className="border border-slate-300 p-1 text-center">{deg.classification || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
