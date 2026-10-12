@@ -298,5 +298,23 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     // 5. Kiểm tra Schema Version mới v5.9
     expect(CURRENT_SCHEMA_VERSION).toBe('2026.10.12_v5.9_work_locations_and_credit_areas_subsystem');
   });
+
+  test('Kiểm tra Cấu hình Luân chuyển Địa bàn Cán bộ Tín dụng (CBTD) và Loại bỏ Bảng Chức danh thừa', async () => {
+    // 1. Kiểm tra DEFAULT_MODULE_HR_SETTINGS có các tham số chu kỳ luân chuyển và cảnh báo CBTD
+    expect(DEFAULT_MODULE_HR_SETTINGS.transferMaxMonths).toBe(36);
+    expect(DEFAULT_MODULE_HR_SETTINGS.transferWarningMonths).toBe(6);
+
+    // 2. Kiểm tra chỉ CBTD mới kích hoạt cảnh báo luân chuyển địa bàn
+    const creditOfficer = OFFICIAL_STAFF_EMPLOYEES.find((e) => isCreditOfficerRole(e.position, e.department));
+    expect(creditOfficer).toBeDefined();
+    expect(isCreditOfficerRole(creditOfficer.position, creditOfficer.department)).toBe(true);
+
+    const nonCreditOfficers = OFFICIAL_STAFF_EMPLOYEES.filter((e) => !isCreditOfficerRole(e.position, e.department));
+    expect(nonCreditOfficers.length).toBeGreaterThan(0);
+    for (const nonCBTD of nonCreditOfficers) {
+      // HĐQT, BKS, Giám đốc, Kế toán, Thủ quỹ tuyệt đối không thuộc diện luân chuyển địa bàn
+      expect(isCreditOfficerRole(nonCBTD.position, nonCBTD.department)).toBe(false);
+    }
+  });
 });
 

@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
-  Briefcase, 
-  ShieldAlert, 
-  CheckCircle2, 
   ShieldCheck, 
   GraduationCap, 
   Save, 
-  Lock, 
-  Eye, 
-  Users 
+  Eye,
+  MapPin,
+  CalendarClock,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
-import { DEFAULT_POSITIONS } from '../../../lib/systemDefaults';
 import { saveSubsystemConfig } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
 
@@ -24,7 +22,7 @@ import { useToast } from '../../../context/ToastContext';
  */
 const EmployeeSettingsTab = ({
   departments = [],
-  positions = DEFAULT_POSITIONS,
+  positions = [],
   hrConfig = null,
   canManage = false,
 }) => {
@@ -34,7 +32,8 @@ const EmployeeSettingsTab = ({
   // Form Cấu hình Phân hệ
   const [allowStaffViewDirectory, setAllowStaffViewDirectory] = useState(true);
   const [canStaffUploadTraining, setCanStaffUploadTraining] = useState(true);
-  const [transferRules, setTransferRules] = useState([]);
+  const [creditRotationMonths, setCreditRotationMonths] = useState(36);
+  const [creditWarningMonths, setCreditWarningMonths] = useState(6);
 
   useEffect(() => {
     if (hrConfig) {
@@ -44,86 +43,12 @@ const EmployeeSettingsTab = ({
       if (hrConfig.canStaffUploadTraining !== undefined) {
         setCanStaffUploadTraining(Boolean(hrConfig.canStaffUploadTraining));
       }
-      if (Array.isArray(hrConfig.transferRules)) {
-        setTransferRules(hrConfig.transferRules);
-      } else {
-        // Khởi tạo quy tắc mặc định nếu chưa có
-        const defaultRules = positions.map((pos) => {
-          const p = (pos.name || '').toLowerCase();
-          const defaultRequires = (
-            p.includes('tín dụng') ||
-            p.includes('kế toán') ||
-            p.includes('thủ quỹ') ||
-            p.includes('kiểm soát')
-          );
-          return {
-            positionName: pos.name,
-            requiresTransfer: defaultRequires,
-            maxMonths: 36,
-            warningMonths: 6,
-          };
-        });
-        setTransferRules(defaultRules);
-      }
-    } else {
-      // Fallback nếu hrConfig null
-      const defaultRules = positions.map((pos) => {
-        const p = (pos.name || '').toLowerCase();
-        const defaultRequires = (
-          p.includes('tín dụng') ||
-          p.includes('kế toán') ||
-          p.includes('thủ quỹ') ||
-          p.includes('kiểm soát')
-        );
-        return {
-          positionName: pos.name,
-          requiresTransfer: defaultRequires,
-          maxMonths: 36,
-          warningMonths: 6,
-        };
-      });
-      setTransferRules(defaultRules);
+      const rotMonths = hrConfig.creditRotationMonths ?? hrConfig.transferMaxMonths ?? hrConfig.transferCycleMonths ?? 36;
+      const warnMonths = hrConfig.creditWarningMonths ?? hrConfig.transferWarningMonths ?? hrConfig.warningMonths ?? 6;
+      setCreditRotationMonths(Number(rotMonths) || 36);
+      setCreditWarningMonths(Number(warnMonths) || 6);
     }
-  }, [hrConfig, positions]);
-
-  // Cập nhật quy tắc cho một chức vụ
-  const handleUpdateRule = (posName, field, value) => {
-    setTransferRules((prev) => {
-      const idx = prev.findIndex((r) => r.positionName === posName);
-      if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], [field]: value };
-        return updated;
-      }
-      return [
-        ...prev,
-        {
-          positionName: posName,
-          requiresTransfer: field === 'requiresTransfer' ? value : false,
-          maxMonths: field === 'maxMonths' ? value : 36,
-          warningMonths: field === 'warningMonths' ? value : 6,
-        },
-      ];
-    });
-  };
-
-  const getRuleForPos = (posName) => {
-    const found = transferRules.find((r) => r.positionName === posName);
-    if (found) return found;
-    const p = (posName || '').toLowerCase();
-    const defaultRequires = (
-      p.includes('tín dụng') ||
-      p.includes('kế toán') ||
-      p.includes('thủ quỹ') ||
-      p.includes('kiểm soát')
-    );
-    return {
-      positionName: posName,
-      requiresTransfer: defaultRequires,
-      maxMonths: 36,
-      warningMonths: 6,
-    };
-  };
+  }, [hrConfig]);
 
   const handleSaveConfig = async (e) => {
     e?.preventDefault?.();
@@ -134,12 +59,24 @@ const EmployeeSettingsTab = ({
 
     setSaving(true);
     try {
+      const rotMonths = Number(creditRotationMonths) || 36;
+      const warnMonths = Number(creditWarningMonths) || 6;
+
       await saveSubsystemConfig('hr', {
         allowStaffViewDirectory,
         canStaffUploadTraining,
-        transferRules,
+        creditRotationMonths: rotMonths,
+        creditWarningMonths: warnMonths,
+        // Giữ các trường tương thích ngược 100%
+        transferMaxMonths: rotMonths,
+        transferWarningMonths: warnMonths,
+        transferCycleMonths: rotMonths,
+        warningMonths: warnMonths,
+        transferRules: [
+          { positionName: 'Cán bộ tín dụng', requiresTransfer: true, maxMonths: rotMonths, warningMonths: warnMonths },
+        ],
       });
-      toast?.showSuccess?.('Đã lưu cấu hình và phân quyền luân chuyển thành công!');
+      toast?.showSuccess?.('Đã lưu cấu hình phân hệ và thời hạn luân chuyển địa bàn CBTD thành công!');
     } catch (err) {
       toast?.showError?.(err.message || 'Lỗi khi lưu cấu hình');
     } finally {
@@ -271,111 +208,104 @@ const EmployeeSettingsTab = ({
         </div>
       </div>
 
-      {/* 3. Cấu Hình Vị Trí Phải Luân Chuyển & Thời Hạn Cụ Thể (Linh Hoạt Không Gắn Cứng) */}
+      {/* 3. Cấu Hình Luân Chuyển Địa Bàn Cán Bộ Tín Dụng (CBTD) */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Briefcase className="w-4 h-4 text-emerald-700" />
-              <span>Cấu Hình Vị Trí Bắt Buộc Luân Chuyển &amp; Thời Hạn Từng Chức Danh ({positions.length})</span>
+              <MapPin className="w-4 h-4 text-emerald-700" />
+              <span>Cấu Hình Luân Chuyển Địa Bàn Cán Bộ Tín Dụng (CBTD)</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Lựa chọn chức danh nào phải luân chuyển và thiết lập chu kỳ tháng riêng biệt, không gán cứng cố định
+              Thiết lập chu kỳ luân chuyển địa bàn quản lý định kỳ và thời hạn phát cảnh báo theo quy định phòng ngừa rủi ro tín dụng của NHNN
             </p>
           </div>
 
-          {canManage && (
-            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              Có quyền điều chỉnh chu kỳ
-            </span>
-          )}
+          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0">
+            Áp dụng chuyên biệt cho CBTD
+          </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
-                <th className="py-2.5 px-3 text-center w-12">STT</th>
-                <th className="py-2.5 px-3">Tên chức vụ chính quyền</th>
-                <th className="py-2.5 px-3">Phòng ban</th>
-                <th className="py-2.5 px-3 text-center">Bắt buộc luân chuyển</th>
-                <th className="py-2.5 px-3 text-center">Thời hạn (tháng)</th>
-                <th className="py-2.5 px-3 text-center">Cảnh báo trước (tháng)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {positions.map((pos, idx) => {
-                const rule = getRuleForPos(pos.name);
-                const requiresTransfer = Boolean(rule.requiresTransfer);
-                const maxM = Number(rule.maxMonths) || 36;
-                const warnM = Number(rule.warningMonths) || 6;
+        {/* 2 Ô Cấu hình tham số */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* Tham số 1: Chu kỳ luân chuyển địa bàn */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 text-emerald-700" />
+                <h4 className="font-bold text-slate-900">Chu Kỳ Luân Chuyển Địa Bàn</h4>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-500">Mặc định 36 tháng</span>
+            </div>
 
-                return (
-                  <tr key={pos.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-2.5 px-3 text-center font-bold text-slate-500 tabular-nums">
-                      {idx + 1}
-                    </td>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">
-                      {pos.name}
-                    </td>
-                    <td className="py-2.5 px-3 text-slate-600">
-                      {pos.department}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={requiresTransfer}
-                          onChange={(e) => handleUpdateRule(pos.name, 'requiresTransfer', e.target.checked)}
-                          disabled={!canManage}
-                          className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
-                        />
-                        <span className={`text-[11px] font-bold ${requiresTransfer ? 'text-amber-800' : 'text-slate-500'}`}>
-                          {requiresTransfer ? 'Bắt buộc' : 'Theo nhiệm kỳ'}
-                        </span>
-                      </label>
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      {requiresTransfer ? (
-                        <div className="inline-flex items-center justify-center gap-1">
-                          <input
-                            type="number"
-                            min="6"
-                            max="60"
-                            value={maxM}
-                            onChange={(e) => handleUpdateRule(pos.name, 'maxMonths', Number(e.target.value))}
-                            disabled={!canManage}
-                            className="w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg text-center font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-1 focus:ring-emerald-700"
-                          />
-                          <span className="text-[11px] text-slate-500">tháng</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">—</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      {requiresTransfer ? (
-                        <div className="inline-flex items-center justify-center gap-1">
-                          <input
-                            type="number"
-                            min="1"
-                            max="12"
-                            value={warnM}
-                            onChange={(e) => handleUpdateRule(pos.name, 'warningMonths', Number(e.target.value))}
-                            disabled={!canManage}
-                            className="w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg text-center font-bold text-slate-800 tabular-nums focus:outline-hidden focus:ring-1 focus:ring-emerald-700"
-                          />
-                          <span className="text-[11px] text-slate-500">tháng</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Thời gian tối đa một Cán bộ tín dụng phụ trách một địa bàn (thôn/cụm/xã) trước khi thực hiện luân chuyển sang địa bàn khác.
+            </p>
+
+            <div className="pt-1 flex items-center gap-2">
+              <div className="relative flex-1 max-w-[160px]">
+                <input
+                  type="number"
+                  min="6"
+                  max="60"
+                  step="1"
+                  value={creditRotationMonths}
+                  onChange={(e) => setCreditRotationMonths(Math.max(6, Math.min(60, Number(e.target.value) || 36)))}
+                  disabled={!canManage}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 disabled:bg-slate-100"
+                />
+              </div>
+              <span className="text-xs font-bold text-slate-700">tháng</span>
+              <span className="text-[11px] text-slate-400">
+                ({Math.round((creditRotationMonths / 12) * 10) / 10} năm)
+              </span>
+            </div>
+          </div>
+
+          {/* Tham số 2: Thời hạn cảnh báo trước */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <h4 className="font-bold text-slate-900">Thời Gian Cảnh Báo Trước</h4>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-500">Mặc định 6 tháng</span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Hệ thống phát thông báo cảnh báo sớm trước khi đến hạn để Ban Điều hành chuẩn bị nhân sự và phương án bàn giao nợ tín dụng.
+            </p>
+
+            <div className="pt-1 flex items-center gap-2">
+              <div className="relative flex-1 max-w-[160px]">
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  step="1"
+                  value={creditWarningMonths}
+                  onChange={(e) => setCreditWarningMonths(Math.max(1, Math.min(12, Number(e.target.value) || 6)))}
+                  disabled={!canManage}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 disabled:bg-slate-100"
+                />
+              </div>
+              <span className="text-xs font-bold text-slate-700">tháng</span>
+              <span className="text-[11px] text-slate-400">
+                (từ tháng thứ {Math.max(1, creditRotationMonths - creditWarningMonths)})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Khối Ghi chú nghiệp vụ rõ ràng */}
+        <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-900 flex items-start gap-2.5 text-xs">
+          <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-amber-950">Quy định nghiệp vụ Quỹ tín dụng nhân dân:</p>
+            <p className="text-[11px] text-amber-900 leading-relaxed">
+              Quy định luân chuyển định kỳ địa bàn quản lý chỉ áp dụng bắt buộc đối với vị trí <strong>Cán bộ tín dụng (CBTD)</strong> nhằm phòng ngừa rủi ro tín dụng và rủi ro đạo đức theo quy định của Ngân hàng Nhà nước. Các chức danh thuộc <strong>Hội đồng quản trị, Ban Kiểm soát, Ban Điều hành</strong> hoạt động theo nhiệm kỳ bầu cử và phê chuẩn của NHNN; các vị trí <strong>Kế toán, Thủ quỹ</strong> hoạt động theo phân công nhiệm vụ nội bộ của Ban Giám đốc, không áp dụng luân chuyển địa bàn.
+            </p>
+          </div>
         </div>
       </div>
     </div>

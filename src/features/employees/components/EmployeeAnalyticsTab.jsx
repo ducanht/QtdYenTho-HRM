@@ -9,7 +9,7 @@ import {
   GraduationCap,
   MapPin
 } from 'lucide-react';
-import { calculatePositionTenure, calculateAreaTenureAndDueDate } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, calculateAreaTenureAndDueDate, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 
 /**
@@ -34,89 +34,21 @@ const EmployeeAnalyticsTab = ({
   const partyMembersCount = employees.filter((e) => e.partyMember).length;
   const partyPercent = totalEmployees ? Math.round((partyMembersCount / totalEmployees) * 100) : 0;
 
-  // Tra cứu quy tắc luân chuyển theo cấu hình
-  const getTransferRule = (posName) => {
-    if (!posName) return null;
-    const rules = hrConfig?.transferRules || [];
-    const directMatch = rules.find(
-      (r) => r.positionName?.trim().toLowerCase() === posName.trim().toLowerCase()
-    );
-    if (directMatch) return directMatch;
-
-    const posLower = posName.toLowerCase();
-    const partialMatch = rules.find(
-      (r) => posLower.includes(r.positionName?.toLowerCase()) || r.positionName?.toLowerCase().includes(posLower)
-    );
-    return partialMatch || null;
-  };
-
-  // 2. Phân tích danh sách cán bộ vị trí nhạy cảm & cán bộ tín dụng luân chuyển địa bàn
+  // 2. Phân tích danh sách cán bộ tín dụng (CBTD) luân chuyển địa bàn
   const transferMonitoringList = useMemo(() => {
     const list = [];
-    const rules = hrConfig?.transferRules || [];
+    const maxMonths = Number(hrConfig?.creditRotationMonths || hrConfig?.transferMaxMonths || hrConfig?.transferCycleMonths || 36);
+    const warningMonths = Number(hrConfig?.creditWarningMonths || hrConfig?.transferWarningMonths || hrConfig?.warningMonths || 6);
 
     employees.forEach((emp) => {
-      const posName = emp.position || '';
-      const isCreditOfficer = (emp.department || '').includes('Tín dụng') || 
-        posName.toLowerCase().includes('tín dụng') || 
-        Boolean(emp.assignedArea);
-
-      let isSensitive = false;
-      let maxMonths = 36;
-      let warningMonths = 6;
-
-      if (rules.length > 0) {
-        const rule = getTransferRule(posName);
-        if (rule && rule.requiresTransfer) {
-          isSensitive = true;
-          maxMonths = Number(rule.maxMonths) || 36;
-          warningMonths = Number(rule.warningMonths) || 6;
-        }
-      } else {
-        // Fallback mặc định theo Thông tư NHNN nếu chưa tải kịp cấu hình
-        const p = posName.toLowerCase();
-        isSensitive =
-          p.includes('tín dụng') ||
-          p.includes('kế toán') ||
-          p.includes('thủ quỹ') ||
-          p.includes('kiểm soát');
-      }
-
-      if (!isSensitive && !isCreditOfficer) return;
+      // Chỉ theo dõi Cán bộ Tín dụng phụ trách địa bàn (loại trừ HĐQT, BKS, Giám đốc, Kế toán, Thủ quỹ)
+      const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department) || Boolean(emp.assignedArea);
+      if (!isCreditOfficer) return;
 
       const effectiveStart = emp.positionStartDate || emp.joinDate;
       const areaStart = emp.areaStartDate || effectiveStart;
 
-      let tenureText = '';
-      let tenureMonths = 0;
-      let isDue = false;
-      let isNear = false;
-      let dueDateText = '';
-
-      if (isCreditOfficer) {
-        const areaInfo = calculateAreaTenureAndDueDate(areaStart, maxMonths, warningMonths);
-        tenureText = areaInfo.tenureText;
-        tenureMonths = areaInfo.tenureMonths;
-        isDue = areaInfo.isDue;
-        isNear = areaInfo.isNear;
-        dueDateText = areaInfo.dueDateText;
-      } else {
-        tenureText = calculatePositionTenure(effectiveStart);
-        if (effectiveStart) {
-          try {
-            const start = new Date(effectiveStart);
-            const now = new Date();
-            if (!isNaN(start.getTime())) {
-              tenureMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-            }
-          } catch {
-            tenureMonths = 0;
-          }
-        }
-        const warningThreshold = Math.max(0, maxMonths - warningMonths);
-        isDue = tenureMonths >= maxMonths;
-        isNear = tenureMonths >= warningThreshold && tenureMonths < maxMonths;
-      }
+      const areaInfo = calculateAreaTenureAndDueDate(areaStart, maxMonths, warningMonths);
 
       list.push({
         id: emp.id,
@@ -124,17 +56,17 @@ const EmployeeAnalyticsTab = ({
         name: emp.name,
         department: emp.department,
         position: emp.position,
-        isCreditOfficer,
-        assignedArea: emp.assignedArea || '',
+        isCreditOfficer: true,
+        assignedArea: emp.assignedArea || 'Chưa phân công',
         areaStartDate: emp.areaStartDate || '',
         startDate: effectiveStart,
-        tenureText,
-        tenureMonths,
+        tenureText: areaInfo.tenureText,
+        tenureMonths: areaInfo.tenureMonths,
         maxMonths,
         warningMonths,
-        isDue,
-        isNear,
-        dueDateText,
+        isDue: areaInfo.isDue,
+        isNear: areaInfo.isNear,
+        dueDateText: areaInfo.dueDateText,
       });
     });
 
@@ -144,6 +76,7 @@ const EmployeeAnalyticsTab = ({
       if (a.isNear !== b.isNear) return a.isNear ? -1 : 1;
       return (b.tenureMonths - b.maxMonths) - (a.tenureMonths - a.maxMonths);
     });
+
     return list;
   }, [employees, hrConfig]);
 
@@ -245,7 +178,7 @@ const EmployeeAnalyticsTab = ({
 
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold uppercase">Hạn luân chuyển</span>
+            <span className="text-[11px] font-bold uppercase">Hạn đổi địa bàn CBTD</span>
             <ShieldAlert className="w-4 h-4 text-rose-600" />
           </div>
           <div className="text-2xl font-black text-rose-700">{dueCount}</div>
@@ -255,16 +188,16 @@ const EmployeeAnalyticsTab = ({
         </div>
       </div>
 
-      {/* 2. Bảng Theo Dõi Thời Hạn Luân Chuyển Toàn Quỹ */}
+      {/* 2. Bảng Theo Dõi Thời Hạn Luân Chuyển Địa Bàn CBTD */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4 text-emerald-700" />
-              <span>Bảng Giám Sát Luân Chuyển Định Kỳ Toàn Quỹ</span>
+              <span>Bảng Giám Sát Luân Chuyển Địa Bàn Cán Bộ Tín Dụng (CBTD)</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Theo dõi thâm niên các vị trí theo danh mục chu kỳ luân chuyển đã thiết lập trong Cấu hình hệ thống & quy định NHNN
+              Theo dõi thời gian phụ trách địa bàn và chu kỳ luân chuyển cán bộ tín dụng theo quy định của Ngân hàng Nhà nước &amp; Quỹ TDND Yên Thọ
             </p>
           </div>
 
@@ -280,7 +213,7 @@ const EmployeeAnalyticsTab = ({
 
         {transferMonitoringList.length === 0 ? (
           <div className="py-8 text-center text-slate-400 text-xs">
-            Hiện không có cán bộ nào thuộc vị trí luân chuyển hoặc toàn bộ nhân sự đang trong hạn an toàn.
+            Hiện không có Cán bộ tín dụng nào thuộc diện luân chuyển địa bàn hoặc toàn bộ CBTD đang trong thời hạn an toàn.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -289,10 +222,10 @@ const EmployeeAnalyticsTab = ({
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold">
                   <th className="py-2.5 px-3 text-center w-12">STT</th>
                   <th className="py-2.5 px-3">Họ và tên</th>
-                  <th className="py-2.5 px-3">Chức vụ & Địa bàn / Bộ phận</th>
-                  <th className="py-2.5 px-3">Ngày bắt đầu</th>
-                  <th className="py-2.5 px-3">Thâm niên theo dõi</th>
-                  <th className="py-2.5 px-3">Chu kỳ quy định</th>
+                  <th className="py-2.5 px-3">Chức vụ &amp; Địa bàn quản lý</th>
+                  <th className="py-2.5 px-3">Ngày nhận địa bàn</th>
+                  <th className="py-2.5 px-3">Thâm niên địa bàn</th>
+                  <th className="py-2.5 px-3">Chu kỳ luân chuyển</th>
                   <th className="py-2.5 px-3 text-right">Trạng thái theo dõi</th>
                 </tr>
               </thead>

@@ -51,32 +51,11 @@ const EmployeeTransferHistory = ({
     setEditingPeriod(null);
   };
 
-  // Nhận diện quy tắc luân chuyển theo chức vụ cấu hình
-  const positionRule = useMemo(() => {
-    if (!emp?.position) return null;
-    const rules = hrConfig?.transferRules || [];
-    const found = rules.find((r) => r.positionName === emp.position);
-    if (found) return found;
-
-    // Fallback logic ban đầu nếu chưa có cấu hình riêng
-    const p = emp.position.toLowerCase();
-    const defaultRequires = (
-      p.includes('tín dụng') ||
-      p.includes('kế toán') ||
-      p.includes('thủ quỹ') ||
-      p.includes('kiểm soát')
-    );
-    return {
-      positionName: emp.position,
-      requiresTransfer: defaultRequires,
-      maxMonths: hrConfig?.transferMaxMonths || 36,
-      warningMonths: hrConfig?.transferWarningMonths || 6,
-    };
-  }, [emp?.position, hrConfig]);
-
-  const requiresTransfer = Boolean(positionRule?.requiresTransfer);
-  const maxMonths = Number(positionRule?.maxMonths) || 36;
-  const warningMonths = Number(positionRule?.warningMonths) || 6;
+  // Nhận diện quy tắc luân chuyển: CHỈ áp dụng cho Cán bộ Tín dụng (CBTD)
+  const isCreditOfficer = isCreditOfficerRole(emp?.position, emp?.department);
+  const maxMonths = Number(hrConfig?.creditRotationMonths || hrConfig?.transferMaxMonths || hrConfig?.transferCycleMonths || 36);
+  const warningMonths = Number(hrConfig?.creditWarningMonths || hrConfig?.transferWarningMonths || hrConfig?.warningMonths || 6);
+  const requiresTransfer = isCreditOfficer;
 
   // Tính số tháng công tác tại vị trí hiện tại
   const effectiveStart = emp ? (emp.positionStartDate || emp.joinDate) : null;
@@ -99,8 +78,6 @@ const EmployeeTransferHistory = ({
   const isNear = requiresTransfer && tenureMonths >= (maxMonths - warningMonths) && tenureMonths < maxMonths;
 
   // Theo dõi tiến độ quản lý địa bàn dành riêng cho Cán bộ Tín dụng (HĐQT, BKS, Giám đốc, Kế toán... KHÔNG áp dụng)
-  const isCreditOfficer = isCreditOfficerRole(emp?.position, emp?.department);
-
   const areaInfo = isCreditOfficer 
     ? calculateAreaTenureAndDueDate(emp?.areaStartDate || effectiveStart, maxMonths, warningMonths) 
     : null;
@@ -166,7 +143,7 @@ const EmployeeTransferHistory = ({
             {requiresTransfer ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
                 <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Vị trí luân chuyển định kỳ ({maxMonths} tháng)</span>
+                <span>Luân chuyển địa bàn định kỳ ({maxMonths} tháng)</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 text-xs font-medium">
@@ -245,7 +222,7 @@ const EmployeeTransferHistory = ({
                 Vị trí công tác hiện tại theo dõi theo nhiệm kỳ / HĐLĐ
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Chức danh này không thuộc diện bắt buộc luân chuyển định kỳ theo cấu hình hệ thống hiện tại của Quỹ.
+                Chức danh này hoạt động theo nhiệm kỳ bầu cử hoặc phân công nhiệm vụ nội bộ, không áp dụng luân chuyển địa bàn.
               </p>
             </div>
           </div>

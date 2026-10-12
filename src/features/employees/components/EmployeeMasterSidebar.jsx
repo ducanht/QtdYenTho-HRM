@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search, UserPlus, ShieldAlert, Clock, Building2, FileSpreadsheet } from 'lucide-react';
-import { calculatePositionTenure } from '../../../lib/evaluationUtils';
+import { calculatePositionTenure, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { exportEmployeesDirectoryToExcel } from '../../../lib/exportUtils';
 import { useToast } from '../../../context/ToastContext';
 
@@ -21,26 +21,19 @@ const EmployeeMasterSidebar = ({
   const toast = useToast();
   const [exportingExcel, setExportingExcel] = useState(false);
 
-  // Tra cứu quy tắc luân chuyển theo cấu hình phân hệ
-  const getTransferRule = (pos = '') => {
-    if (!pos) return { requiresTransfer: false, maxMonths: 36, warningMonths: 6 };
-    const rules = hrConfig?.transferRules || [];
-    const found = rules.find((r) => r.positionName === pos);
-    if (found) return found;
+  // Tra cứu quy tắc luân chuyển: CHỈ áp dụng cho Cán bộ Tín dụng (CBTD)
+  const getTransferRule = (pos = '', dept = '') => {
+    const isCBTD = isCreditOfficerRole(pos, dept);
+    if (!isCBTD) return { requiresTransfer: false, maxMonths: 36, warningMonths: 6 };
 
-    // Fallback nếu chưa lưu cấu hình riêng
-    const p = pos.toLowerCase();
-    const defaultRequires = (
-      p.includes('tín dụng') ||
-      p.includes('kế toán') ||
-      p.includes('thủ quỹ') ||
-      p.includes('kiểm soát')
-    );
+    const maxMonths = Number(hrConfig?.creditRotationMonths || hrConfig?.transferMaxMonths || hrConfig?.transferCycleMonths || 36);
+    const warningMonths = Number(hrConfig?.creditWarningMonths || hrConfig?.transferWarningMonths || hrConfig?.warningMonths || 6);
+
     return {
       positionName: pos,
-      requiresTransfer: defaultRequires,
-      maxMonths: hrConfig?.transferMaxMonths || 36,
-      warningMonths: hrConfig?.transferWarningMonths || 6,
+      requiresTransfer: true,
+      maxMonths,
+      warningMonths,
     };
   };
 
@@ -148,7 +141,10 @@ const EmployeeMasterSidebar = ({
         ) : (
           filteredList.map((emp) => {
             const isSelected = selectedEmployeeId === emp.id;
-            const effectiveStart = emp.positionStartDate || emp.joinDate;
+            const isCBTD = isCreditOfficerRole(emp.position, emp.department);
+            const effectiveStart = isCBTD
+              ? (emp.areaStartDate || emp.positionStartDate || emp.joinDate)
+              : (emp.positionStartDate || emp.joinDate);
             const tenureText = calculatePositionTenure(effectiveStart);
 
             let tenureMonths = 0;
@@ -164,7 +160,7 @@ const EmployeeMasterSidebar = ({
               }
             }
 
-            const rule = getTransferRule(emp.position);
+            const rule = getTransferRule(emp.position, emp.department);
             const requiresTransfer = Boolean(rule?.requiresTransfer);
             const maxM = Number(rule?.maxMonths) || 36;
             const warnM = Number(rule?.warningMonths) || 6;
