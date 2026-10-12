@@ -585,6 +585,17 @@ Hệ thống tích hợp Module Khởi tạo & Đồng bộ CSDL tự động t�
     - Xuất file Excel (`exportEmployeeProfileToExcel`): Mở rộng xuất file Excel đa sheet chuyên nghiệp gồm 4 sheet: `Trich_ngang_2C`, `Qua_trinh_cong_tac`, `Van_bang_chuyen_mon`, và `Mang_xa_hoi`.
   - **Phân Tích Động Cơ Cấu Trình Độ Học Vấn Toàn Quỹ**:
     - Thống kê tỷ lệ và số lượng từng cấp học vấn trong `EmployeeAnalyticsTab` được tính toán trực tiếp từ danh sách văn bằng trong `employee_degrees`, ưu tiên văn bằng cao nhất của mỗi cán bộ, fallback linh hoạt sang trường `education` tóm tắt.
+- **`2026.10.12_v5.7_editable_it_language_and_secondary_phone`**:
+  - **Bổ Sung & Điều Chỉnh Động Trình Độ Tin Học & Ngoại Ngữ**:
+    - Khắc phục tình trạng hiển thị hardcoded tĩnh trước đây. Bổ sung 2 trường `itLevel` (Trình độ Tin học) và `foreignLanguage` (Trình độ Ngoại ngữ) vào CSDL `users` / `employees`.
+    - Tích hợp 2 ô nhập liệu vào Khối 4 của Form hồ sơ cán bộ (`EmployeeFormModal`), hiển thị động trên Hồ sơ chi tiết (`EmployeeProfileDetail`), Bản in A4 trích ngang 2C/TCTD (`EmployeeA4PrintModal`), và Bộ xuất file Excel/Word (`exportUtils.js`).
+  - **Hỗ Trợ Số Điện Thoại Thứ 2 (Số Liên Hệ Phụ)**:
+    - Bổ sung trường `secondaryPhone` vào schema cán bộ và form nhập liệu, cho phép lưu trữ thêm số điện thoại phụ phục vụ liên lạc khẩn cấp nội bộ.
+    - Hiển thị tự động trên hồ sơ cá nhân và xuất bản in A4 trích ngang / file Excel / Word.
+  - **Tinh Giản Giao Diện Nghiệp Vụ Chuẩn Ngân Hàng (Zero UI Clutter)**:
+    - Rà soát và loại bỏ hoàn toàn khối banner giải thích màu xanh rườm rà ở đầu modal Thêm văn bằng (`AddDegreeModal`).
+    - Loại bỏ toàn bộ các nút tag gợi ý chật chội (`MAJOR_SUGGESTIONS`, `INSTITUTION_SUGGESTIONS`) dưới các ô input, trả lại giao diện nhập liệu thanh lịch, thông thoáng, tập trung 100% vào nghiệp vụ cơ quan tín dụng nhân dân.
+    - Ẩn hoàn toàn mã code kỹ thuật `(${selectedEmp.code})` khỏi subtitle modal `WorkHistoryPeriodModal`.
 
 ---
 

@@ -97,7 +97,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.6_degrees_socials_and_timeline_tables';
+export const CURRENT_SCHEMA_VERSION = '2026.10.12_v5.7_editable_it_language_and_secondary_phone';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (20 Collections chuẩn hóa)

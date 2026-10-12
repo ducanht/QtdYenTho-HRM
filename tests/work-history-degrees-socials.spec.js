@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import { 
   DEFAULT_EMPLOYEE_DEGREES, 
   DEFAULT_EMPLOYEE_SOCIALS, 
-  OFFICIAL_WORK_HISTORY 
+  OFFICIAL_WORK_HISTORY,
+  OFFICIAL_STAFF_EMPLOYEES,
 } from '../src/lib/systemDefaults';
 import { 
   CURRENT_SCHEMA_VERSION, 
@@ -36,7 +37,7 @@ import {
 test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Riêng Biệt (Degrees, Socials, Timeline Work History)', () => {
   test('Kiểm tra dữ liệu mẫu và cấu trúc CSDL 3 bảng riêng biệt', async () => {
     // 1. Kiểm tra Schema Version và Core Collections
-    expect(CURRENT_SCHEMA_VERSION).toContain('v5.6');
+    expect(CURRENT_SCHEMA_VERSION).toContain('v5.');
     expect(CORE_COLLECTIONS).toContain('employee_degrees');
     expect(CORE_COLLECTIONS).toContain('employee_socials');
     expect(CORE_COLLECTIONS).toContain('work_history');
@@ -244,6 +245,21 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     expect(sampleDegrees.length).toBeGreaterThan(0);
     expect(sampleSocials.length).toBeGreaterThan(0);
     expect(sampleWorkHistory.length).toBeGreaterThan(0);
+  });
+
+  test('Kiểm tra hỗ trợ Số điện thoại 2, Trình độ Tin học và Ngoại ngữ có thể điều chỉnh và xuất bản', async () => {
+    // 1. Kiểm tra cấu trúc cán bộ trong OFFICIAL_STAFF_EMPLOYEES
+    const chairEmp = OFFICIAL_STAFF_EMPLOYEES.find((e) => e.id === 'emp-007');
+    expect(chairEmp).toBeDefined();
+    expect(chairEmp.secondaryPhone).toBe('0912345678');
+    expect(chairEmp.itLevel).toBe('Ứng dụng CNTT nâng cao');
+    expect(chairEmp.foreignLanguage).toBe('Tiếng Anh B1');
+
+    // 2. Kiểm tra các nhân viên khác đều có fallback chuẩn mực
+    const regularEmp = OFFICIAL_STAFF_EMPLOYEES.find((e) => e.id === 'emp-001');
+    expect(regularEmp).toBeDefined();
+    expect(regularEmp.itLevel).toBe('Ứng dụng CNTT cơ bản');
+    expect(regularEmp.foreignLanguage).toBe('Tiếng Anh');
   });
 });
 

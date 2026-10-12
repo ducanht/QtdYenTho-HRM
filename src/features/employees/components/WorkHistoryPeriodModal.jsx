@@ -187,7 +187,7 @@ const WorkHistoryPeriodModal = ({
       isOpen={isOpen}
       onClose={onClose}
       title={editingRecord ? 'Chỉnh Sửa Mốc Quá Trình Công Tác' : 'Thêm Mốc Quá Trình Công Tác Mới'}
-      subtitle={selectedEmp ? `Cán bộ: ${selectedEmp.name} (${selectedEmp.code}) • Quỹ TDND Yên Thọ` : 'Quỹ TDND Yên Thọ'}
+      subtitle={selectedEmp ? `Cán bộ: ${selectedEmp.name} • Quỹ TDND Yên Thọ` : 'Quỹ TDND Yên Thọ'}
       maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">

@@ -203,21 +203,6 @@ const AddDegreeModal = ({
       maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
-        {/* Banner tóm tắt */}
-        <div className="p-3.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-800 text-white flex items-center justify-center shrink-0 shadow-2xs">
-            <GraduationCap className="w-5 h-5" />
-          </div>
-          <div className="text-xs">
-            <div className="font-bold text-emerald-950">
-              Hồ Sơ Văn Bằng & Trình Độ Đào Tạo
-            </div>
-            <div className="text-slate-600 mt-0.5">
-              Quản lý chi tiết từng cấp bậc văn bằng (Tiến sĩ, Thạc sĩ, Đại học, Cao đẳng, Trung cấp) phục vụ thẩm định hồ sơ nhân sự và mẫu 2C/TCTD.
-            </div>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           {/* Cấp bậc văn bằng */}
           <div>
@@ -264,7 +249,7 @@ const AddDegreeModal = ({
                 <GraduationCap className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Chuyên ngành đào tạo <span className="text-rose-500">*</span></span>
               </span>
-              <span className="text-[11px] text-slate-400 font-normal">Ví dụ: Tài chính - Ngân hàng, Kế toán...</span>
+              <span className="text-[11px] text-slate-400 font-normal">VD: Tài chính - Ngân hàng, Kế toán...</span>
             </label>
             <input
               type="text"
@@ -274,19 +259,6 @@ const AddDegreeModal = ({
               required
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-700 focus:outline-hidden text-xs font-semibold text-slate-900 shadow-2xs"
             />
-            {/* Gợi ý chuyên ngành */}
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {MAJOR_SUGGESTIONS.map((sug) => (
-                <button
-                  type="button"
-                  key={sug}
-                  onClick={() => setMajor(sug)}
-                  className="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-[10px] text-slate-600 rounded-md border border-slate-200 transition-colors cursor-pointer"
-                >
-                  {sug}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Cơ sở / Trường đào tạo */}
@@ -296,7 +268,7 @@ const AddDegreeModal = ({
                 <Building2 className="w-3.5 h-3.5 text-indigo-700" />
                 <span>Cơ sở / Trường đào tạo cấp bằng <span className="text-rose-500">*</span></span>
               </span>
-              <span className="text-[11px] text-slate-400 font-normal">Ghi đầy đủ tên trường đại học/học viện</span>
+              <span className="text-[11px] text-slate-400 font-normal">Ghi rõ tên trường đại học / học viện</span>
             </label>
             <input
               type="text"
@@ -306,19 +278,6 @@ const AddDegreeModal = ({
               required
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-700 focus:outline-hidden text-xs font-medium text-slate-900 shadow-2xs"
             />
-            {/* Gợi ý trường đào tạo */}
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {INSTITUTION_SUGGESTIONS.map((inst) => (
-                <button
-                  type="button"
-                  key={inst}
-                  onClick={() => setInstitution(inst)}
-                  className="px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-800 text-[10px] text-slate-600 rounded-md border border-slate-200 transition-colors cursor-pointer"
-                >
-                  {inst}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Năm tốt nghiệp */}

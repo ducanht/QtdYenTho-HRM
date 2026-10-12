@@ -30,6 +30,7 @@ const EmployeeFormModal = ({
   const [birthDate, setBirthDate] = useState('');
   const [cccd, setCccd] = useState('');
   const [phone, setPhone] = useState('');
+  const [secondaryPhone, setSecondaryPhone] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('Phòng Tín dụng');
   const [position, setPosition] = useState('Cán bộ tín dụng');
@@ -43,6 +44,8 @@ const EmployeeFormModal = ({
   const [partyOfficialDate, setPartyOfficialDate] = useState('');
   const [politicalRole, setPoliticalRole] = useState('Đảng viên');
   const [education, setEducation] = useState('Đại học chuyên ngành Tài chính - Ngân hàng');
+  const [itLevel, setItLevel] = useState('Ứng dụng CNTT cơ bản');
+  const [foreignLanguage, setForeignLanguage] = useState('Tiếng Anh');
   const [role, setRole] = useState('staff');
 
   useEffect(() => {
@@ -54,6 +57,7 @@ const EmployeeFormModal = ({
       setBirthDate(initialData.birthDate || '');
       setCccd(initialData.cccd || '');
       setPhone(initialData.phone || '');
+      setSecondaryPhone(initialData.secondaryPhone || initialData.phone2 || '');
       setEmail(initialData.email || '');
       setDepartment(initialData.department || 'Phòng Tín dụng');
       setPosition(initialData.position || 'Cán bộ tín dụng');
@@ -67,6 +71,8 @@ const EmployeeFormModal = ({
       setPartyOfficialDate(initialData.partyOfficialDate || '');
       setPoliticalRole(initialData.politicalRole || 'Đảng viên');
       setEducation(initialData.education || '');
+      setItLevel(initialData.itLevel || 'Ứng dụng CNTT cơ bản');
+      setForeignLanguage(initialData.foreignLanguage || 'Tiếng Anh');
       setRole(initialData.role || 'staff');
     } else {
       const newUuid = generateUUID();
@@ -85,6 +91,7 @@ const EmployeeFormModal = ({
       setBirthDate('');
       setCccd('');
       setPhone('');
+      setSecondaryPhone('');
       setEmail('');
       setDepartment(departments[0] || 'Phòng Tín dụng');
       setPosition('Cán bộ tín dụng');
@@ -99,6 +106,8 @@ const EmployeeFormModal = ({
       setPartyOfficialDate('');
       setPoliticalRole('Đảng viên');
       setEducation('Đại học chuyên ngành');
+      setItLevel('Ứng dụng CNTT cơ bản');
+      setForeignLanguage('Tiếng Anh');
       setRole('staff');
     }
   }, [initialData, isOpen, departments, existingEmployees]);
@@ -120,6 +129,7 @@ const EmployeeFormModal = ({
         birthDate,
         cccd: cccd.trim(),
         phone: phone.trim(),
+        secondaryPhone: secondaryPhone.trim(),
         email: email.trim().toLowerCase(),
         department,
         position: position.trim(),
@@ -133,6 +143,8 @@ const EmployeeFormModal = ({
         partyOfficialDate: partyMember ? partyOfficialDate : '',
         politicalRole: partyMember ? politicalRole : '',
         education: education.trim(),
+        itLevel: itLevel.trim() || 'Ứng dụng CNTT cơ bản',
+        foreignLanguage: foreignLanguage.trim() || 'Tiếng Anh',
         role: role || 'staff',
         status: initialData?.status || 'ACTIVE',
       };
@@ -212,7 +224,7 @@ const EmployeeFormModal = ({
               />
             </div>
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Số điện thoại liên hệ:</label>
+              <label className="block text-slate-700 font-bold mb-1">Số điện thoại chính:</label>
               <input
                 type="text"
                 placeholder="0988..."
@@ -221,7 +233,17 @@ const EmployeeFormModal = ({
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>
-            <div className="sm:col-span-3">
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Số điện thoại 2 (Số phụ):</label>
+              <input
+                type="text"
+                placeholder="0912... (Tùy chọn)"
+                value={secondaryPhone}
+                onChange={(e) => setSecondaryPhone(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+              />
+            </div>
+            <div className="sm:col-span-2">
               <label className="block text-slate-700 font-bold mb-1">Hộp thư điện tử (Email):</label>
               <input
                 type="email"
@@ -381,7 +403,7 @@ const EmployeeFormModal = ({
             4. Trình độ học vấn &amp; Chuyên môn đào tạo
           </h4>
           <div>
-            <label className="block text-slate-700 font-bold mb-1">Văn bằng / Học vị:</label>
+            <label className="block text-slate-700 font-bold mb-1">Văn bằng / Học vị chính:</label>
             <input
               type="text"
               placeholder="VD: Đại học chuyên ngành Tài chính - Ngân hàng (Học viện Ngân hàng)"
@@ -389,6 +411,28 @@ const EmployeeFormModal = ({
               onChange={(e) => setEducation(e.target.value)}
               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Trình độ Tin học:</label>
+              <input
+                type="text"
+                placeholder="VD: Ứng dụng CNTT cơ bản / Nâng cao"
+                value={itLevel}
+                onChange={(e) => setItLevel(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Trình độ Ngoại ngữ:</label>
+              <input
+                type="text"
+                placeholder="VD: Tiếng Anh / B1 / Giao tiếp"
+                value={foreignLanguage}
+                onChange={(e) => setForeignLanguage(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
+              />
+            </div>
           </div>
         </div>
 

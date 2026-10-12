@@ -527,6 +527,9 @@ export const OFFICIAL_EMPLOYEES = [
     status: 'ACTIVE',
     mustChangePassword: false,
     phone: '0988668866',
+    secondaryPhone: '0912345678',
+    itLevel: 'Ứng dụng CNTT nâng cao',
+    foreignLanguage: 'Tiếng Anh B1',
   },
   {
     id: 'emp-008',
@@ -884,6 +887,9 @@ export const OFFICIAL_STAFF_EMPLOYEES = OFFICIAL_EMPLOYEES.filter(
   (emp) => emp.id !== 'emp-root' && emp.code !== 'ROOT'
 ).map(({ role, mustChangePassword, ...profile }) => ({
   ...profile,
+  secondaryPhone: profile.secondaryPhone || '',
+  itLevel: profile.itLevel || 'Ứng dụng CNTT cơ bản',
+  foreignLanguage: profile.foreignLanguage || 'Tiếng Anh',
   status: profile.status || 'ACTIVE',
 }));
 

@@ -685,7 +685,12 @@ export const exportEmployeeProfileToExcel = async (
   wsData.push(['I. THÔNG TIN CÁ NHÂN & LIÊN HỆ']);
   wsData.push(['Họ và tên khai sinh:', emp.name, 'Giới tính:', emp.gender || 'Nam']);
   wsData.push(['Ngày sinh:', emp.birthDate ? formatDateVN(emp.birthDate) : '', 'Số CCCD:', emp.cccd ? `'${emp.cccd}` : '']);
-  wsData.push(['Số điện thoại:', emp.phone ? `'${emp.phone}` : '', 'Hộp thư điện tử:', emp.email || '']);
+  if (emp.secondaryPhone) {
+    wsData.push(['Số điện thoại:', emp.phone ? `'${emp.phone}` : '', 'Số ĐT 2 (phụ):', `'${emp.secondaryPhone}`]);
+    wsData.push(['Hộp thư điện tử:', emp.email || '']);
+  } else {
+    wsData.push(['Số điện thoại:', emp.phone ? `'${emp.phone}` : '', 'Hộp thư điện tử:', emp.email || '']);
+  }
   if (filteredSocials.length > 0) {
     const socSummary = filteredSocials.map((s) => `${s.platform}: ${s.accountName || s.username || ''}`).join('; ');
     wsData.push(['Kênh liên lạc mạng xã hội:', socSummary]);
@@ -706,7 +711,7 @@ export const exportEmployeeProfileToExcel = async (
 
   wsData.push(['IV. TRÌNH ĐỘ HỌC VẤN & VĂN BẰNG CHUYÊN MÔN']);
   wsData.push(['Trình độ chuyên môn tóm tắt:', emp.education || 'Đại học chuyên ngành']);
-  wsData.push(['Tin học:', 'Ứng dụng CNTT cơ bản', 'Ngoại ngữ:', 'Tiếng Anh']);
+  wsData.push(['Tin học:', emp.itLevel || 'Ứng dụng CNTT cơ bản', 'Ngoại ngữ:', emp.foreignLanguage || 'Tiếng Anh']);
 
   if (filteredDegrees.length > 0) {
     wsData.push([]);
@@ -1042,6 +1047,7 @@ export const exportEmployeeProfileToDocx = async (
     makeInfoLine('3. Ngày, tháng, năm sinh:', emp.birthDate ? formatDateVN(emp.birthDate) : '—'),
     makeInfoLine('4. Số Thẻ CCCD:', emp.cccd || '—', true),
     makeInfoLine('5. Số điện thoại liên hệ:', emp.phone || '—'),
+    ...(emp.secondaryPhone ? [makeInfoLine('   Số điện thoại 2 (phụ):', emp.secondaryPhone)] : []),
     makeInfoLine('6. Hộp thư điện tử (Email):', emp.email || '—'),
   ];
 
@@ -1069,8 +1075,10 @@ export const exportEmployeeProfileToDocx = async (
 
     makeSectionHeading('IV. TRÌNH ĐỘ HỌC VẤN & VĂN BẰNG CHUYÊN MÔN'),
     makeInfoLine('1. Trình độ chuyên môn tóm tắt:', emp.education || 'Đại học chuyên ngành', true),
-    makeInfoLine('2. Lý luận chính trị:', 'Sơ cấp / Trung cấp'),
-    makeInfoLine('3. Quản lý Nhà nước / Nghiệp vụ Quỹ TDND:', 'Đã hoàn thành bồi dưỡng theo tiêu chuẩn NHNN')
+    makeInfoLine('2. Trình độ Tin học:', emp.itLevel || 'Ứng dụng CNTT cơ bản'),
+    makeInfoLine('3. Trình độ Ngoại ngữ:', emp.foreignLanguage || 'Tiếng Anh'),
+    makeInfoLine('4. Lý luận chính trị:', 'Sơ cấp / Trung cấp'),
+    makeInfoLine('5. Quản lý Nhà nước / Nghiệp vụ Quỹ TDND:', 'Đã hoàn thành bồi dưỡng theo tiêu chuẩn NHNN')
   );
 
   // Bảng văn bằng chuyên môn nếu có

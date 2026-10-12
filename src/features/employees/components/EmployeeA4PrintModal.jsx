@@ -165,7 +165,7 @@ const EmployeeA4PrintModal = ({
               <p>2. Giới tính: <span>{emp.gender || 'Nam'}</span></p>
               <p>3. Ngày sinh: <span>{emp.birthDate ? formatDateVN(emp.birthDate) : '—'}</span></p>
               <p>4. Số CCCD: <span className="font-bold tabular-nums">{emp.cccd || '—'}</span></p>
-              <p>5. Số điện thoại: <span className="font-bold tabular-nums">{emp.phone || '—'}</span></p>
+              <p>5. Số điện thoại: <span className="font-bold tabular-nums">{emp.phone || '—'}{emp.secondaryPhone ? ` • ${emp.secondaryPhone}` : ''}</span></p>
               <p>6. Hộp thư điện tử (Email): <span>{emp.email || '—'}</span></p>
               <p className="col-span-2">
                 7. Kênh mạng xã hội / Liên hệ số: <span>{empSocials.length > 0 ? empSocials.map(s => `${s.platform}: ${s.accountName || s.username}`).join(' • ') : 'Chưa cập nhật'}</span>
@@ -245,8 +245,10 @@ const EmployeeA4PrintModal = ({
             </h3>
             <div className="grid grid-cols-2 gap-y-2 pt-2 px-2">
               <p className="col-span-2">1. Trình độ chuyên môn / Học vị: <span className="font-bold">{emp.education || 'Chờ bổ sung'}</span></p>
-              <p>2. Lý luận chính trị: <span>Sơ cấp / Trung cấp</span></p>
-              <p>3. Quản lý nhà nước: <span>Đã hoàn thành bồi dưỡng</span></p>
+              <p>2. Trình độ Tin học: <span>{emp.itLevel || 'Ứng dụng CNTT cơ bản'}</span></p>
+              <p>3. Trình độ Ngoại ngữ: <span>{emp.foreignLanguage || 'Tiếng Anh'}</span></p>
+              <p>4. Lý luận chính trị: <span>Sơ cấp / Trung cấp</span></p>
+              <p>5. Quản lý nhà nước: <span>Đã hoàn thành bồi dưỡng</span></p>
             </div>
 
             {empDegrees.length > 0 && (

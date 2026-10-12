@@ -313,7 +313,13 @@ const EmployeeProfileDetail = ({
               <span className="text-slate-400 block text-[11px] mb-0.5">Số điện thoại liên hệ:</span>
               <span className="font-bold text-emerald-800 tabular-nums">{emp.phone || '—'}</span>
             </div>
-            <div className="col-span-2">
+            {emp.secondaryPhone ? (
+              <div>
+                <span className="text-slate-400 block text-[11px] mb-0.5">Số điện thoại 2 (Phụ):</span>
+                <span className="font-semibold text-slate-800 tabular-nums">{emp.secondaryPhone}</span>
+              </div>
+            ) : null}
+            <div className={emp.secondaryPhone ? "" : "col-span-2"}>
               <span className="text-slate-400 block text-[11px] mb-0.5">Hộp thư điện tử (Email):</span>
               <span className="font-medium text-slate-800">{emp.email || '—'}</span>
             </div>
@@ -644,11 +650,11 @@ const EmployeeProfileDetail = ({
             <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 text-xs">
               <div>
                 <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Tin học:</span>
-                <span className="font-medium text-slate-800">Ứng dụng CNTT cơ bản</span>
+                <span className="font-medium text-slate-800">{emp.itLevel || 'Ứng dụng CNTT cơ bản'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[11px] mb-0.5">Trình độ Ngoại ngữ:</span>
-                <span className="font-medium text-slate-800">Tiếng Anh</span>
+                <span className="font-medium text-slate-800">{emp.foreignLanguage || 'Tiếng Anh'}</span>
               </div>
             </div>
           </div>
