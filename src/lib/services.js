@@ -237,17 +237,19 @@ export const subscribeWorkHistory = (employeeId = null, callback) => {
     let q = collection(db, 'work_history');
     if (employeeId) {
       q = query(q, where('employeeId', '==', employeeId));
-    } else {
-      q = query(q, orderBy('effectiveDate', 'desc'));
     }
 
     return onSnapshot(
       q,
       (snapshot) => {
         const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-        if (employeeId) {
-          list.sort((a, b) => (b.effectiveDate || '').localeCompare(a.effectiveDate || ''));
-        }
+        list.sort((a, b) => {
+          if (a.isCurrent && !b.isCurrent) return -1;
+          if (!a.isCurrent && b.isCurrent) return 1;
+          const dateA = a.startDate || a.effectiveDate || '';
+          const dateB = b.startDate || b.effectiveDate || '';
+          return dateB.localeCompare(dateA);
+        });
         callback(list);
       },
       (error) => {
@@ -265,11 +267,29 @@ export const subscribeWorkHistory = (employeeId = null, callback) => {
 export const saveWorkHistory = async (transferRecord) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
 
+  const cleanData = {};
+  Object.keys(transferRecord || {}).forEach((k) => {
+    if (transferRecord[k] !== undefined) {
+      cleanData[k] = transferRecord[k];
+    }
+  });
+
+  const nowIso = new Date().toISOString();
   const payload = {
-    ...transferRecord,
-    createdAt: new Date().toISOString(),
+    ...cleanData,
+    startDate: cleanData.startDate || cleanData.effectiveDate || '',
+    endDate: cleanData.endDate || '',
+    isCurrent: cleanData.isCurrent !== undefined ? Boolean(cleanData.isCurrent) : false,
+    position: cleanData.position || cleanData.toPosition || '',
+    department: cleanData.department || cleanData.toDepartment || '',
+    assignedArea: cleanData.assignedArea || cleanData.toAssignedArea || '',
+    updatedAt: nowIso,
     serverTime: serverTimestamp(),
   };
+
+  if (!payload.createdAt) {
+    payload.createdAt = nowIso;
+  }
 
   try {
     let targetDocId;
@@ -282,12 +302,24 @@ export const saveWorkHistory = async (transferRecord) => {
     }
 
     // Nếu người dùng chọn đồng bộ trực tiếp vào hồ sơ hiện tại của cán bộ
-    if (transferRecord.syncToProfile && transferRecord.employeeId) {
+    // Hỗ trợ cả timeline mới (syncToProfile && isCurrent && employeeId) và luân chuyển công tác (syncToProfile)
+    const shouldSync = Boolean(
+      transferRecord.syncToProfile &&
+      transferRecord.employeeId &&
+      (transferRecord.isCurrent || (transferRecord.isCurrent === undefined && (transferRecord.toPosition || transferRecord.toDepartment)))
+    );
+
+    if (shouldSync) {
       const profileUpdate = {};
-      if (transferRecord.toPosition) profileUpdate.position = transferRecord.toPosition;
-      if (transferRecord.toDepartment) profileUpdate.department = transferRecord.toDepartment;
-      if (transferRecord.toAssignedArea) profileUpdate.assignedArea = transferRecord.toAssignedArea;
-      if (transferRecord.effectiveDate) profileUpdate.positionStartDate = transferRecord.effectiveDate;
+      const pos = transferRecord.position || transferRecord.toPosition;
+      const dept = transferRecord.department || transferRecord.toDepartment;
+      const area = transferRecord.assignedArea || transferRecord.toAssignedArea;
+      const sDate = transferRecord.startDate || transferRecord.effectiveDate;
+
+      if (pos) profileUpdate.position = pos;
+      if (dept) profileUpdate.department = dept;
+      if (area) profileUpdate.assignedArea = area;
+      if (sDate) profileUpdate.positionStartDate = sDate;
 
       if (Object.keys(profileUpdate).length > 0) {
         await updateEmployeeProfile(transferRecord.employeeId, profileUpdate).catch((err) => {
@@ -296,7 +328,7 @@ export const saveWorkHistory = async (transferRecord) => {
       }
     }
 
-    return { success: true, id: targetDocId };
+    return { success: true, id: targetDocId, data: payload };
   } catch (error) {
     console.error('Lỗi Firestore lưu work_history:', error);
     throw error;
@@ -1449,3 +1481,253 @@ export const deleteEmployeeKpiHistory = async (historyId) => {
   await deleteDoc(doc(db, 'employee_kpi_history', historyId));
   return { success: true, id: historyId };
 };
+
+// ============================================================================
+// 15. VĂN BẰNG & TRÌNH ĐỘ CHUYÊN MÔN (employee_degrees collection)
+// Quản lý hồ sơ văn bằng cử nhân, thạc sĩ, tiến sĩ, cao đẳng, trung cấp
+// ============================================================================
+export const subscribeEmployeeDegrees = (employeeId = null, callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    let q = collection(db, 'employee_degrees');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    }
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // Sắp xếp: bằng có isHighest lên đầu, sau đó theo graduationYear giảm dần
+        list.sort((a, b) => {
+          if (a.isHighest && !b.isHighest) return -1;
+          if (!a.isHighest && b.isHighest) return 1;
+          const yearA = Number(a.graduationYear) || 0;
+          const yearB = Number(b.graduationYear) || 0;
+          return yearB - yearA;
+        });
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot employee_degrees:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot employee_degrees:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const getEmployeeDegrees = async (employeeId = null) => {
+  if (!db) return [];
+  try {
+    let q = collection(db, 'employee_degrees');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    }
+    const snap = await getDocs(q);
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    list.sort((a, b) => {
+      if (a.isHighest && !b.isHighest) return -1;
+      if (!a.isHighest && b.isHighest) return 1;
+      const yearA = Number(a.graduationYear) || 0;
+      const yearB = Number(b.graduationYear) || 0;
+      return yearB - yearA;
+    });
+    return list;
+  } catch (err) {
+    console.error('Lỗi getEmployeeDegrees:', err);
+    return [];
+  }
+};
+
+export const saveEmployeeDegree = async (degreeData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!degreeData.employeeId) throw new Error('Thiếu mã cán bộ nhân viên');
+
+  const targetId = degreeData.id || `deg_${generateUUID()}`;
+  const nowIso = new Date().toISOString();
+
+  // Làm sạch các trường undefined
+  const cleanData = {};
+  Object.keys(degreeData || {}).forEach((k) => {
+    if (degreeData[k] !== undefined) {
+      cleanData[k] = degreeData[k];
+    }
+  });
+
+  const payload = {
+    ...cleanData,
+    id: targetId,
+    degreeLevel: cleanData.degreeLevel ? cleanData.degreeLevel.trim() : 'Đại học',
+    major: cleanData.major ? cleanData.major.trim() : '',
+    institution: cleanData.institution ? cleanData.institution.trim() : '',
+    trainingType: cleanData.trainingType ? cleanData.trainingType.trim() : 'Chính quy',
+    graduationYear: cleanData.graduationYear ? (Number(cleanData.graduationYear) || cleanData.graduationYear) : null,
+    isHighest: cleanData.isHighest !== undefined ? Boolean(cleanData.isHighest) : false,
+    degreeNumber: cleanData.degreeNumber ? cleanData.degreeNumber.trim() : '',
+    classification: cleanData.classification ? cleanData.classification.trim() : (cleanData.ranking ? cleanData.ranking.trim() : ''),
+    degreeImage: cleanData.degreeImage || '',
+    notes: cleanData.notes ? cleanData.notes.trim() : '',
+    updatedAt: nowIso,
+    serverTime: serverTimestamp(),
+  };
+
+  if (!payload.createdAt) {
+    payload.createdAt = nowIso;
+  }
+
+  try {
+    await setDoc(doc(db, 'employee_degrees', targetId), payload, { merge: true });
+
+    // Nếu là bằng cấp cao nhất, tự động đồng bộ tóm tắt sang education của hồ sơ cán bộ
+    if (payload.isHighest && payload.employeeId) {
+      const majorPart = payload.major ? ` ${payload.major}` : '';
+      const instPart = payload.institution ? ` - ${payload.institution}` : '';
+      const educationSummary = `${payload.degreeLevel}${majorPart}${instPart}`.trim();
+      if (educationSummary) {
+        await updateEmployeeProfile(payload.employeeId, { education: educationSummary }).catch((err) => {
+          console.warn('Lỗi đồng bộ trình độ văn bằng sang hồ sơ cán bộ:', err);
+        });
+      }
+    }
+
+    return { success: true, id: targetId, data: payload };
+  } catch (err) {
+    console.error('Lỗi lưu văn bằng vào employee_degrees:', err);
+    throw err;
+  }
+};
+
+export const deleteEmployeeDegree = async (degreeId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!degreeId) throw new Error('Thiếu ID văn bằng cần xóa');
+
+  try {
+    await deleteDoc(doc(db, 'employee_degrees', degreeId));
+    return { success: true, id: degreeId };
+  } catch (err) {
+    console.error(`Lỗi xóa văn bằng [${degreeId}]:`, err);
+    throw err;
+  }
+};
+
+// ============================================================================
+// 16. MẠNG XÃ HỘI & KÊNH LIÊN LẠC CBNV (employee_socials collection)
+// Quản lý các kênh tương tác số: Zalo, Facebook, LinkedIn, Telegram...
+// ============================================================================
+export const subscribeEmployeeSocials = (employeeId = null, callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    let q = collection(db, 'employee_socials');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    }
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => {
+          if (a.isPublic && !b.isPublic) return -1;
+          if (!a.isPublic && b.isPublic) return 1;
+          return (a.platform || '').localeCompare(b.platform || '');
+        });
+        callback(list);
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot employee_socials:', error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot employee_socials:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const getEmployeeSocials = async (employeeId = null) => {
+  if (!db) return [];
+  try {
+    let q = collection(db, 'employee_socials');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    }
+    const snap = await getDocs(q);
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    list.sort((a, b) => {
+      if (a.isPublic && !b.isPublic) return -1;
+      if (!a.isPublic && b.isPublic) return 1;
+      return (a.platform || '').localeCompare(b.platform || '');
+    });
+    return list;
+  } catch (err) {
+    console.error('Lỗi getEmployeeSocials:', err);
+    return [];
+  }
+};
+
+export const saveEmployeeSocial = async (socialData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!socialData.employeeId) throw new Error('Thiếu mã cán bộ nhân viên');
+
+  const targetId = socialData.id || `soc_${generateUUID()}`;
+  const nowIso = new Date().toISOString();
+
+  // Làm sạch các trường undefined
+  const cleanData = {};
+  Object.keys(socialData || {}).forEach((k) => {
+    if (socialData[k] !== undefined) {
+      cleanData[k] = socialData[k];
+    }
+  });
+
+  const payload = {
+    ...cleanData,
+    id: targetId,
+    platform: cleanData.platform ? cleanData.platform.trim() : 'Zalo',
+    accountName: cleanData.accountName ? cleanData.accountName.trim() : '',
+    url: cleanData.url ? cleanData.url.trim() : '',
+    isPublic: cleanData.isPublic !== undefined ? Boolean(cleanData.isPublic) : true,
+    notes: cleanData.notes ? cleanData.notes.trim() : '',
+    updatedAt: nowIso,
+    serverTime: serverTimestamp(),
+  };
+
+  if (!payload.createdAt) {
+    payload.createdAt = nowIso;
+  }
+
+  try {
+    await setDoc(doc(db, 'employee_socials', targetId), payload, { merge: true });
+    return { success: true, id: targetId, data: payload };
+  } catch (err) {
+    console.error('Lỗi lưu mạng xã hội vào employee_socials:', err);
+    throw err;
+  }
+};
+
+export const deleteEmployeeSocial = async (socialId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!socialId) throw new Error('Thiếu ID kênh mạng xã hội cần xóa');
+
+  try {
+    await deleteDoc(doc(db, 'employee_socials', socialId));
+    return { success: true, id: socialId };
+  } catch (err) {
+    console.error(`Lỗi xóa kênh mạng xã hội [${socialId}]:`, err);
+    throw err;
+  }
+};
+

@@ -9,6 +9,18 @@ import {
   CORE_COLLECTIONS, 
   autoInitializeDatabase 
 } from '../src/lib/autoInitDb';
+import {
+  subscribeEmployeeDegrees,
+  saveEmployeeDegree,
+  deleteEmployeeDegree,
+  subscribeEmployeeSocials,
+  saveEmployeeSocial,
+  deleteEmployeeSocial,
+  subscribeWorkHistory,
+  saveWorkHistory,
+  deleteWorkHistory
+} from '../src/lib/services';
+
 
 test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Riêng Biệt (Degrees, Socials, Timeline Work History)', () => {
   test('Kiểm tra dữ liệu mẫu và cấu trúc CSDL 3 bảng riêng biệt', async () => {
@@ -74,4 +86,34 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
       expect(item).toHaveProperty('assignedArea');
     }
   });
+
+  test('Kiểm tra Type Contract và tính sẵn sàng của các Firestore Services mới', async () => {
+    // 1. Kiểm tra Services Quản lý Văn bằng (employee_degrees)
+    expect(typeof subscribeEmployeeDegrees).toBe('function');
+    expect(typeof saveEmployeeDegree).toBe('function');
+    expect(typeof deleteEmployeeDegree).toBe('function');
+
+    const unsubDegrees = subscribeEmployeeDegrees('emp-001', () => {});
+    expect(typeof unsubDegrees).toBe('function');
+    unsubDegrees();
+
+    // 2. Kiểm tra Services Quản lý Mạng Xã Hội (employee_socials)
+    expect(typeof subscribeEmployeeSocials).toBe('function');
+    expect(typeof saveEmployeeSocial).toBe('function');
+    expect(typeof deleteEmployeeSocial).toBe('function');
+
+    const unsubSocials = subscribeEmployeeSocials('emp-001', () => {});
+    expect(typeof unsubSocials).toBe('function');
+    unsubSocials();
+
+    // 3. Kiểm tra Services Luân chuyển & Timeline Công tác (work_history)
+    expect(typeof subscribeWorkHistory).toBe('function');
+    expect(typeof saveWorkHistory).toBe('function');
+    expect(typeof deleteWorkHistory).toBe('function');
+
+    const unsubWork = subscribeWorkHistory('emp-001', () => {});
+    expect(typeof unsubWork).toBe('function');
+    unsubWork();
+  });
 });
+

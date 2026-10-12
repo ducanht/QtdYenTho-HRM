@@ -244,6 +244,37 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isBoardOrAdmin();
     }
+
+    // ===============================================================
+    // 17. Văn bằng & Trình độ Chuyên môn (employee_degrees)
+    // ===============================================================
+    match /employee_degrees/{degreeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        isBoardOrAdmin() ||
+        request.resource.data.employeeId == request.auth.uid
+      );
+      allow update, delete: if isAuthenticated() && (
+        isBoardOrAdmin() ||
+        (resource != null && resource.data.employeeId == request.auth.uid)
+      );
+    }
+
+    // ===============================================================
+    // 18. Mạng Xã Hội & Kênh Liên Lạc CBNV (employee_socials)
+    // ===============================================================
+    match /employee_socials/{socialId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        isBoardOrAdmin() ||
+        request.resource.data.employeeId == request.auth.uid
+      );
+      allow update, delete: if isAuthenticated() && (
+        isBoardOrAdmin() ||
+        (resource != null && resource.data.employeeId == request.auth.uid)
+      );
+    }
   }
 }
+
 
