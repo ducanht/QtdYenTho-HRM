@@ -17,10 +17,11 @@
 1. **Quản trị danh bạ trích ngang 13 Cán bộ Nhân viên chính thức** (không dùng dữ liệu giả/mock, chuẩn hóa ID `emp-001` đến `emp-013`, Zero Duplicate Policy):
    - Quản lý đầy đủ thông tin: Họ và tên, mã cán bộ (`CB01` đến `CB13`), số CCCD (12 chữ số), ngày sinh, giới tính, chức danh chính quyền, chức vụ Đảng - Đoàn thể, địa bàn phụ trách, trình độ chuyên môn, loại hợp đồng, số điện thoại và email công vụ.
 2. **Theo dõi Quá trình Luân chuyển công tác & Timeline Mốc Công Tác (`work_history`)**:
-   - Theo quy định của Ngân hàng Nhà nước và Quy chế quản trị nội bộ, các vị trí nhạy cảm tại Quỹ tín dụng nhân dân (CBTD, Kế toán, Thủ quỹ, BKS) **phải được giám sát luân chuyển định kỳ** nhằm phòng ngừa rủi ro đạo đức và rủi ro hoạt động tín dụng.
-   - **Mốc thời gian Timeline chuyên sâu (`startDate`, `endDate`, `isCurrent`, `position`, `department`, `assignedArea`)**: Theo dõi trọn đời quá trình công tác từ ngày tuyển dụng, qua các lần luân chuyển, điều động, bổ nhiệm chức danh và phân công địa bàn quản lý tín dụng.
-   - **Tự động đồng bộ vị trí công tác**: Khi cập nhật hoặc thêm mốc công tác hiện tại (`isCurrent: true`), hệ thống tự động đồng bộ chức vụ và địa bàn vào hồ sơ cán bộ.
-   - **Cấu hình luân chuyển linh hoạt (`transferRules`)**: Vị trí nào phải luân chuyển và thời hạn cụ thể (số tháng chu kỳ và số tháng cảnh báo trước) được đưa vào cấu hình CSDL `system_settings/module_hr`.
+   - Theo quy định của Ngân hàng Nhà nước và Quy chế quản trị nội bộ, **chỉ có duy nhất Cán bộ Tín dụng (CBTD) phụ trách địa bàn là đối tượng bắt buộc phải luân chuyển định kỳ** nhằm phòng ngừa rủi ro đạo đức và rủi ro hoạt động tín dụng.
+   - Các chức danh thuộc **Hội đồng quản trị, Ban Kiểm soát, Ban Điều hành** hoạt động theo nhiệm kỳ bầu cử và phê chuẩn của NHNN; các vị trí **Kế toán, Thủ quỹ** hoạt động theo phân công nhiệm vụ nội bộ của Ban Giám đốc, **tuyệt đối không thuộc diện luân chuyển địa bàn**.
+   - **Mốc thời gian Timeline chuyên sâu (`startDate`, `endDate`, `isCurrent`, `position`, `department`, `assignedArea`, `workLocation`)**: Theo dõi trọn đời quá trình công tác từ ngày tuyển dụng, qua các lần điều động, bổ nhiệm chức danh, phân công nơi làm việc và phân công địa bàn quản lý tín dụng.
+   - **Tự động đồng bộ vị trí công tác**: Khi cập nhật hoặc thêm mốc công tác hiện tại (`isCurrent: true`), hệ thống tự động đồng bộ chức vụ, nơi làm việc và địa bàn vào hồ sơ cán bộ.
+   - **Cấu hình chu kỳ luân chuyển chuyên biệt cho CBTD (`creditRotationMonths`, `creditWarningMonths`)**: Thiết lập chu kỳ luân chuyển địa bàn (mặc định 36 tháng) và thời gian cảnh báo trước khi đến hạn (mặc định 6 tháng) trong `system_settings/module_hr`. Tinh giản hoàn toàn bảng 13 chức vụ thừa để giữ giao diện chuẩn mực, tinh gọn.
    - **Vị trí công tác kiêm nhiệm Quản trị & Điều hành**: Chuẩn hóa chức danh *"Thành viên HĐQT - Giám đốc"* thuộc Ban Điều hành, phản ánh đúng cơ cấu thực tế tại Quỹ tín dụng nhân dân.
 3. **Quản Lý Danh Mục Văn Bằng Chuyên Môn Đa Cấp (`employee_degrees`)**:
    - Tách riêng thành một bảng CSDL độc lập, hỗ trợ một cán bộ sở hữu nhiều văn bằng (ví dụ: Đại học Luật + Đại học Kinh tế, hoặc Đại học + Thạc sĩ).
@@ -39,7 +40,7 @@
    - Xóa cán bộ (`deleteEmployeeProfile`): Tích hợp hộp thoại xác nhận an toàn, xóa đồng bộ tài khoản và danh bạ nhân sự.
 8. **Thống Kê Cơ Cấu Nhân Lực & Trình Độ Chuyên Môn**:
    - Thống kê tỷ lệ và cơ cấu học vấn toàn Quỹ được tính toán động trực tiếp từ danh mục văn bằng `employee_degrees`, ưu tiên văn bằng cao nhất của mỗi cán bộ.
-   - Bảng giám sát thời hạn luân chuyển toàn Quỹ tự động áp dụng `transferRules` cấu hình động.
+   - Bảng giám sát thời hạn luân chuyển địa bàn CBTD tự động áp dụng chu kỳ cấu hình động (`creditRotationMonths`).
 9. **Giao Diện Sidebar Danh Bạ Tinh Gọn (One-Tap Search)**:
    - Loại bỏ hoàn toàn thanh bộ lọc phòng ban cuộn ngang thừa thãi, tối đa hóa chiều cao danh sách cán bộ.
    - Tìm kiếm tức thì tích hợp đa trường (Họ tên, Chức vụ, Phòng ban, Số điện thoại, Địa bàn phụ trách).
@@ -47,9 +48,10 @@
    - Bản in Sơ yếu lý lịch trích ngang A4 chuẩn mẫu 2C/TCTD với Bảng quá trình công tác timeline và Bảng danh mục văn bằng chuyên môn.
    - Xuất file Word (`.docx`) chuẩn thể thức văn bản hành chính Việt Nam với đầy đủ bảng biểu thâm niên, quá trình công tác và hồ sơ văn bằng đào tạo.
    - Xuất file Excel (`.xlsx`) đa sheet chuyên nghiệp (4 sheets: Trích ngang 2C, Quá trình công tác, Văn bằng chuyên môn, Mạng xã hội).
-9. **Cấu Hình Phân Hệ & Phân Quyền Truy Cập (`system_settings/module_hr`)**:
+11. **Cấu Hình Phân Hệ & Phân Quyền Truy Cập (`system_settings/module_hr`)**:
    - `allowStaffViewDirectory`: Phân quyền xem danh bạ toàn Quỹ vs Chế độ bảo mật cá nhân (cán bộ thường chỉ xem hồ sơ của chính mình; Lãnh đạo xem toàn bộ cán bộ).
-   - `transferRules`: Danh mục quy tắc luân chuyển theo từng chức danh (gồm `positionId`, `positionName`, `requiresTransfer`, `maxMonths`, `warningMonths`).
+   - `creditRotationMonths` / `transferMaxMonths`: Chu kỳ luân chuyển địa bàn dành riêng cho Cán bộ Tín dụng (mặc định 36 tháng).
+   - `creditWarningMonths` / `transferWarningMonths`: Thời gian phát cảnh báo trước khi đến hạn luân chuyển địa bàn (mặc định 6 tháng).
    - `canStaffUploadTraining`: Quyền tự tải lên văn bằng chứng chỉ chuyên môn.
 
 ---
