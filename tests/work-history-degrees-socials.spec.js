@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { 
   DEFAULT_EMPLOYEE_DEGREES, 
   DEFAULT_EMPLOYEE_SOCIALS, 
+  DEFAULT_EMPLOYEE_CONTRACTS,
+  DEFAULT_CONTRACT_ANNEXES,
   OFFICIAL_WORK_HISTORY,
   OFFICIAL_STAFF_EMPLOYEES,
   DEFAULT_MODULE_HR_SETTINGS,
@@ -21,7 +23,13 @@ import {
   deleteEmployeeSocial,
   subscribeWorkHistory,
   saveWorkHistory,
-  deleteWorkHistory
+  deleteWorkHistory,
+  subscribeEmployeeContracts,
+  saveEmployeeContract,
+  deleteEmployeeContract,
+  subscribeContractAnnexes,
+  saveContractAnnex,
+  deleteContractAnnex
 } from '../src/lib/services';
 import { TRANSFER_TYPES } from '../src/features/employees/components/WorkHistoryPeriodModal';
 import { 
@@ -39,7 +47,7 @@ import {
 test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Riêng Biệt (Degrees, Socials, Timeline Work History)', () => {
   test('Kiểm tra dữ liệu mẫu và cấu trúc CSDL 3 bảng riêng biệt', async () => {
     // 1. Kiểm tra Schema Version và Core Collections
-    expect(CURRENT_SCHEMA_VERSION).toContain('v5.');
+    expect(CURRENT_SCHEMA_VERSION).toMatch(/v(5|6)\./);
     expect(CORE_COLLECTIONS).toContain('employee_degrees');
     expect(CORE_COLLECTIONS).toContain('employee_socials');
     expect(CORE_COLLECTIONS).toContain('work_history');
@@ -186,7 +194,7 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     await expect(page.getByText(/Quá Trình Công Tác & Luân Chuyển/i).first()).toBeVisible({ timeout: 15000 });
 
     // Kiểm tra nút "+ Thêm mốc công tác" hiển thị cho Quản trị viên
-    const addPeriodBtn = page.getByRole('button', { name: /\+ Thêm mốc công tác/i });
+    const addPeriodBtn = page.getByRole('button', { name: /\+? ?Thêm mốc công tác/i });
     await expect(addPeriodBtn).toBeVisible({ timeout: 10000 });
 
     // Nhấp nút mở modal
@@ -197,7 +205,14 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     await expect(page.getByText('Thời Gian Công Tác')).toBeVisible();
     await expect(page.getByText(/Đang đảm nhiệm \(Mốc hiện tại\)/i)).toBeVisible();
     await expect(page.getByText(/Phòng ban/i).first()).toBeVisible();
-    await expect(page.getByText(/Địa bàn quản lý/i).first()).toBeVisible();
+    await expect(page.getByText(/Nơi làm việc/i).first()).toBeVisible();
+
+    // Kiểm tra trường Địa bàn quản lý tín dụng xuất hiện động khi chức vụ là Cán bộ tín dụng thuộc Phòng Tín dụng
+    const deptSelect = page.locator('select').first();
+    await deptSelect.selectOption('Phòng Tín dụng');
+    const posInput = page.getByPlaceholder(/VD: Cán bộ tín dụng/i);
+    await posInput.fill('Cán bộ tín dụng');
+    await expect(page.getByText(/Địa bàn quản lý tín dụng/i).first()).toBeVisible({ timeout: 5000 });
 
     // Nhấp nút Hủy bỏ để đóng modal
     await page.getByRole('button', { name: /Hủy bỏ/i }).click();
@@ -295,8 +310,8 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
       expect(emp.workLocation).toContain('Trụ sở chính');
     }
 
-    // 5. Kiểm tra Schema Version mới v5.9
-    expect(CURRENT_SCHEMA_VERSION).toBe('2026.10.12_v5.9_work_locations_and_credit_areas_subsystem');
+    // 5. Kiểm tra Schema Version mới v6.0
+    expect(CURRENT_SCHEMA_VERSION).toBe('2026.10.13_v6.0_contracts_annexes_and_overview_config');
   });
 
   test('Kiểm tra Cấu hình Luân chuyển Địa bàn Cán bộ Tín dụng (CBTD) và Loại bỏ Bảng Chức danh thừa', async () => {
@@ -315,6 +330,54 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
       // HĐQT, BKS, Giám đốc, Kế toán, Thủ quỹ tuyệt đối không thuộc diện luân chuyển địa bàn
       expect(isCreditOfficerRole(nonCBTD.position, nonCBTD.department)).toBe(false);
     }
+  });
+
+  test('Kiểm tra Bảng Hợp Đồng Lao Động (employee_contracts), Phụ Lục HĐLĐ (employee_contract_annexes) và Cấu hình Hiển thị', async () => {
+    // 1. Core Collections
+    expect(CORE_COLLECTIONS).toContain('employee_contracts');
+    expect(CORE_COLLECTIONS).toContain('employee_contract_annexes');
+
+    // 2. DEFAULT_EMPLOYEE_CONTRACTS
+    expect(Array.isArray(DEFAULT_EMPLOYEE_CONTRACTS)).toBe(true);
+    expect(DEFAULT_EMPLOYEE_CONTRACTS.length).toBe(13); // 13 cán bộ chính thức
+    for (const contract of DEFAULT_EMPLOYEE_CONTRACTS) {
+      expect(contract).toHaveProperty('id');
+      expect(contract).toHaveProperty('employeeId');
+      expect(contract).toHaveProperty('contractNumber');
+      expect(contract).toHaveProperty('contractType');
+      expect(contract).toHaveProperty('signDate');
+      expect(contract).toHaveProperty('effectiveDate');
+      expect(contract).toHaveProperty('isCurrent', true);
+      expect(contract).toHaveProperty('status', 'ACTIVE');
+    }
+
+    // 3. DEFAULT_CONTRACT_ANNEXES
+    expect(Array.isArray(DEFAULT_CONTRACT_ANNEXES)).toBe(true);
+    expect(DEFAULT_CONTRACT_ANNEXES.length).toBeGreaterThan(0);
+    for (const annex of DEFAULT_CONTRACT_ANNEXES) {
+      expect(annex).toHaveProperty('id');
+      expect(annex).toHaveProperty('contractId');
+      expect(annex).toHaveProperty('annexNumber');
+      expect(annex).toHaveProperty('signDate');
+      expect(annex).toHaveProperty('annexType');
+      expect(annex).toHaveProperty('content');
+    }
+
+    // 4. Contract Services API
+    expect(typeof subscribeEmployeeContracts).toBe('function');
+    expect(typeof saveEmployeeContract).toBe('function');
+    expect(typeof deleteEmployeeContract).toBe('function');
+    expect(typeof subscribeContractAnnexes).toBe('function');
+    expect(typeof saveContractAnnex).toBe('function');
+    expect(typeof deleteContractAnnex).toBe('function');
+
+    // 5. Cấu hình hiển thị Tổng quan trong DEFAULT_MODULE_HR_SETTINGS
+    expect(DEFAULT_MODULE_HR_SETTINGS).toHaveProperty('overviewDisplayConfig');
+    expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showKpis).toBe(true);
+    expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showContractStructure).toBe(true);
+    expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showEducationStructure).toBe(true);
+    expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showCreditRotationMonitoring).toBe(true);
+    expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showDepartmentDistribution).toBe(true);
   });
 });
 

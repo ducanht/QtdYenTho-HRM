@@ -288,6 +288,26 @@ service cloud.firestore {
         (resource != null && resource.data.employeeId == request.auth.uid)
       );
     }
+
+    // ===============================================================
+    // 19. Hợp đồng Lao động (employee_contracts)
+    // Cán bộ đăng nhập xem được thông tin hợp đồng của Quỹ;
+    // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
+    // ===============================================================
+    match /employee_contracts/{contractId} {
+      allow read: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
+    }
+
+    // ===============================================================
+    // 20. Phụ lục Hợp đồng Lao động (employee_contract_annexes)
+    // Cán bộ đăng nhập xem được phụ lục hợp đồng;
+    // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
+    // ===============================================================
+    match /employee_contract_annexes/{annexId} {
+      allow read: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
+    }
   }
 }
 

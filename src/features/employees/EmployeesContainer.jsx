@@ -10,8 +10,11 @@ import {
   subscribeDepartments,
   subscribePositions,
   subscribeSubsystemConfig,
+  saveSubsystemConfig,
   subscribeEmployeeDegrees,
-  subscribeEmployeeSocials
+  subscribeEmployeeSocials,
+  subscribeEmployeeContracts,
+  subscribeContractAnnexes
 } from '../../lib/services';
 import { DEFAULT_POSITIONS } from '../../lib/systemDefaults';
 import { getOfficialStaff } from '../../lib/evaluationUtils';
@@ -24,6 +27,8 @@ import EmployeeMasterSidebar from './components/EmployeeMasterSidebar';
 
 // Tab Detail Views
 import EmployeeProfileDetail from './components/EmployeeProfileDetail';
+import EmployeeOverviewTab from './components/EmployeeOverviewTab';
+import EmployeeContractHistoryTab from './components/EmployeeContractHistoryTab';
 import EmployeeTransferHistory from './components/EmployeeTransferHistory';
 import EmployeeTrainingTab from './components/EmployeeTrainingTab';
 import EmployeeAnalyticsTab from './components/EmployeeAnalyticsTab';
@@ -34,6 +39,7 @@ import EmployeeFormModal from './components/EmployeeFormModal';
 import TransferDecisionModal from './components/TransferDecisionModal';
 import AddTrainingModal from './components/AddTrainingModal';
 import EmployeeA4PrintModal from './components/EmployeeA4PrintModal';
+import OverviewDisplayConfigModal, { DEFAULT_OVERVIEW_DISPLAY_CONFIG } from './components/OverviewDisplayConfigModal';
 
 /**
  * EmployeesContainer: Bộ điều phối chính Phân hệ Quản trị Nhân sự
@@ -55,6 +61,8 @@ const EmployeesContainer = () => {
   const [trainings, setTrainings] = useState([]);
   const [degrees, setDegrees] = useState([]);
   const [socials, setSocials] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [contractAnnexes, setContractAnnexes] = useState([]);
   const [hrConfig, setHrConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -85,17 +93,57 @@ const EmployeesContainer = () => {
   // Bộ lọc tìm kiếm Cán bộ Sidebar
   const [searchTerm, setSearchTerm] = useState('');
 
-  // URL State Sync
-  const urlTab = searchParams.get('tab') || 'PROFILE';
+  // URL State Sync: Mặc định OVERVIEW (nếu chưa chọn cán bộ) hoặc PROFILE (nếu đã truyền empId)
+  const urlTab = searchParams.get('tab') || (searchParams.get('empId') ? 'PROFILE' : 'OVERVIEW');
   const urlEmpId = searchParams.get('empId') || '';
 
   const [activeTab, setActiveTabState] = useState(urlTab);
   const [selectedEmpId, setSelectedEmpIdState] = useState(urlEmpId);
 
+  // Cấu hình hiển thị màn hình Tổng quan
+  const [isDisplayConfigModalOpen, setIsDisplayConfigModalOpen] = useState(false);
+
+  const overviewDisplayConfig = useMemo(() => {
+    let localSaved = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('qtd_hrm_overview_display_config');
+        if (raw) localSaved = JSON.parse(raw);
+      } catch {
+        // bỏ qua lỗi đọc storage
+      }
+    }
+    return localSaved || hrConfig?.overviewDisplayConfig || DEFAULT_OVERVIEW_DISPLAY_CONFIG;
+  }, [hrConfig?.overviewDisplayConfig]);
+
+  const handleSaveDisplayConfig = useCallback(async (newConfig) => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('qtd_hrm_overview_display_config', JSON.stringify(newConfig));
+      }
+      if (canManage) {
+        await saveSubsystemConfig('hr', {
+          overviewDisplayConfig: newConfig,
+        });
+      }
+      setHrConfig((prev) => ({
+        ...(prev || {}),
+        overviewDisplayConfig: newConfig,
+      }));
+    } catch (err) {
+      console.error('Lỗi lưu cấu hình hiển thị:', err);
+    }
+  }, [canManage]);
+
+  const handleSelectEmployeeForProfile = useCallback((empId) => {
+    setSelectedEmpIdState(empId);
+    setActiveTabState('PROFILE');
+  }, []);
+
   // Chặn truy cập tab SETTINGS nếu không có quyền
   useEffect(() => {
     if (activeTab === 'SETTINGS' && !canManage) {
-      setActiveTabState('PROFILE');
+      setActiveTabState('OVERVIEW');
     }
   }, [activeTab, canManage]);
 
@@ -145,7 +193,7 @@ const EmployeesContainer = () => {
 
   // Đồng bộ State -> URL
   useEffect(() => {
-    const curTab = searchParams.get('tab') || 'PROFILE';
+    const curTab = searchParams.get('tab') || (searchParams.get('empId') ? 'PROFILE' : 'OVERVIEW');
     const curEmpId = searchParams.get('empId') || '';
 
     const tabChanged = activeTab && activeTab !== curTab;
@@ -155,14 +203,14 @@ const EmployeesContainer = () => {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          if (activeTab && activeTab !== 'PROFILE') {
+          if (activeTab && activeTab !== 'OVERVIEW') {
             next.set('tab', activeTab);
           } else {
             next.delete('tab');
           }
-          if (selectedEmpId) {
+          if (selectedEmpId && activeTab !== 'OVERVIEW') {
             next.set('empId', selectedEmpId);
-          } else {
+          } else if (activeTab === 'OVERVIEW') {
             next.delete('empId');
           }
           return next;
@@ -174,7 +222,7 @@ const EmployeesContainer = () => {
 
   // Đồng bộ URL -> State (Back/Forward)
   useEffect(() => {
-    const curTab = searchParams.get('tab') || 'PROFILE';
+    const curTab = searchParams.get('tab') || (searchParams.get('empId') ? 'PROFILE' : 'OVERVIEW');
     const curEmpId = searchParams.get('empId') || '';
     if (curTab !== activeTab) {
       setActiveTabState(curTab);
@@ -227,6 +275,14 @@ const EmployeesContainer = () => {
       setSocials(list || []);
     });
 
+    const unsubContracts = subscribeEmployeeContracts(null, (list) => {
+      setContracts(list || []);
+    });
+
+    const unsubAnnexes = subscribeContractAnnexes(null, (list) => {
+      setContractAnnexes(list || []);
+    });
+
     return () => {
       unsubEmp();
       unsubDept();
@@ -236,6 +292,8 @@ const EmployeesContainer = () => {
       unsubConfig();
       unsubDegrees();
       unsubSocials();
+      unsubContracts();
+      unsubAnnexes();
     };
   }, []);
 
@@ -297,7 +355,12 @@ const EmployeesContainer = () => {
             <EmployeeMasterSidebar
               employees={viewableEmployees}
               selectedEmployeeId={selectedEmpId}
-              onSelectEmployee={setSelectedEmpIdState}
+              onSelectEmployee={(empId) => {
+                setSelectedEmpIdState(empId);
+                if (activeTab === 'OVERVIEW') {
+                  setActiveTabState('PROFILE');
+                }
+              }}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               hrConfig={hrConfig}
@@ -308,6 +371,19 @@ const EmployeesContainer = () => {
 
           {/* CỘT PHẢI (DETAIL): Nội dung chi tiết theo từng Tab */}
           <div className="lg:col-span-8 xl:col-span-8">
+            {activeTab === 'OVERVIEW' && (
+              <EmployeeOverviewTab
+                employees={viewableEmployees}
+                departments={departments}
+                degrees={degrees}
+                contracts={contracts}
+                hrConfig={hrConfig}
+                overviewDisplayConfig={overviewDisplayConfig}
+                onOpenDisplayConfigModal={() => setIsDisplayConfigModalOpen(true)}
+                onSelectEmployeeForProfile={handleSelectEmployeeForProfile}
+              />
+            )}
+
             {activeTab === 'PROFILE' && (
               <EmployeeProfileDetail
                 emp={currentEmp}
@@ -328,9 +404,11 @@ const EmployeesContainer = () => {
               />
             )}
 
-            {activeTab === 'TRANSFERS' && (
-              <EmployeeTransferHistory
+            {(activeTab === 'CONTRACTS' || activeTab === 'TRANSFERS') && (
+              <EmployeeContractHistoryTab
                 emp={currentEmp}
+                contracts={contracts}
+                contractAnnexes={contractAnnexes}
                 workHistory={workHistory}
                 hrConfig={hrConfig}
                 departments={departments}
@@ -345,16 +423,6 @@ const EmployeesContainer = () => {
                 trainings={trainings}
                 onOpenAddTraining={handleOpenAddTraining}
                 canManage={canManage}
-              />
-            )}
-
-            {activeTab === 'ANALYTICS' && (
-              <EmployeeAnalyticsTab
-                employees={viewableEmployees}
-                departments={departments}
-                degrees={degrees}
-                hrConfig={hrConfig}
-                onSelectEmployeeForTransfer={handleSelectEmployeeForTransfer}
               />
             )}
 
@@ -434,6 +502,15 @@ const EmployeesContainer = () => {
           trainings={trainings}
           degrees={degrees}
           socials={socials}
+        />
+      )}
+
+      {isDisplayConfigModalOpen && (
+        <OverviewDisplayConfigModal
+          isOpen={isDisplayConfigModalOpen}
+          onClose={() => setIsDisplayConfigModalOpen(false)}
+          config={overviewDisplayConfig}
+          onSaveConfig={handleSaveDisplayConfig}
         />
       )}
     </div>

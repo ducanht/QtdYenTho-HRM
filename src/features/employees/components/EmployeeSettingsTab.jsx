@@ -7,7 +7,8 @@ import {
   Eye,
   MapPin,
   CalendarClock,
-  Clock
+  Clock,
+  Sliders
 } from 'lucide-react';
 import { saveSubsystemConfig } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
@@ -34,6 +35,13 @@ const EmployeeSettingsTab = ({
   const [creditRotationMonths, setCreditRotationMonths] = useState(36);
   const [creditWarningMonths, setCreditWarningMonths] = useState(6);
 
+  // Cấu hình hiển thị màn hình Tổng quan
+  const [showKpis, setShowKpis] = useState(true);
+  const [showContractStructure, setShowContractStructure] = useState(true);
+  const [showEducationStructure, setShowEducationStructure] = useState(true);
+  const [showCreditRotationMonitoring, setShowCreditRotationMonitoring] = useState(true);
+  const [showDepartmentDistribution, setShowDepartmentDistribution] = useState(true);
+
   useEffect(() => {
     if (hrConfig) {
       if (hrConfig.allowStaffViewDirectory !== undefined) {
@@ -46,6 +54,13 @@ const EmployeeSettingsTab = ({
       const warnMonths = hrConfig.creditWarningMonths ?? hrConfig.transferWarningMonths ?? hrConfig.warningMonths ?? 6;
       setCreditRotationMonths(rotMonths);
       setCreditWarningMonths(warnMonths);
+
+      const ovConfig = hrConfig.overviewDisplayConfig || {};
+      setShowKpis(ovConfig.showKpis !== false);
+      setShowContractStructure(ovConfig.showContractStructure !== false);
+      setShowEducationStructure(ovConfig.showEducationStructure !== false);
+      setShowCreditRotationMonitoring(ovConfig.showCreditRotationMonitoring !== false);
+      setShowDepartmentDistribution(ovConfig.showDepartmentDistribution !== false);
     }
   }, [hrConfig]);
 
@@ -68,6 +83,13 @@ const EmployeeSettingsTab = ({
         canStaffUploadTraining,
         creditRotationMonths: rotMonths,
         creditWarningMonths: warnMonths,
+        overviewDisplayConfig: {
+          showKpis,
+          showContractStructure,
+          showEducationStructure,
+          showCreditRotationMonitoring,
+          showDepartmentDistribution,
+        },
         // Tương thích ngược các bảng liên quan
         transferMaxMonths: rotMonths,
         transferWarningMonths: warnMonths,
@@ -191,7 +213,94 @@ const EmployeeSettingsTab = ({
         </div>
       </div>
 
-      {/* 2. Danh Mục Phòng Ban */}
+      {/* 2. Cấu Hình Hiển Thị Dashboard Tổng Quan Nhân Lực */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div>
+            <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-emerald-700" />
+              <span>Cấu Hình Hiển Thị Dashboard Tổng Quan Nhân Lực</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Bật hoặc tắt các khối widget báo cáo hiển thị trên màn hình Tổng quan
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showKpis}
+              onChange={(e) => setShowKpis(e.target.checked)}
+              disabled={!canManage}
+              className="mt-0.5 w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+            />
+            <div>
+              <span className="font-bold text-slate-800 block">Thẻ chỉ số nhân lực KPI</span>
+              <span className="text-[11px] text-slate-500 block">Tổng CBNV, Đảng viên, Giới tính, Hạn CBTD</span>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showContractStructure}
+              onChange={(e) => setShowContractStructure(e.target.checked)}
+              disabled={!canManage}
+              className="mt-0.5 w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+            />
+            <div>
+              <span className="font-bold text-slate-800 block">Cơ cấu Hợp đồng lao động</span>
+              <span className="text-[11px] text-slate-500 block">Tỷ lệ các loại HĐ &amp; cảnh báo tái ký</span>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showEducationStructure}
+              onChange={(e) => setShowEducationStructure(e.target.checked)}
+              disabled={!canManage}
+              className="mt-0.5 w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+            />
+            <div>
+              <span className="font-bold text-slate-800 block">Cơ cấu Trình độ chuyên môn</span>
+              <span className="text-[11px] text-slate-500 block">Văn bằng cao nhất theo chuẩn NHNN</span>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showCreditRotationMonitoring}
+              onChange={(e) => setShowCreditRotationMonitoring(e.target.checked)}
+              disabled={!canManage}
+              className="mt-0.5 w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+            />
+            <div>
+              <span className="font-bold text-slate-800 block">Bảng giám sát luân chuyển CBTD</span>
+              <span className="text-[11px] text-slate-500 block">Thời gian phụ trách địa bàn tín dụng</span>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showDepartmentDistribution}
+              onChange={(e) => setShowDepartmentDistribution(e.target.checked)}
+              disabled={!canManage}
+              className="mt-0.5 w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+            />
+            <div>
+              <span className="font-bold text-slate-800 block">Phân bổ nhân sự theo Bộ phận</span>
+              <span className="text-[11px] text-slate-500 block">Tỷ lệ cơ cấu phòng ban hoạt động</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* 3. Danh Mục Phòng Ban */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">

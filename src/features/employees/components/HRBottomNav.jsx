@@ -1,9 +1,9 @@
 import React from 'react';
 import { 
+  Building2,
   UserCheck, 
-  ArrowRightLeft, 
+  FileText, 
   GraduationCap, 
-  BarChart3, 
   Sliders 
 } from 'lucide-react';
 
@@ -12,15 +12,15 @@ import {
  * Tối ưu thao tác 1 chạm bằng ngón tay cái, tự động ẩn trên Desktop/iPad
  */
 const HRBottomNav = ({
-  activeTab = 'PROFILE',
+  activeTab = 'OVERVIEW',
   onChangeTab,
   canManage = false,
 }) => {
   const navItems = [
+    { id: 'OVERVIEW', label: 'Tổng quan', icon: Building2, visible: true },
     { id: 'PROFILE', label: 'Hồ sơ', icon: UserCheck, visible: true },
-    { id: 'TRANSFERS', label: 'Luân chuyển', icon: ArrowRightLeft, visible: true },
+    { id: 'CONTRACTS', label: 'Hợp đồng', icon: FileText, visible: true },
     { id: 'TRAINING', label: 'Đào tạo', icon: GraduationCap, visible: true },
-    { id: 'ANALYTICS', label: 'Cơ cấu', icon: BarChart3, visible: true },
     { id: 'SETTINGS', label: 'Cấu hình', icon: Sliders, visible: canManage },
   ].filter((item) => item.visible);
 

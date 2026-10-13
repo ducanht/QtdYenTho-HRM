@@ -34,13 +34,17 @@ export const TRANSFER_TYPES = [
 const WorkHistoryPeriodModal = ({
   isOpen,
   onClose,
-  selectedEmp,
-  editingRecord = null,
+  selectedEmp: propSelectedEmp,
+  emp,
+  editingRecord: propEditingRecord,
+  record,
   departments = [],
   positions = [],
   hrConfig = null,
   onSuccess,
 }) => {
+  const selectedEmp = propSelectedEmp || emp;
+  const editingRecord = propEditingRecord || record || null;
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
 

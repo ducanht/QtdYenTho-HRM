@@ -1736,3 +1736,300 @@ export const deleteEmployeeSocial = async (socialId) => {
   }
 };
 
+// ============================================================================
+// 17. HỢP ĐỒNG LAO ĐỘNG (employee_contracts collection)
+// Quản lý hồ sơ hợp đồng lao động chính thức của CBNV Quỹ
+// ============================================================================
+export const subscribeEmployeeContracts = (employeeId = null, callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    let q = collection(db, 'employee_contracts');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    }
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => {
+          if (a.isCurrent && !b.isCurrent) return -1;
+          if (!a.isCurrent && b.isCurrent) return 1;
+          return (b.signDate || '').localeCompare(a.signDate || '');
+        });
+        callback(list);
+      },
+      (error) => {
+        console.warn('Lỗi onSnapshot employee_contracts (sử dụng bộ nhớ cục bộ dự phòng):', error.message || error);
+        try {
+          const raw = typeof window !== 'undefined' ? localStorage.getItem('qtd_hrm_employee_contracts') : null;
+          if (raw) {
+            callback(JSON.parse(raw));
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot employee_contracts:', err);
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('qtd_hrm_employee_contracts') : null;
+      if (raw) {
+        callback(JSON.parse(raw));
+        return () => {};
+      }
+    } catch {
+      // ignore
+    }
+    callback([]);
+    return () => {};
+  }
+};
+
+export const getEmployeeContracts = async (employeeId = null) => {
+  if (!db) return [];
+  try {
+    let q = collection(db, 'employee_contracts');
+    if (employeeId) {
+      q = query(q, where('employeeId', '==', employeeId));
+    }
+    const snap = await getDocs(q);
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    list.sort((a, b) => {
+      if (a.isCurrent && !b.isCurrent) return -1;
+      if (!a.isCurrent && b.isCurrent) return 1;
+      return (b.signDate || '').localeCompare(a.signDate || '');
+    });
+    return list;
+  } catch (err) {
+    console.error('Lỗi getEmployeeContracts:', err);
+    return [];
+  }
+};
+
+export const saveEmployeeContract = async (contractData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!contractData.employeeId) throw new Error('Thiếu mã cán bộ nhân viên');
+
+  const targetId = contractData.id || `contract_${generateUUID()}`;
+  const nowIso = new Date().toISOString();
+
+  // Làm sạch các trường undefined
+  const cleanData = {};
+  Object.keys(contractData || {}).forEach((k) => {
+    if (contractData[k] !== undefined) {
+      cleanData[k] = contractData[k];
+    }
+  });
+
+  const isCurrent = cleanData.isCurrent !== undefined ? Boolean(cleanData.isCurrent) : true;
+
+  const payload = {
+    ...cleanData,
+    id: targetId,
+    contractNumber: cleanData.contractNumber ? cleanData.contractNumber.trim() : '',
+    contractType: cleanData.contractType || 'Không xác định thời hạn',
+    signDate: cleanData.signDate || '',
+    effectiveDate: cleanData.effectiveDate || cleanData.signDate || '',
+    expirationDate: cleanData.expirationDate || '',
+    jobTitle: cleanData.jobTitle ? cleanData.jobTitle.trim() : '',
+    department: cleanData.department ? cleanData.department.trim() : '',
+    workLocation: cleanData.workLocation ? cleanData.workLocation.trim() : '',
+    wageType: cleanData.wageType ? cleanData.wageType.trim() : 'Lương theo ngạch bậc & chức danh',
+    baseSalary: cleanData.baseSalary ? cleanData.baseSalary.trim() : '',
+    signerName: cleanData.signerName ? cleanData.signerName.trim() : '',
+    signerPosition: cleanData.signerPosition ? cleanData.signerPosition.trim() : '',
+    status: cleanData.status || 'ACTIVE',
+    isCurrent,
+    attachmentUrl: cleanData.attachmentUrl || '',
+    notes: cleanData.notes ? cleanData.notes.trim() : '',
+    updatedAt: nowIso,
+    serverTime: serverTimestamp(),
+  };
+
+  if (!payload.createdAt) {
+    payload.createdAt = nowIso;
+  }
+
+  try {
+    // Nếu hợp đồng này được đánh dấu isCurrent = true, bỏ cờ isCurrent của các hợp đồng khác của cùng cán bộ
+    if (isCurrent && payload.employeeId) {
+      const existing = await getEmployeeContracts(payload.employeeId);
+      for (const item of existing) {
+        if (item.id !== targetId && item.isCurrent) {
+          await setDoc(doc(db, 'employee_contracts', item.id), { isCurrent: false, updatedAt: nowIso }, { merge: true });
+        }
+      }
+      // Đồng bộ contractType sang hồ sơ cán bộ (employees & users)
+      if (payload.contractType) {
+        await updateEmployeeProfile(payload.employeeId, { contractType: payload.contractType }).catch((e) => {
+          console.warn('Lỗi đồng bộ contractType sang hồ sơ:', e);
+        });
+      }
+    }
+
+    await setDoc(doc(db, 'employee_contracts', targetId), payload, { merge: true });
+    return { success: true, id: targetId, data: payload };
+  } catch (err) {
+    console.error('Lỗi lưu hợp đồng vào employee_contracts:', err);
+    throw err;
+  }
+};
+
+export const deleteEmployeeContract = async (contractId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!contractId) throw new Error('Thiếu ID hợp đồng cần xóa');
+
+  try {
+    await deleteDoc(doc(db, 'employee_contracts', contractId));
+    return { success: true, id: contractId };
+  } catch (err) {
+    console.error(`Lỗi xóa hợp đồng [${contractId}]:`, err);
+    throw err;
+  }
+};
+
+// ============================================================================
+// 18. PHỤ LỤC HỢP ĐỒNG LAO ĐỘNG (employee_contract_annexes collection)
+// Quản lý các sửa đổi, bổ sung HĐLĐ (Lương, chức danh, gia hạn, địa bàn)
+// ============================================================================
+export const subscribeContractAnnexes = (contractIdOrEmployeeId = null, callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    let q = collection(db, 'employee_contract_annexes');
+    if (contractIdOrEmployeeId) {
+      if (contractIdOrEmployeeId.startsWith('contract-') || contractIdOrEmployeeId.startsWith('contract_')) {
+        q = query(q, where('contractId', '==', contractIdOrEmployeeId));
+      } else {
+        q = query(q, where('employeeId', '==', contractIdOrEmployeeId));
+      }
+    }
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => (b.signDate || '').localeCompare(a.signDate || ''));
+        callback(list);
+      },
+      (error) => {
+        console.warn('Lỗi onSnapshot employee_contract_annexes (sử dụng bộ nhớ cục bộ dự phòng):', error.message || error);
+        try {
+          const raw = typeof window !== 'undefined' ? localStorage.getItem('qtd_hrm_employee_contract_annexes') : null;
+          if (raw) {
+            callback(JSON.parse(raw));
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot employee_contract_annexes:', err);
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('qtd_hrm_employee_contract_annexes') : null;
+      if (raw) {
+        callback(JSON.parse(raw));
+        return () => {};
+      }
+    } catch {
+      // ignore
+    }
+    callback([]);
+    return () => {};
+  }
+};
+
+export const getContractAnnexes = async (contractIdOrEmployeeId = null) => {
+  if (!db) return [];
+  try {
+    let q = collection(db, 'employee_contract_annexes');
+    if (contractIdOrEmployeeId) {
+      if (contractIdOrEmployeeId.startsWith('contract-') || contractIdOrEmployeeId.startsWith('contract_')) {
+        q = query(q, where('contractId', '==', contractIdOrEmployeeId));
+      } else {
+        q = query(q, where('employeeId', '==', contractIdOrEmployeeId));
+      }
+    }
+    const snap = await getDocs(q);
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    list.sort((a, b) => (b.signDate || '').localeCompare(a.signDate || ''));
+    return list;
+  } catch (err) {
+    console.error('Lỗi getContractAnnexes:', err);
+    return [];
+  }
+};
+
+export const saveContractAnnex = async (annexData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!annexData.contractId && !annexData.employeeId) throw new Error('Thiếu thông tin liên kết hợp đồng hoặc cán bộ');
+
+  const targetId = annexData.id || `annex_${generateUUID()}`;
+  const nowIso = new Date().toISOString();
+
+  // Làm sạch các trường undefined
+  const cleanData = {};
+  Object.keys(annexData || {}).forEach((k) => {
+    if (annexData[k] !== undefined) {
+      cleanData[k] = annexData[k];
+    }
+  });
+
+  const payload = {
+    ...cleanData,
+    id: targetId,
+    annexNumber: cleanData.annexNumber ? cleanData.annexNumber.trim() : '',
+    signDate: cleanData.signDate || '',
+    effectiveDate: cleanData.effectiveDate || cleanData.signDate || '',
+    annexType: cleanData.annexType || 'CHUC_DANH',
+    annexTypeLabel: cleanData.annexTypeLabel || 'Điều chỉnh chức danh & nhiệm vụ công tác',
+    content: cleanData.content ? cleanData.content.trim() : '',
+    signerName: cleanData.signerName ? cleanData.signerName.trim() : '',
+    signerPosition: cleanData.signerPosition ? cleanData.signerPosition.trim() : '',
+    attachmentUrl: cleanData.attachmentUrl || '',
+    notes: cleanData.notes ? cleanData.notes.trim() : '',
+    updatedAt: nowIso,
+    serverTime: serverTimestamp(),
+  };
+
+  if (!payload.createdAt) {
+    payload.createdAt = nowIso;
+  }
+
+  try {
+    await setDoc(doc(db, 'employee_contract_annexes', targetId), payload, { merge: true });
+    return { success: true, id: targetId, data: payload };
+  } catch (err) {
+    console.error('Lỗi lưu phụ lục vào employee_contract_annexes:', err);
+    throw err;
+  }
+};
+
+export const deleteContractAnnex = async (annexId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!annexId) throw new Error('Thiếu ID phụ lục cần xóa');
+
+  try {
+    await deleteDoc(doc(db, 'employee_contract_annexes', annexId));
+    return { success: true, id: annexId };
+  } catch (err) {
+    console.error(`Lỗi xóa phụ lục [${annexId}]:`, err);
+    throw err;
+  }
+};
+
+

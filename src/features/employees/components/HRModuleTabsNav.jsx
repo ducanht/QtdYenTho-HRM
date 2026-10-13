@@ -1,15 +1,15 @@
 import React from 'react';
 import { 
+  Building2,
   UserCheck, 
-  ArrowRightLeft, 
+  FileText, 
   GraduationCap, 
-  BarChart3, 
   Sliders 
 } from 'lucide-react';
 
 /**
  * HRModuleTabsNav: Thanh Menu Tab chuyển nhanh phân hệ Quản trị Nhân sự trên Desktop / iPad
- * Kế thừa phong cách thiết kế tinh gọn của Phân hệ Đánh giá Tín nhiệm
+ * Chuẩn hóa 5 phân khu chức năng mạch lạc theo nghiệp vụ Quỹ tín dụng nhân dân
  */
 const HRModuleTabsNav = ({
   activeTab,
@@ -17,10 +17,10 @@ const HRModuleTabsNav = ({
   canManage = false,
 }) => {
   const tabs = [
-    { id: 'PROFILE', label: 'Hồ sơ trích ngang', icon: UserCheck, show: true },
-    { id: 'TRANSFERS', label: 'Luân chuyển công tác', icon: ArrowRightLeft, show: true },
+    { id: 'OVERVIEW', label: 'Tổng quan nhân sự', icon: Building2, show: true },
+    { id: 'PROFILE', label: 'Thông tin nhân sự', icon: UserCheck, show: true },
+    { id: 'CONTRACTS', label: 'Hợp đồng & Luân chuyển', icon: FileText, show: true },
     { id: 'TRAINING', label: 'Đào tạo & Chứng chỉ', icon: GraduationCap, show: true },
-    { id: 'ANALYTICS', label: 'Cơ cấu & Thống kê', icon: BarChart3, show: true },
     { id: 'SETTINGS', label: 'Cấu hình & Phân quyền', icon: Sliders, show: canManage },
   ].filter((t) => t.show);
 
