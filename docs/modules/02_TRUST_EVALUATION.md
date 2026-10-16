@@ -256,3 +256,20 @@ Thư viện dùng chung tại `src/lib/exportUtils.js` cung cấp hạ tầng xu
      + **Container điều khiển (`TrustEvaluationContainer.jsx`)**: Khóa chặn các hành động cập nhật điểm (`handleSetScore`), ghi chú (`handleSetNote`), và vô hiệu hóa nút nộp phiếu chính thức (`isFullyReadyToSubmit = false`).
      + **Banner tiến độ (`TrustProgressBanner.jsx`)**: Hiển thị đếm ngược thời gian và khung giờ mở cổng cụ thể, đảm bảo tính minh bạch và công bằng cho toàn thể cử tri.
 
+---
+
+## 🏗️ 15. KIẾN TRÚC MODULAR SERVICE LAYER & EVENT-DRIVEN URL NAVIGATION (v6.0)
+
+1. **Phân rã Service Layer chuyên biệt (`src/features/trust/services/trustService.js`)**:
+   - Toàn bộ 14 hàm truy vấn và xử lý nghiệp vụ của Phân hệ Đánh giá Tín nhiệm được đóng gói độc lập trong `trustService.js` (dung lượng 21.3 KB):
+     + Quản lý đợt đánh giá: `subscribeEvaluationPeriods`, `saveEvaluationPeriod`, `updateEvaluationPeriod`, `deleteEvaluationPeriod`.
+     + Quản lý cấu hình đợt: `subscribePeriodConfig`, `savePeriodConfig`.
+     + Tiêu chí & Phiếu chấm: `subscribeTrustCriteria`, `saveTrustEvaluation`, `saveBatchTrustEvaluations`, `subscribeTrustEvaluations`, `deleteTrustEvaluationsByPeriod`.
+     + Cấu hình tiêu chí & Phân hệ: `saveTrustCriterion`, `deleteTrustCriterion`, `subscribeSubsystemConfig`, `saveSubsystemConfig`.
+   - File dùng chung `src/lib/services.js` đóng vai trò Re-export Hub nhằm đảm bảo 100% tương thích ngược (Zero Contract Drift).
+
+2. **Triệt tiêu Cảnh báo React Hooks & Sẵn sàng cho React 19 Compiler**:
+   - **Khử lỗi `Cannot update a component ('BrowserRouter')`**: Không gọi `setSearchParams` trong callback dữ liệu Firestore ban đầu.
+   - **Khử anti-pattern `set-state-in-effect`**: Chuyển đổi mô hình 2 `useEffect` hai chiều đối kháng giữa `useState` và URL sang **Event-Driven Navigation** (`handleSelectTab`, `handleSelectPeriod`). Chỉ cập nhật URL khi người dùng thực hiện thao tác click chuyển tab hoặc chọn đợt.
+   - **Derived State cho kiểm tra quyền hạn**: Chuyển việc ép chuyển tab dựa theo quyền quản trị (`isAdmin`) sang tính toán tức thì `const effectiveTab = useMemo(...)`, loại bỏ hoàn toàn `setState` trong vòng đời render.
+

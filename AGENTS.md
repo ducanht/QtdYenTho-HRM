@@ -26,21 +26,15 @@ Tài liệu này là **Quy tắc Bắt buộc & Trí nhớ Cốt lõi** dành ch
 
 ---
 
-## 🔄 3. QUY CHUẨN ĐỒNG BỘ CSDL VÀ MÃ NGUỒN (CODE & DATABASE IN-SYNC PROTOCOL)
+## 🔄 3. QUY CHUẨN BẮT BUỘC: ĐỒNG BỘ ĐẶC TẢ KỸ THUẬT PHÂN HỆ, CSDL & CODE REVIEW GRAPH (IN-SYNC SPECIFICATION, SCHEMA & CODEGRAPH PROTOCOL)
 
-> **QUY TẮC BẮT BUỘC**:
-> Khi có bất kỳ thay đổi nào về thiết kế bảng/collection CSDL, **BẮT BUỘC ĐỒNG BỘ 100% CẢ VỀ MÃ NGUỒN VÀ CSDL**. Tuyệt đối không để xảy ra tình trạng bảng chỉ có trên tài liệu hoặc chỉ có trong CSDL mà mã nguồn không có định nghĩa.
-
-Mỗi lần thay đổi cấu trúc bảng CSDL, AI Agent phải cập nhật đồng bộ các tệp sau trong cùng một phiên làm việc:
-1. `src/lib/schema.js`: Định nghĩa Schema, TypeScript types/JSDoc, hàm validation và giá trị mặc định của bảng.
-2. `src/lib/systemDefaults.js`: Khai báo dữ liệu mẫu (Seed Data) chuẩn mực của bảng, bảo đảm Zero Mock Policy.
-3. `src/lib/services.js`: Viết các hàm nghiệp vụ chuẩn (`get`, `subscribe`, `save`, `delete`) kết nối Firestore.
-4. `src/lib/autoInitDb.js`:
-   - Bổ sung tên collection vào danh sách `CORE_COLLECTIONS`.
-   - Thêm logic tự động khởi tạo/đồng bộ vào `autoSyncDatabaseSchema()` và `autoInitializeFirebaseDatabase()`.
-   - Cập nhật số phiên bản `CURRENT_SCHEMA_VERSION`.
-5. `firestore.rules`: Khai báo quy tắc bảo mật đọc/ghi tương ứng trên collection mới.
-6. `docs/DATABASE_SCHEMA_HRM_TRUST.md`: Cập nhật đặc tả schema chi tiết trong tài liệu tương ứng.
+> **QUY TẮC BẤT DI BẤT DỊCH (BẮT BUỘC TUÂN THỦ 100%)**:
+> Bất kỳ khi nào có thay đổi ở bất kỳ phân hệ nào (thêm tính năng, đổi logic nghiệp vụ, sửa UI/UX, mở rộng bảng/collection Firestore, tái cấu trúc service layer):
+> **AI AGENT BẮT BUỘC PHẢI CẬP NHẬT ĐỒNG BỘ CẢ 4 THÀNH PHẦN TRONG CÙNG PHIÊN LÀM VIỆC VÀ CÙNG COMMIT GIT**:
+> 1. **Đặc tả Kỹ thuật Phân hệ (`docs/modules/<module_name>.md`)**: Ghi nhận toàn bộ luồng nghiệp vụ mới, cơ chế bảo mật, thuật toán tính toán, quy tắc giao diện và phân rã component. Tuyệt đối không để xảy ra tình trạng code đã đổi nhưng tài liệu đặc tả bị trôi (Zero Documentation Drift).
+> 2. **Thiết Kế CSDL Tổng Thể (`docs/DATABASE_SCHEMA_HRM_TRUST.md`)**: Cập nhật ERD Diagram, bảng chi tiết collections, trường dữ liệu, ràng buộc PK/FK, kiểu dữ liệu, cơ chế phân cấp truy vấn (Global vs On-Demand).
+> 3. **Mã Nguồn CSDL & Dịch Vụ**: Cập nhật đồng bộ `src/lib/schema.js`, `src/lib/systemDefaults.js`, `src/lib/autoInitDb.js`, `firestore.rules`, và các service tương ứng (`src/features/<module>/services/`).
+> 4. **Code Review Graph (Knowledge Graph)**: Bắt buộc gọi MCP `build_or_update_graph_tool` (từ server `code-review-graph`) để tái lập chỉ mục toàn bộ AST, dependency tree, caller-callee flows, đảm bảo `head_matches_build: true`.
 
 ---
 
@@ -57,13 +51,13 @@ Khi cần mở rộng CSDL cho các phân hệ mới:
 
 ---
 
-## 🏛️ 5. BẢN ĐỒ 18 COLLECTIONS NÒNG CỐT HIỆN TẠI (SCHEMA V5.3)
+## 🏛️ 5. BẢN ĐỒ 22 COLLECTIONS NÒNG CỐT HIỆN TẠI (SCHEMA V6.0)
 
-Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 Collections nòng cốt (Schema `2026.10.11_v5.3_flexible_transfer_rules_and_full_training_lifecycle`):
+Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 22 Collections nòng cốt (Schema `2026.10.16_v6.0_modular_services_and_contract_management`):
 1. `accounts`: Danh sách tài khoản đăng nhập, xác thực và phân quyền.
 2. `employees`: Danh bạ Cán bộ Nhân viên chính thức của Quỹ (`emp-001` .. `emp-013`).
 3. `system_metadata`: Siêu dữ liệu phiên bản CSDL và lịch sử đồng bộ (`schema_status`).
-4. `system_modules`: Danh mục 8 phân hệ chức năng hệ thống.
+4. `system_modules`: Danh mục các phân hệ chức năng hệ thống.
 5. `system_settings`: Cấu hình thông tin pháp nhân, tham số chung và phân hệ (bao gồm `transferRules` linh hoạt).
 6. `roles_permissions`: Ma trận phân quyền RBAC toàn hệ thống.
 7. `departments`: Danh mục 5 phòng ban chuẩn của Quỹ.
@@ -78,6 +72,11 @@ Hệ thống quản trị CSDL Firestore hiện tại quản lý chính xác 18 
 16. `evaluations_planning`: Dữ liệu bỏ phiếu quy hoạch cán bộ nguồn.
 17. `employee_training`: Hồ sơ văn bằng, chứng chỉ và chu trình đào tạo chuyên sâu toàn diện.
 18. `employee_kpi_history`: Lịch sử diễn biến kết quả xếp loại KPI nhiều năm.
+19. `employee_degrees`: Danh mục văn bằng chuyên môn đa cấp (Tiến sĩ, Thạc sĩ, Đại học, Cao đẳng, Trung cấp, Sơ cấp).
+20. `employee_socials`: Kênh mạng xã hội & liên lạc số của cán bộ.
+21. `employee_contracts`: Hợp đồng lao động chính thức của cán bộ nhân viên (Không xác định thời hạn, 1-3 năm, theo nhiệm kỳ, thử việc).
+22. `employee_contract_annexes`: Phụ lục hợp đồng lao động phát sinh (điều chỉnh lương, đổi chức vụ, gia hạn).
+
 
 ---
 

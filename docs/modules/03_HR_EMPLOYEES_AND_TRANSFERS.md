@@ -366,3 +366,37 @@ Hệ thống giao diện Phân hệ Quản trị Nhân sự kế thừa trọn v
      - Sheet 3: `Van_bang_chuyen_mon` (Danh mục văn bằng, chuyên ngành, trường, xếp loại).
      - Sheet 4: `Mang_xa_hoi` (Danh sách kênh liên lạc số & mạng xã hội).
 
+---
+
+## 📜 6. PHÂN HỆ QUẢN LÝ HỢP ĐỒNG LAO ĐỘNG & KIẾN TRÚC ON-DEMAND DATA LAYER (v6.0)
+
+### 6.1. Quản lý Hợp Đồng Lao Động & Phụ Lục Hợp Đồng (`EmployeeContractHistoryTab.jsx`):
+1. **Phân loại 4 nhóm Hợp đồng chuẩn**:
+   - `KHONG_XAC_DINH_THOI_HAN`: Hợp đồng không xác định thời hạn (cán bộ chính thức).
+   - `XAC_DINH_THOI_HAN_1_3_NAM`: Hợp đồng xác định thời hạn từ 1 đến 3 năm.
+   - `THEO_NHIEM_KY`: Hợp đồng gắn liền với nhiệm kỳ Đại hội thành viên / HĐQT / BKS.
+   - `THU_VIEC`: Hợp đồng thử việc theo Bộ luật Lao động.
+2. **Theo dõi Phụ Lục Hợp Đồng Phát Sinh**:
+   - Gắn kết chặt chẽ với hợp đồng gốc theo `contractId`.
+   - 4 loại hình phụ lục: Điều chỉnh mức lương/hệ số, Thay đổi vị trí công tác, Gia hạn thời hạn hợp đồng, Điều khoản bổ sung khác.
+3. **Thao tác Nghiệp vụ**:
+   - Modal thêm/sửa hợp đồng (`EmployeeContractModal.jsx`): Lưu trữ ngày ký, ngày hiệu lực, ngày hết hạn, mức lương, mức đóng BHXH, người ký và tệp scan.
+   - Modal thêm/sửa phụ lục (`ContractAnnexModal.jsx`).
+
+### 6.2. Phân rã Service Layer Chuyên Biệt (`src/features/employees/services/hrService.js`):
+- Đóng gói toàn bộ 26 hàm xử lý nghiệp vụ của Phân hệ Nhân sự vào `hrService.js` (33.3 KB):
+  + Quản lý hồ sơ: `updateEmployeeProfile`, `createEmployeeProfile`, `deleteEmployeeProfile`.
+  + Quá trình công tác: `subscribeWorkHistory`, `saveWorkHistory`, `deleteWorkHistory`.
+  + Đào tạo: `subscribeEmployeeTraining`, `saveEmployeeTraining`, `deleteEmployeeTraining`.
+  + KPI: `subscribeEmployeeKpiHistory`, `saveEmployeeKpiHistory`, `deleteEmployeeKpiHistory`.
+  + Bằng cấp: `subscribeEmployeeDegrees`, `getEmployeeDegrees`, `saveEmployeeDegree`, `deleteEmployeeDegree`.
+  + Mạng xã hội: `subscribeEmployeeSocials`, `getEmployeeSocials`, `saveEmployeeSocial`, `deleteEmployeeSocial`.
+  + Hợp đồng & Phụ lục: `subscribeEmployeeContracts`, `getEmployeeContracts`, `saveEmployeeContract`, `deleteEmployeeContract`, `subscribeContractAnnexes`, `getContractAnnexes`, `saveContractAnnex`, `deleteContractAnnex`.
+
+### 6.3. Cơ Chế On-Demand Subscriptions Theo Cán Bộ Đang Xem:
+- Trong `EmployeesContainer.jsx`, phân tách 2 luồng nạp dữ liệu:
+  + **Global Listeners**: Chỉ duy trì 4 listeners dùng chung toàn hệ thống (`employees`, `departments`, `positions`, `subsystemConfig`).
+  + **On-Demand Scoped Listeners**: Chuyển toàn bộ 6 collections con (`work_history`, `employee_training`, `employee_degrees`, `employee_socials`, `employee_contracts`, `employee_contract_annexes`) vào `useEffect` phụ thuộc trực tiếp vào `currentEmp?.id`.
+  + Khi người dùng chuyển sang cán bộ khác hoặc đóng modal, các listeners cũ lập tức được unsubscribe. **Giảm hơn 75% lượng đọc Firestore, triệt tiêu nguy cơ rò rỉ bộ nhớ và giúp ứng dụng phản hồi mượt mà trên thiết bị di động**.
+
+

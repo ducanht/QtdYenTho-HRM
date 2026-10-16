@@ -19,6 +19,8 @@ erDiagram
     EMPLOYEE ||--o{ EMPLOYEE_SOCIALS : "có kênh mạng xã hội & liên lạc số"
     EMPLOYEE ||--o{ EMPLOYEE_TRAINING : "có chứng chỉ đào tạo"
     EMPLOYEE ||--o{ EMPLOYEE_KPI_HISTORY : "có lịch sử KPI"
+    EMPLOYEE ||--o{ EMPLOYEE_CONTRACTS : "có hợp đồng lao động"
+    EMPLOYEE_CONTRACTS ||--o{ EMPLOYEE_CONTRACT_ANNEXES : "có phụ lục hợp đồng"
     EMPLOYEE ||--o{ TRUST_EVALUATION : "thực hiện đánh giá (người chấm)"
     EMPLOYEE ||--o{ TRUST_EVALUATION : "nhận đánh giá (người được chấm)"
     EVALUATION_PERIOD ||--o{ TRUST_EVALUATION : "thuộc kỳ đánh giá"
@@ -117,6 +119,46 @@ erDiagram
         string classification "Xếp loại kết quả (Xuất sắc | Tốt | Hoàn thành...)"
         string approvedBy "Người phê duyệt"
         timestamp createdAt "Thời gian phê duyệt"
+    }
+
+    EMPLOYEE_CONTRACTS {
+        string id PK "Mã hợp đồng chuẩn UUID (VD: cont-uuid)"
+        string contractNo UK "Số hợp đồng lao động (VD: 01/2024/HĐLĐ-YENTHO)"
+        string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
+        string employeeName "Họ tên cán bộ"
+        string contractType "KHONG_XAC_DINH_THOI_HAN | XAC_DINH_THOI_HAN_1_3_NAM | THEO_NHIEM_KY | THU_VIEC"
+        date signDate "Ngày ký kết hợp đồng (YYYY-MM-DD)"
+        date effectiveDate "Ngày hợp đồng có hiệu lực (YYYY-MM-DD)"
+        date expiryDate "Ngày hết hạn hợp đồng (nếu có thời hạn)"
+        string position "Vị trí công việc theo hợp đồng"
+        string department "Bộ phận / Phòng ban công tác"
+        float salaryRate "Mức lương cơ bản / Hệ số lương thỏa thuận"
+        float insuranceSalary "Mức đóng BHXH, BHYT, BHTN"
+        string signerName "Người đại diện theo pháp luật ký kết (Chủ tịch HĐQT / Giám đốc)"
+        string signerPosition "Chức danh người ký"
+        string status "ACTIVE | EXPIRED | TERMINATED"
+        string notes "Ghi chú điều khoản bổ sung"
+        string fileScanUrl "Đường dẫn file scan hợp đồng PDF/ảnh WebP"
+        timestamp createdAt "Thời điểm tạo"
+    }
+
+    EMPLOYEE_CONTRACT_ANNEXES {
+        string id PK "Mã phụ lục chuẩn UUID (VD: anx-uuid)"
+        string annexNo UK "Số phụ lục hợp đồng (VD: 01/PLHĐ-01/2024)"
+        string contractId FK "Mã hợp đồng gốc (FK -> employee_contracts.id)"
+        string contractNo "Số hợp đồng gốc"
+        string employeeId FK "Mã cán bộ (FK -> employees.id)"
+        string employeeUuid FK "UUID cán bộ (FK -> employees.uuid)"
+        string employeeName "Họ tên cán bộ"
+        string annexType "DIEU_CHINH_LUONG | THAY_DOI_CHUC_VU | GIA_HAN_THOI_HAN | KHAC"
+        date signDate "Ngày ký phụ lục (YYYY-MM-DD)"
+        date effectiveDate "Ngày phụ lục có hiệu lực (YYYY-MM-DD)"
+        string contentChange "Nội dung sửa đổi bổ sung điều khoản hợp đồng"
+        string signerName "Người ký phụ lục"
+        string signerPosition "Chức vụ người ký"
+        string fileScanUrl "Đường dẫn file scan phụ lục hợp đồng"
+        timestamp createdAt "Thời điểm tạo"
     }
 
     WORK_HISTORY {
@@ -363,6 +405,85 @@ Quản lý các kênh kết nối mạng xã hội và liên lạc số của c�
 | `isPublicInternal` | `boolean` | `true/false` | Cho phép hiển thị trên danh bạ nội bộ Quỹ để đồng nghiệp kết nối. |
 | `createdAt` | `timestamp` | Server Time | Thời điểm tạo bản ghi. |
 | `updatedAt` | `timestamp` | Server Time | Thời điểm cập nhật lần cuối. |
+
+---
+
+## 📜 2.6. Chi Tiết Thực Thể: Hợp Đồng Lao Động (`employee_contracts`)
+
+Collection Firestore: `employee_contracts`  
+Quản lý lịch sử toàn bộ các hợp đồng lao động ký kết giữa Quỹ Tín Dụng Nhân Dân Yên Thọ và cán bộ, nhân viên (Hợp đồng không xác định thời hạn, Hợp đồng xác định thời hạn 1 - 3 năm, Hợp đồng theo nhiệm kỳ bầu cử HĐQT/BKS, Thử việc).
+
+### Cấu trúc dữ liệu:
+| Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | **PK** | Mã định danh hợp đồng chuẩn UUID (VD: `cont-f47ac10b-...`). |
+| `contractNo` | `string` | **Not Null / UK** | Số hợp đồng lao động chính thức (VD: `01/2024/HĐLĐ-YENTHO`). |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ ký hợp đồng. |
+| `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
+| `employeeName` | `string` | Snapshot | Họ tên cán bộ tại thời điểm ký kết. |
+| `contractType` | `string` | Enum chuẩn | Loại hợp đồng lao động:<br>- `KHONG_XAC_DINH_THOI_HAN`: Không xác định thời hạn<br>- `XAC_DINH_THOI_HAN_1_3_NAM`: Xác định thời hạn (1 đến 3 năm)<br>- `THEO_NHIEM_KY`: Theo nhiệm kỳ bầu cử HĐQT / BKS<br>- `THU_VIEC`: Hợp đồng thử việc |
+| `signDate` | `string` | `YYYY-MM-DD` | Ngày ký kết hợp đồng. |
+| `effectiveDate` | `string` | `YYYY-MM-DD` | Ngày hợp đồng bắt đầu có hiệu lực. |
+| `expiryDate` | `string` | `YYYY-MM-DD` (Nullable) | Ngày hết hạn hợp đồng (để trống nếu không xác định thời hạn). |
+| `position` | `string` | **Not Null** | Chức vụ / Vị trí công tác theo hợp đồng. |
+| `department` | `string` | **Not Null** | Phòng ban công tác theo hợp đồng. |
+| `salaryRate` | `number` | Số thực | Hệ số lương hoặc mức lương cơ bản thỏa thuận (VNĐ). |
+| `insuranceSalary` | `number` | Số thực | Mức tiền lương đóng bảo hiểm xã hội (BHXH, BHYT, BHTN). |
+| `signerName` | `string` | **Not Null** | Người đại diện Quỹ ký kết (Chủ tịch HĐQT / Giám đốc Quỹ). |
+| `signerPosition` | `string` | **Not Null** | Chức vụ người đại diện ký kết. |
+| `status` | `string` | Enum chuẩn | Trạng thái hiệu lực:<br>- `ACTIVE`: Đang có hiệu lực<br>- `EXPIRED`: Đã hết hạn hợp đồng<br>- `TERMINATED`: Đã chấm dứt / thanh lý hợp đồng |
+| `notes` | `string` | Text | Ghi chú các điều khoản cam kết đặc thù. |
+| `fileScanUrl` | `string` | Base64 / URL | File scan hợp đồng gốc lưu trữ điện tử. |
+| `createdAt` | `timestamp` | Server Time | Thời điểm tạo bản ghi trên hệ thống. |
+| `updatedAt` | `timestamp` | Server Time | Thời điểm cập nhật lần cuối. |
+
+---
+
+## 📎 2.7. Chi Tiết Thực Thể: Phụ Lục Hợp Đồng Lao Động (`employee_contract_annexes`)
+
+Collection Firestore: `employee_contract_annexes`  
+Quản lý các phụ lục hợp đồng phát sinh trong quá trình thực hiện HĐLĐ (Điều chỉnh nâng lương, thay đổi chức danh, điều chỉnh mức đóng bảo hiểm, gia hạn hợp đồng).
+
+### Cấu trúc dữ liệu:
+| Trường dữ liệu | Kiểu dữ liệu | Ràng buộc | Ý nghĩa nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | **PK** | Mã định danh phụ lục chuẩn UUID (VD: `anx-e2ba96dc-...`). |
+| `annexNo` | `string` | **Not Null / UK** | Số phụ lục hợp đồng (VD: `01/PLHĐ-01/2024`). |
+| `contractId` | `string` | **FK -> employee_contracts.id** | Tham chiếu đến hợp đồng lao động gốc. |
+| `contractNo` | `string` | Snapshot | Số hiệu hợp đồng gốc. |
+| `employeeId` | `string` | **FK -> employees.id** | Cán bộ thuộc diện áp dụng phụ lục. |
+| `employeeUuid` | `string` | **FK -> employees.uuid** | Mã UUID bất biến v4 chuẩn RFC 4122 của cán bộ. |
+| `employeeName` | `string` | Snapshot | Họ tên cán bộ. |
+| `annexType` | `string` | Enum chuẩn | Nội dung phụ lục:<br>- `DIEU_CHINH_LUONG`: Điều chỉnh tiền lương / hệ số<br>- `THAY_DOI_CHUC_VU`: Thay đổi chức danh / phân công nhiệm vụ mới<br>- `GIA_HAN_THOI_HAN`: Gia hạn thời hạn hợp đồng<br>- `KHAC`: Các điều khoản bổ sung khác |
+| `signDate` | `string` | `YYYY-MM-DD` | Ngày ký phụ lục hợp đồng. |
+| `effectiveDate` | `string` | `YYYY-MM-DD` | Ngày phụ lục bắt đầu có hiệu lực thi hành. |
+| `contentChange` | `string` | Text | Nội dung chi tiết các điều khoản sửa đổi, bổ sung. |
+| `signerName` | `string` | **Not Null** | Người đại diện Quỹ ký phụ lục. |
+| `signerPosition` | `string` | **Not Null** | Chức vụ người đại diện ký. |
+| `fileScanUrl` | `string` | Base64 / URL | File scan phụ lục hợp đồng gốc. |
+| `createdAt` | `timestamp` | Server Time | Thời điểm tạo bản ghi. |
+| `updatedAt` | `timestamp` | Server Time | Thời điểm cập nhật lần cuối. |
+
+---
+
+## ⚡ 2.8. Cơ Chế Truy Vấn Theo Nhu Cầu (On-Demand Scoping & Subscriptions)
+
+Nhằm tối ưu hóa hiệu năng, tiết kiệm chi phí đọc Firestore và triệt tiêu tràn RAM trên trình duyệt di động:
+1. **Phân cấp dữ liệu Global vs On-Demand**:
+   - **Tầng Global**: Chỉ nạp danh bạ tóm tắt `employees` (id, name, code, dept, position, status), `departments`, `positions`, `system_settings`.
+   - **Tầng On-Demand**: Toàn bộ các bảng chi tiết con của cán bộ gồm:
+     + `work_history`
+     + `employee_training`
+     + `employee_degrees`
+     + `employee_socials`
+     + `employee_contracts`
+     + `employee_contract_annexes`
+     **TUYỆT ĐỐI KHÔNG nạp toàn bộ của 13+ cán bộ cùng lúc vào RAM**.
+2. **Cơ chế Lắng nghe Theo Cán Bộ Đang Xem (`currentEmp?.id`)**:
+   - Dịch vụ truy vấn sử dụng bộ lọc `where('employeeId', '==', employeeId)` cho từng collection con.
+   - Khi người dùng chọn xem hồ sơ của một cán bộ, hệ thống mới mở kết nối `onSnapshot` cho cán bộ đó.
+   - Khi chuyển sang cán bộ khác hoặc đóng modal chi tiết, hệ thống tự động gọi hàm cleanup `unsubscribe()` để hủy bỏ subscription cũ, giải phóng 100% bộ nhớ.
+   - Tiết kiệm hơn **75% số lượt đọc Firestore** trong mỗi phiên làm việc.
 
 ---
 
