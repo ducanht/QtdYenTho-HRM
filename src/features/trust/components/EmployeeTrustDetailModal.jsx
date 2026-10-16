@@ -4,9 +4,7 @@ import {
   Award, 
   ShieldCheck, 
   Printer, 
-  CheckCircle2, 
   FileText,
-  Clock,
   MessageSquare,
   ChevronDown,
   ChevronUp,
@@ -16,7 +14,6 @@ import {
 } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
-import Badge from '../../../components/common/Badge';
 import { classifyTrustScore } from '../../../lib/schema';
 import { exportToExcel } from '../../../lib/exportUtils';
 
@@ -32,7 +29,7 @@ const EmployeeTrustDetailModal = ({
   evaluations = [],
   criteria = [],
   currentPeriod,
-  isAdmin = false,
+  _isAdmin = false,
 }) => {
   // Tiêu chí đang được chọn để xem chi tiết điểm từng cử tri
   const [selectedCriterionId, setSelectedCriterionId] = useState(null);

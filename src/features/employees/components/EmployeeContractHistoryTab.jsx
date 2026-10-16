@@ -11,14 +11,11 @@ import {
   CheckCircle2, 
   Clock, 
   Tag, 
-  UserCheck, 
-  DollarSign, 
-  Briefcase,
-  AlertCircle
+  Briefcase
 } from 'lucide-react';
 import { calculatePositionTenure, calculateAreaTenureAndDueDate, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
-import { deleteEmployeeContract, deleteContractAnnex, deleteWorkHistory } from '../../../lib/services';
+import { deleteEmployeeContract, deleteContractAnnex, deleteWorkHistory } from '../services/hrService';
 import { useToast } from '../../../context/ToastContext';
 import Button from '../../../components/common/Button';
 import ContractFormModal from './ContractFormModal';
@@ -117,7 +114,7 @@ const EmployeeContractHistoryTab = ({
       const dateB = b.startDate || b.effectiveDate || '';
       return dateB.localeCompare(dateA);
     });
-  }, [workHistory, emp?.id, emp?.code]);
+  }, [workHistory, emp]);
 
   if (!emp) {
     return (

@@ -2,15 +2,11 @@ import React, { useState } from 'react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
 import { 
-  Globe, 
   Plus, 
   Trash2, 
   Edit2, 
   ExternalLink, 
-  CheckCircle2, 
   Share2, 
-  Lock, 
-  MessageCircle,
   Link as LinkIcon
 } from 'lucide-react';
 import { saveEmployeeSocial, deleteEmployeeSocial } from '../../../lib/services';

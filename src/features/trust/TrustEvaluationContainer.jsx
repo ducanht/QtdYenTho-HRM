@@ -1,28 +1,25 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { 
   subscribeTrustCriteria, 
-  subscribeEmployees, 
   subscribeEvaluationPeriods, 
   subscribeTrustEvaluations,
   saveTrustEvaluation,
   saveEvaluationPeriod,
   deleteEvaluationPeriod,
-  subscribeSubsystemConfig,
-  saveSubsystemConfig,
-  saveTrustCriterion,
-  deleteTrustCriterion,
   subscribePeriodConfig,
-  savePeriodConfig
-} from '../../lib/services';
+  savePeriodConfig,
+  subscribeSubsystemConfig,
+  saveSubsystemConfig
+} from './services/trustService';
+import { subscribeEmployees } from '../../lib/services';
 import { classifyTrustScore } from '../../lib/schema';
 import { 
   getEligibleTargetEmployees, 
   getEligibleVoterEmployees, 
   getOfficialStaff, 
-  isSystemAdminAccount, 
   generatePeriodId,
   checkPeriodActiveStatus
 } from '../../lib/evaluationUtils';
@@ -59,9 +56,8 @@ import TrustPermissionsMatrix from '../settings/components/subsystems/TrustPermi
  * - Phân quyền bảo mật: Cán bộ chỉ xem điểm cá nhân và phiếu mình đã chấm
  */
 const TrustEvaluationContainer = () => {
-  const { currentUser, role } = useAuth();
+  const { currentUser } = useAuth();
   const toast = useToast();
-  const navigate = useNavigate();
 
   // Dữ liệu thời gian thực Firestore
   const [employees, setEmployees] = useState([]);
@@ -72,66 +68,39 @@ const TrustEvaluationContainer = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Tab chức năng chính & Kỳ đánh giá: Khởi tạo từ URL nếu có
-  const urlTab = searchParams.get('tab');
-  const urlPeriodId = searchParams.get('periodId');
+  const urlTab = searchParams.get('tab') || 'SCORING';
+  const urlPeriodId = searchParams.get('periodId') || '';
 
-  const [selectedPeriodId, setSelectedPeriodIdState] = useState(urlPeriodId || '');
-  const [activeTab, setActiveTabState] = useState(urlTab || 'SCORING');
+  const [selectedPeriodId, setSelectedPeriodId] = useState(urlPeriodId);
+  const [activeTab, setActiveTab] = useState(urlTab);
 
-  const setSelectedPeriodId = useCallback((idOrUpdater) => {
-    setSelectedPeriodIdState((prev) => {
-      const nextId = typeof idOrUpdater === 'function' ? idOrUpdater(prev) : idOrUpdater;
-      return nextId;
-    });
-  }, []);
-
-  const setActiveTab = useCallback((tabOrUpdater) => {
-    setActiveTabState((prev) => {
+  // Handler khi người dùng chủ động chọn tab
+  const handleSelectTab = useCallback((tabOrUpdater) => {
+    setActiveTab((prev) => {
       const nextTab = typeof tabOrUpdater === 'function' ? tabOrUpdater(prev) : tabOrUpdater;
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        if (nextTab && nextTab !== 'SCORING') next.set('tab', nextTab);
+        else next.delete('tab');
+        return next;
+      }, { replace: true });
       return nextTab;
     });
-  }, []);
+  }, [setSearchParams]);
 
-  // Đồng bộ State -> URL SearchParams một cách an toàn (ngoài chu trình render)
-  useEffect(() => {
-    const curTab = searchParams.get('tab') || 'SCORING';
-    const curPid = searchParams.get('periodId') || '';
-
-    const tabChanged = activeTab && activeTab !== curTab;
-    const pidChanged = selectedPeriodId && selectedPeriodId !== curPid;
-
-    if (tabChanged || pidChanged) {
-      setSearchParams(
-        (prev) => {
-          const nextParams = new URLSearchParams(prev);
-          if (activeTab && activeTab !== 'SCORING') {
-            nextParams.set('tab', activeTab);
-          } else {
-            nextParams.delete('tab');
-          }
-          if (selectedPeriodId) {
-            nextParams.set('periodId', selectedPeriodId);
-          } else {
-            nextParams.delete('periodId');
-          }
-          return nextParams;
-        },
-        { replace: true }
-      );
-    }
-  }, [activeTab, selectedPeriodId, searchParams, setSearchParams]);
-
-  // Đồng bộ URL SearchParams -> State khi người dùng bấm nút Back/Forward của trình duyệt
-  useEffect(() => {
-    const curTab = searchParams.get('tab') || 'SCORING';
-    if (curTab !== activeTab) {
-      setActiveTabState(curTab);
-    }
-    const curPid = searchParams.get('periodId') || '';
-    if (curPid && curPid !== selectedPeriodId) {
-      setSelectedPeriodIdState(curPid);
-    }
-  }, [searchParams]);
+  // Handler khi người dùng chủ động chọn đợt
+  const handleSelectPeriod = useCallback((idOrUpdater) => {
+    setSelectedPeriodId((prev) => {
+      const nextId = typeof idOrUpdater === 'function' ? idOrUpdater(prev) : idOrUpdater;
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        if (nextId) next.set('periodId', nextId);
+        else next.delete('periodId');
+        return next;
+      }, { replace: true });
+      return nextId;
+    });
+  }, [setSearchParams]);
 
   // Chế độ xem tiêu chí: 'STEPPER' (từng tiêu chí một) | 'ALL' (toàn bộ 10 tiêu chí cuộn liên tục)
   const [viewMode, setViewMode] = useState('STEPPER');
@@ -169,7 +138,6 @@ const TrustEvaluationContainer = () => {
   // Quản lý Phân quyền theo ma trận RBAC Phân hệ Tín nhiệm
   const [trustPermissions, setTrustPermissions] = useState(DEFAULT_ROLE_PERMISSIONS.trust);
   const [trustConfig, setTrustConfig] = useState(DEFAULT_MODULE_TRUST_SETTINGS);
-  const [savingConfig, setSavingConfig] = useState(false);
   const [savingPermissions, setSavingPermissions] = useState(false);
 
   // Cấu hình Riêng Biệt Cho Từng Đợt Đánh Giá (period_configs)
@@ -178,10 +146,7 @@ const TrustEvaluationContainer = () => {
 
   // Lắng nghe cấu hình độc lập của đợt đánh giá đang chọn
   useEffect(() => {
-    if (!selectedPeriodId) {
-      setCurrentPeriodConfig(null);
-      return;
-    }
+    if (!selectedPeriodId) return;
     const unsub = subscribePeriodConfig(selectedPeriodId, (cfg) => {
       setCurrentPeriodConfig(cfg);
     });
@@ -225,70 +190,14 @@ const TrustEvaluationContainer = () => {
     return checkUserPermission(currentUser, TRUST_PERMISSIONS.VIEW_AGGREGATE_REPORT, { trust: trustPermissions });
   }, [currentUser, trustPermissions]);
 
-  const canPrintReport = useMemo(() => {
-    return checkUserPermission(currentUser, TRUST_PERMISSIONS.PRINT_OFFICIAL_REPORT, { trust: trustPermissions });
-  }, [currentUser, trustPermissions]);
-
-  // Tự động chuyển tab nếu người dùng không có quyền truy cập tab hiện tại
-  useEffect(() => {
-    if (activeTab === 'OVERVIEW' && !canViewOverview) {
-      setActiveTab('SCORING');
-    } else if (activeTab === 'CRITERIA_SETTINGS' && !(canManageCriteria || canManagePeriods)) {
-      setActiveTab('SCORING');
-    } else if (activeTab === 'PERMISSIONS_SETTINGS' && !(canManageCriteria || canManagePeriods)) {
-      setActiveTab('SCORING');
-    } else if (activeTab === 'SCORING' && !canVote) {
-      setActiveTab(canViewOwnResults ? 'MY_RESULTS' : 'MY_VOTES');
-    }
-  }, [activeTab, canViewOverview, canManageCriteria, canManagePeriods, canVote, canViewOwnResults, setActiveTab]);
-
-  // Handler: Lưu cấu hình tiêu chí & tham số phân hệ Tín nhiệm
-  const handleSaveTrustConfig = async (newConfig) => {
-    setSavingConfig(true);
-    try {
-      await saveSubsystemConfig('trust', {
-        ...newConfig,
-        permissions: trustPermissions,
-      });
-      toast.success('Đã lưu cấu hình tham số Tín nhiệm lên Firestore thành công!');
-    } catch (err) {
-      toast.error('Lỗi khi lưu cấu hình tín nhiệm: ' + err.message);
-    } finally {
-      setSavingConfig(false);
-    }
-  };
-
-  // Handler: Thêm/Sửa tiêu chí tín nhiệm
-  const handleSaveCriterion = async (critForm, editingCrit) => {
-    try {
-      await saveTrustCriterion({
-        ...(editingCrit ? { id: editingCrit.id } : { id: Date.now() }),
-        code: critForm.code.trim().toUpperCase(),
-        title: critForm.title.trim(),
-        group: critForm.group.trim(),
-        description: critForm.description.trim(),
-        maxScore: Number(critForm.maxScore) || 10,
-        minScore: Number(critForm.minScore) || 0,
-        weight: Number(critForm.weight) || 10,
-      });
-      toast.success(`${editingCrit ? 'Cập nhật' : 'Thêm mới'} tiêu chí thành công!`);
-      return true;
-    } catch (err) {
-      toast.error('Lỗi lưu tiêu chí: ' + err.message);
-      return false;
-    }
-  };
-
-  // Handler: Xóa tiêu chí tín nhiệm
-  const handleDeleteCriterion = async (code, title) => {
-    if (!window.confirm(`Đồng chí có chắc chắn muốn xóa tiêu chí [${title}] (${code})?`)) return;
-    try {
-      await deleteTrustCriterion(code);
-      toast.success(`Đã xóa tiêu chí [${title}].`);
-    } catch (err) {
-      toast.error('Lỗi khi xóa tiêu chí: ' + err.message);
-    }
-  };
+  // Tab thực tế được hiển thị (Derived State dựa trên phân quyền, loại bỏ cascading setState)
+  const effectiveTab = useMemo(() => {
+    if (activeTab === 'OVERVIEW' && !canViewOverview) return 'SCORING';
+    if (activeTab === 'CRITERIA_SETTINGS' && !(canManageCriteria || canManagePeriods)) return 'SCORING';
+    if (activeTab === 'PERMISSIONS_SETTINGS' && !(canManageCriteria || canManagePeriods)) return 'SCORING';
+    if (activeTab === 'SCORING' && !canVote) return canViewOwnResults ? 'MY_RESULTS' : 'MY_VOTES';
+    return activeTab;
+  }, [activeTab, canViewOverview, canManageCriteria, canManagePeriods, canVote, canViewOwnResults]);
 
   // Handler: Lưu phân quyền chuyên biệt phân hệ Tín nhiệm
   const handleSaveTrustPermissions = async () => {
@@ -483,7 +392,7 @@ const TrustEvaluationContainer = () => {
       count: sorted.length,
       lastSubmittedAt: sorted[0]?.submittedAt || null,
     };
-  }, [currentPeriod?.id, currentUser, evaluations]);
+  }, [currentPeriod, currentUser, evaluations]);
 
   const hasSubmitted = Boolean(userSubmissionInfo?.hasSubmitted);
   const submittedAt = userSubmissionInfo?.lastSubmittedAt;
@@ -493,22 +402,13 @@ const TrustEvaluationContainer = () => {
     return checkPeriodActiveStatus(effectivePeriod || currentPeriod);
   }, [effectivePeriod, currentPeriod]);
 
-  // Đếm ngược thời gian kết thúc đợt
-  const timeRemainingBadge = useMemo(() => {
-    if (!currentPeriod?.endDate) return null;
-    if (!periodStatusInfo.isOpen) {
-      return { text: periodStatusInfo.timeRemainingText, isExpired: periodStatusInfo.code === 'EXPIRED' };
-    }
-    return { 
-      text: periodStatusInfo.timeRemainingText, 
-      isExpired: false, 
-      isUrgent: periodStatusInfo.isUrgent 
-    };
-  }, [currentPeriod?.endDate, periodStatusInfo]);
+  const lastLoadedPeriodRef = useRef(null);
 
   // Tải dữ liệu nháp (Local Draft) hoặc dữ liệu đã nộp cho Ma trận điểm khi đổi đợt
   useEffect(() => {
     if (!currentPeriod?.id || !evaluatableEmployees.length || !currentUser) return;
+    if (lastLoadedPeriodRef.current === currentPeriod.id) return;
+    lastLoadedPeriodRef.current = currentPeriod.id;
 
     const draftKey = `qtd_trust_draft_${currentPeriod.id}_${currentUser.uid || currentUser.id}`;
     let savedDraft = null;
@@ -553,7 +453,7 @@ const TrustEvaluationContainer = () => {
 
     setMatrixScores(initialMatrix);
     setMatrixNotes(initialNotes);
-  }, [currentPeriod?.id, evaluatableEmployees.length, activeCriteria.length, currentUser?.uid]);
+  }, [currentPeriod?.id, evaluatableEmployees, activeCriteria, currentUser, evaluations]);
 
   // Cập nhật điểm cho 1 cán bộ ở 1 tiêu chí (Số nguyên 1..10) & TỰ ĐỘNG LƯU NGẦM
   const handleSetScore = useCallback((employeeId, criterionId, score) => {
@@ -591,7 +491,7 @@ const TrustEvaluationContainer = () => {
 
       return updated;
     });
-  }, [currentPeriod?.id, currentUser, periodStatusInfo, toast]);
+  }, [currentPeriod, currentUser, periodStatusInfo, toast]);
 
   // Cập nhật ghi chú cho 1 cán bộ & TỰ ĐỘNG LƯU NGẦM
   const handleSetNote = useCallback((employeeId, note) => {
@@ -623,7 +523,7 @@ const TrustEvaluationContainer = () => {
 
       return updated;
     });
-  }, [currentPeriod?.id, currentUser, periodStatusInfo, toast]);
+  }, [currentPeriod, currentUser, periodStatusInfo, toast]);
 
   // Tính số lượng cán bộ đã chấm trên từng tiêu chí
   const completionByCriteria = useMemo(() => {
@@ -1034,8 +934,8 @@ const TrustEvaluationContainer = () => {
     <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-200">
       {/* 1. Thanh Menu Tab tinh gọn chuyển nhanh trên Desktop / iPad (Không còn Header rườm rà) */}
       <TrustModuleTabsNav
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
+        activeTab={effectiveTab}
+        onChangeTab={handleSelectTab}
         canVote={canVote}
         canViewSubmitted={canViewSubmitted}
         canViewOwnResults={canViewOwnResults}
@@ -1047,14 +947,14 @@ const TrustEvaluationContainer = () => {
       {/* 2. Nội dung theo từng Tab - 100% bố cục 2 phần kiểu iPad (Master - Detail) */}
       
       {/* Tab 1: ĐÁNH GIÁ (Bên trái: Chọn đợt - Bên phải: Bảng chấm điểm cán bộ) */}
-      {activeTab === 'SCORING' && (
+      {effectiveTab === 'SCORING' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* CỘT TRÁI (MASTER): Danh sách đợt đánh giá kèm bộ lọc năm */}
           <div className="lg:col-span-4 xl:col-span-3">
             <PeriodMasterSidebar
               periods={periods}
               selectedPeriodId={selectedPeriodId}
-              onSelectPeriod={setSelectedPeriodId}
+              onSelectPeriod={handleSelectPeriod}
               title="Đợt Đánh Giá"
               badgeRenderer={(p) => {
                 const mySubmitted = evaluations.filter(
@@ -1198,14 +1098,14 @@ const TrustEvaluationContainer = () => {
 
 
       {/* Tab 2: LỊCH SỬ (Bên trái: Chọn đợt - Bên phải: Phiếu cá nhân đã nộp) */}
-      {activeTab === 'MY_VOTES' && (
+      {effectiveTab === 'MY_VOTES' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* CỘT TRÁI (MASTER): Chọn đợt kèm số lượng phiếu đã nộp */}
           <div className="lg:col-span-4 xl:col-span-3">
             <PeriodMasterSidebar
               periods={periods}
               selectedPeriodId={selectedPeriodId}
-              onSelectPeriod={setSelectedPeriodId}
+              onSelectPeriod={handleSelectPeriod}
               title="Đợt Đánh Giá"
               allowSelectAll={true}
               badgeRenderer={(p) => {
@@ -1245,14 +1145,14 @@ const TrustEvaluationContainer = () => {
       )}
 
       {/* Tab 3: CÁ NHÂN (Bên trái: Chọn đợt - Bên phải: Kết quả điểm tín nhiệm của mình) */}
-      {activeTab === 'MY_RESULTS' && (
+      {effectiveTab === 'MY_RESULTS' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* CỘT TRÁI (MASTER): Chọn đợt */}
           <div className="lg:col-span-4 xl:col-span-3">
             <PeriodMasterSidebar
               periods={periods}
               selectedPeriodId={selectedPeriodId}
-              onSelectPeriod={setSelectedPeriodId}
+              onSelectPeriod={handleSelectPeriod}
               title="Đợt Đánh Giá"
               badgeRenderer={(p) => (
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -1279,14 +1179,14 @@ const TrustEvaluationContainer = () => {
       )}
 
       {/* Tab 4: TỔNG QUAN (Bên trái: Chọn đợt + Quản trị đợt - Bên phải: Báo cáo & Xuất In) */}
-      {activeTab === 'OVERVIEW' && (
+      {effectiveTab === 'OVERVIEW' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* CỘT TRÁI (MASTER): Chọn đợt & Thao tác đợt của Lãnh đạo */}
           <div className="lg:col-span-4 xl:col-span-3">
             <PeriodMasterSidebar
               periods={periods}
               selectedPeriodId={selectedPeriodId}
-              onSelectPeriod={setSelectedPeriodId}
+              onSelectPeriod={handleSelectPeriod}
               title="Đợt Đánh Giá"
               showAdminControls={canManagePeriods}
               onOpenCreatePeriod={handleOpenCreatePeriod}
@@ -1324,11 +1224,11 @@ const TrustEvaluationContainer = () => {
       )}
 
       {/* Tab 5: CẤU HÌNH (Bên trái: Chọn đợt - Bên phải: Cấu hình đợt + Nút Lưu) */}
-      {activeTab === 'CRITERIA_SETTINGS' && (
+      {effectiveTab === 'CRITERIA_SETTINGS' && (
         <TrustCriteriaSettings
           periods={periods}
           selectedPeriodId={selectedPeriodId}
-          onSelectPeriod={setSelectedPeriodId}
+          onSelectPeriod={handleSelectPeriod}
           currentPeriod={effectivePeriod}
           periodConfig={currentPeriodConfig}
           employees={employees}
@@ -1346,7 +1246,7 @@ const TrustEvaluationContainer = () => {
       )}
 
       {/* Tab 6: PHÂN QUYỀN (Ma trận Phân quyền RBAC chuyên biệt Phân hệ Tín nhiệm) */}
-      {activeTab === 'PERMISSIONS_SETTINGS' && (
+      {effectiveTab === 'PERMISSIONS_SETTINGS' && (
         <TrustPermissionsMatrix
           permissions={trustPermissions}
           onChangePermissions={(newPerms) => setTrustPermissions(newPerms)}
@@ -1390,8 +1290,8 @@ const TrustEvaluationContainer = () => {
 
       {/* 4. Bottom Navigation Menu (Chuyên dụng cho thiết bị di động - Truy cập nhanh 1 chạm) */}
       <TrustBottomNav
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
+        activeTab={effectiveTab}
+        onChangeTab={handleSelectTab}
         canVote={canVote}
         canViewSubmitted={canViewSubmitted}
         canViewOwnResults={canViewOwnResults}

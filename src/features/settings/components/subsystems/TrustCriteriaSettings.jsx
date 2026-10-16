@@ -19,8 +19,7 @@ import { TRUST_CRITERIA_DEFAULT as DEFAULT_CRITERIA } from '../../../../lib/cons
 import { 
   getEligibleTargetEmployees, 
   getEligibleVoterEmployees, 
-  getOfficialStaff, 
-  isSystemAdminAccount 
+  getOfficialStaff 
 } from '../../../../lib/evaluationUtils';
 
 // Helper phân loại màu sắc badge cho từng nhóm tiêu chí chuẩn mực
@@ -152,7 +151,7 @@ const TrustCriteriaSettings = ({
       targetEmployeeIds: cleanTargetIds,
       criteria: critList,
     });
-  }, [currentPeriod?.targetEmployeeIds, currentPeriod?.voterEmployeeIds, currentPeriod?.votingMode, currentPeriod?.allowSelfEvaluation, employees, officialStaff]);
+  }, [currentPeriod, employees, officialStaff]);
 
   // Đồng bộ state cấu hình khi đổi đợt hoặc khi periodConfig lần đầu được tải về
   useEffect(() => {
@@ -171,7 +170,7 @@ const TrustCriteriaSettings = ({
       // 2. Cùng đợt và người dùng chưa sửa dở dang: Cập nhật nếu Firestore tải xong cấu hình
       applyConfigFromSource(periodConfig);
     }
-  }, [currentPeriod?.id, selectedPeriodId, periodConfig, applyConfigFromSource]);
+  }, [currentPeriod, selectedPeriodId, periodConfig, applyConfigFromSource]);
 
   // Handler: Chọn nhanh Người tham gia bỏ phiếu (Cử tri) theo phòng ban (Chỉ cán bộ thực tế officialStaff)
   const handleSelectVotersByDept = (dept) => {

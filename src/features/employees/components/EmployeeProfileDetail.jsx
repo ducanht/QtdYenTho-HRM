@@ -16,8 +16,7 @@ import {
   Share2,
   ExternalLink,
   Edit2,
-  Eye,
-  BookOpen
+  Eye
 } from 'lucide-react';
 import { calculatePositionTenure, calculateAreaTenureAndDueDate, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';

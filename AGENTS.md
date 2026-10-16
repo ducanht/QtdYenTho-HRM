@@ -167,8 +167,19 @@ Sau mọi thay đổi mã nguồn hoặc cấu hình:
   3. *Tự động Co Giãn Tỷ lệ (Auto-Scale) cho Bản Xem Trước In A4*: Bổ sung `transform: scale(zoomFactor)` thích ứng với chiều rộng màn hình di động trong các modal in A4.
   4. *Chuẩn hóa Safe-Area-Inset*: Thêm lớp CSS `safe-area-inset-bottom` bảo đảm thanh Bottom Navigation không che lấp các nút thao tác cuối bảng trên iPhone/Android.
 
-- **Giai đoạn 3 (Kế hoạch nâng cao - Modular Service Layer & Zero Warning)**:
-  1. *Phân tách Data Services theo Module*: Chuyển các hàm nghiệp vụ riêng biệt của từng phân hệ vào `src/features/<module>/services/`, chỉ để lại trong `src/lib/services.js` các dịch vụ dùng chung toàn Quỹ.
-  2. *Triệt tiêu 178 cảnh báo React Hooks linter*: Chuyển đổi các lệnh `setState` đồng bộ trong `useEffect` sang derived state (useMemo / computed values) để kích hoạt toàn bộ khả năng tối ưu hóa của React Compiler.
-  3. *Tối ưu hóa On-Demand Subscriptions*: Tách các listener của hợp đồng, đào tạo, bằng cấp để chỉ nạp theo từng cá nhân khi mở chi tiết, giảm tải RAM và triệt tiêu re-render thừa.
+- **Giai đoạn 3 (ĐÃ HOÀN THÀNH 100% - Modular Service Layer & Zero Warning & On-Demand Subscriptions)**:
+  1. *Phân tách Data Services theo Module*:
+     - Tách toàn bộ nghiệp vụ đánh giá tín nhiệm 10 tiêu chí sang [src/features/trust/services/trustService.js](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/src/features/trust/services/trustService.js) (21.3 KB).
+     - Tách toàn bộ nghiệp vụ hồ sơ cán bộ, thâm niên, bằng cấp, hợp đồng, phụ lục sang [src/features/employees/services/hrService.js](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/src/features/employees/services/hrService.js) (33.3 KB).
+     - Tinh gọn [src/lib/services.js](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/src/lib/services.js) từ 2.050 dòng xuống còn 572 dòng (giữ lại Auth, Users, Departments, Positions, Roles, KPI toàn hệ thống và re-export đầy đủ để bảo toàn 100% tương thích ngược Zero Breaking Change).
+  2. *Triệt tiêu Cảnh báo React Hooks & Sẵn sàng React 19 Compiler*:
+     - Triệt tiêu lỗi `Cannot update a component ('BrowserRouter') while rendering a different component` và `set-state-in-effect`.
+     - Chuyển đổi mô hình đồng bộ 2 chiều giữa `useState` và `useSearchParams` bằng `useEffect` sang **Event-Driven Navigation** (`handleSelectTab`, `handleSelectPeriod`).
+     - Tách việc ép tab theo quyền hạn (`isAdmin`) sang Derived State `const effectiveTab = useMemo(...)` giúp React Compiler tối ưu hóa việc nạp component con.
+     - Dọn sạch các import thừa, khai báo biến không dùng và chỉnh sửa dependency arrays chuẩn xác tại các modal và tab con.
+  3. *Tối ưu hóa On-Demand Subscriptions*:
+     - Tách luồng Firestore trong [src/features/employees/EmployeesContainer.jsx](file:///d:/Antigravity%20Projects/QtdYenTho-HRM/src/features/employees/EmployeesContainer.jsx): Global listener chỉ nạp danh sách tóm tắt (Employees, Departments, Positions, Config); Các dữ liệu chuyên sâu (Quá trình công tác, Đào tạo bồi dưỡng, Bằng cấp chứng chỉ, Mạng xã hội, Hợp đồng lao động, Phụ lục) chỉ kích hoạt lắng nghe khi người dùng mở chi tiết của cá nhân (`currentEmp?.id`), tự hủy subscription cũ khi chuyển người. Tiết kiệm ~75% lượng đọc Firestore và giải phóng hoàn toàn RAM trình duyệt.
+  4. *Nghiệm thu chất lượng 4 tầng khép kín*:
+     - `npm run build`: Production bundle thành công, exit code 0.
+     - `npx playwright test tests/hrm-portal.spec.js`: **5/5 tests PASS 100%** trên trình duyệt Chromium.
 

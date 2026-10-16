@@ -255,52 +255,69 @@ const EmployeesContainer = () => {
       }
     });
 
-    const unsubWork = subscribeWorkHistory(null, (list) => {
-      setWorkHistory(list || []);
-    });
-
-    const unsubTrain = subscribeEmployeeTraining(null, (list) => {
-      setTrainings(list || []);
-    });
-
     const unsubConfig = subscribeSubsystemConfig('hr', (cfg) => {
       setHrConfig(cfg || null);
-    });
-
-    const unsubDegrees = subscribeEmployeeDegrees(null, (list) => {
-      setDegrees(list || []);
-    });
-
-    const unsubSocials = subscribeEmployeeSocials(null, (list) => {
-      setSocials(list || []);
-    });
-
-    const unsubContracts = subscribeEmployeeContracts(null, (list) => {
-      setContracts(list || []);
-    });
-
-    const unsubAnnexes = subscribeContractAnnexes(null, (list) => {
-      setContractAnnexes(list || []);
     });
 
     return () => {
       unsubEmp();
       unsubDept();
       unsubPos();
+      unsubConfig();
+    };
+  }, []);
+
+  // Cán bộ đang được chọn xem chi tiết (được tính toán trước để phục vụ On-Demand Subscription)
+  const currentEmp = useMemo(() => {
+    return viewableEmployees.find((e) => e.id === selectedEmpId) || viewableEmployees[0] || null;
+  }, [viewableEmployees, selectedEmpId]);
+
+  // On-Demand Subscriptions: Chỉ nạp Quá trình công tác, Bằng cấp, Hợp đồng của cá nhân đang xem chi tiết
+  useEffect(() => {
+    const targetEmpId = currentEmp?.id;
+    if (!targetEmpId) {
+      setWorkHistory([]);
+      setTrainings([]);
+      setDegrees([]);
+      setSocials([]);
+      setContracts([]);
+      setContractAnnexes([]);
+      return;
+    }
+
+    const unsubWork = subscribeWorkHistory(targetEmpId, (list) => {
+      setWorkHistory(list || []);
+    });
+
+    const unsubTrain = subscribeEmployeeTraining(targetEmpId, (list) => {
+      setTrainings(list || []);
+    });
+
+    const unsubDegrees = subscribeEmployeeDegrees(targetEmpId, (list) => {
+      setDegrees(list || []);
+    });
+
+    const unsubSocials = subscribeEmployeeSocials(targetEmpId, (list) => {
+      setSocials(list || []);
+    });
+
+    const unsubContracts = subscribeEmployeeContracts(targetEmpId, (list) => {
+      setContracts(list || []);
+    });
+
+    const unsubAnnexes = subscribeContractAnnexes(targetEmpId, (list) => {
+      setContractAnnexes(list || []);
+    });
+
+    return () => {
       unsubWork();
       unsubTrain();
-      unsubConfig();
       unsubDegrees();
       unsubSocials();
       unsubContracts();
       unsubAnnexes();
     };
-  }, []);
-
-  // Cán bộ đang được chọn xem chi tiết
-  const currentEmp = useMemo(() => {
-    return viewableEmployees.find((e) => e.id === selectedEmpId) || viewableEmployees[0] || null;
-  }, [viewableEmployees, selectedEmpId]);
+  }, [currentEmp?.id]);
 
   // Handlers mở modal
   const handleOpenAdd = useCallback(() => {
