@@ -99,7 +99,7 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.13_v6.0_contracts_annexes_and_overview_config';
+export const CURRENT_SCHEMA_VERSION = '2026.10.16_v6.0_modular_services_and_contract_management';
 
 /**
  * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (22 Collections chuẩn hóa)

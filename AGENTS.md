@@ -38,16 +38,28 @@ Tài liệu này là **Quy tắc Bắt buộc & Trí nhớ Cốt lõi** dành ch
 
 ---
 
-## 🗄️ 4. PHƯƠNG ÁN NÂNG CẤP CSDL AN TOÀN (ZERO-DOWNTIME DATABASE MIGRATION PLAN)
+## 🗄️ 4. PHƯƠNG ÁN NÂNG CẤP & CẬP NHẬT CSDL TỰ ĐỘNG (AUTOMATED DATABASE PROVISIONING & MIGRATION PROTOCOL)
 
-Khi cần mở rộng CSDL cho các phân hệ mới:
-1. **Mở Rộng Không Phá Vỡ (Additive Non-Breaking Changes)**:
-   - Luôn thêm trường mới dưới dạng tùy chọn (Optional / Nullable) kèm fallback giá trị mặc định ở tầng Presentation.
-   - Không đổi tên (rename) hoặc xóa cột của các bảng đang chạy.
-2. **Bảo Toàn 100% Dữ Liệu Hiện Hữu (Zero Data Loss)**:
-   - Thao tác ghi đè cấu hình phải sử dụng `{ merge: true }` (`setDoc(..., payload, { merge: true })`).
-3. **Cơ Chế Tự Chữa Lành (Self-Healing Schema)**:
-   - Hệ thống tự động so khớp `CURRENT_SCHEMA_VERSION` với `system_metadata/schema`. Nếu phát hiện phiên bản mới hoặc thiếu bảng, hệ thống sẽ tự động bù đắp mà không làm gián đoạn người dùng.
+> **YÊU CẦU BẮT BUỘC KHI CÓ THAY ĐỔI CSDL**:
+> Mọi thay đổi về cấu trúc bảng, thêm collection, bổ sung trường dữ liệu hoặc thay đổi cấu hình danh mục **BẮT BUỘC PHẢI ĐƯỢC CẬP NHẬT TỰ ĐỘNG VÀO CLOUD FIREBASE** theo quy trình chuẩn khép kín sau:
+
+1. **Cơ Chế Tự Động Kích Hoạt Đồng Bộ (Self-Healing Auto-Sync Lifecycle)**:
+   - **Tự động kích hoạt khi Admin truy cập WebApp**: Trong `MainLayout.jsx`, khi tài khoản Quản trị viên (`isAdmin || isSuperAdmin`) đăng nhập, hệ thống tự động gọi ngầm `autoSyncDatabaseSchema()` (Non-blocking). Nếu phát hiện `CURRENT_SCHEMA_VERSION !== remoteVersion`, hệ thống sẽ tự động bù đắp toàn bộ các bảng, danh mục và cấu hình còn thiếu lên Firestore.
+   - **Tự động kích hoạt độc lập qua CLI / CI-CD**: Bất kỳ lúc nào, lập trình viên hoặc pipeline có thể chạy `npm run db:sync` (`scripts/syncDatabase.js`) để nạp trực tiếp lên Firebase Cloud thông qua tài khoản quản trị viên mà không cần mở trình duyệt.
+   - **Kiểm toán tức thì**: Chạy `npm run db:check` (`scripts/checkAllCollections.js`) để kiểm tra số lượng document thực tế của toàn bộ 22 collections trên Firebase.
+
+2. **Quy Trình 5 Bước Bắt Buộc Khi Thay Đổi CSDL**:
+   - **Bước 1 (Nâng Version)**: Cập nhật `CURRENT_SCHEMA_VERSION` trong `src/lib/autoInitDb.js` theo cú pháp ngày: `YYYY.MM.DD_v...` và bổ sung tên collection vào mảng `CORE_COLLECTIONS`.
+   - **Bước 2 (Định Nghĩa Mặc Định)**: Khai báo dữ liệu mẫu (Seed Data) chuẩn mực trong `src/lib/systemDefaults.js` (Zero Mock Data).
+   - **Bước 3 (Bảo Mật Security Rules)**: Bổ sung match rule tương ứng trong `firestore.rules` (chỉ định rõ quyền đọc `isAuthenticated()` và quyền ghi `isBoardOrAdmin()`).
+   - **Bước 4 (Cập Nhật Script Đồng Bộ)**: Bổ sung logic ghi collection mới vào `autoSyncDatabaseSchema()` trong `src/lib/autoInitDb.js` và `scripts/syncDatabase.js`.
+   - **Bước 5 (Kích Hoạt & Triển Khai)**:
+     + Chạy `npm run db:sync` để nạp dữ liệu vào Firestore.
+     + Triển khai security rules lên Firebase Cloud Console: `firebase deploy --only firestore:rules` (hoặc cập nhật trực tiếp trên Console tab Rules).
+
+3. **Nguyên Tắc An Toàn Dữ Liệu Tuyệt Đối (Zero Downtime & Zero Data Loss)**:
+   - **Mở rộng không phá vỡ (Additive Non-Breaking)**: Thêm trường mới dưới dạng Optional/Nullable kèm fallback giá trị mặc định, không đổi tên hoặc xóa trường của các bảng đang hoạt động.
+   - **Ghi đè an toàn**: 100% lệnh cập nhật CSDL cấu hình phải sử dụng `{ merge: true }` (`setDoc(..., payload, { merge: true })`) để bảo toàn các dữ liệu đã có.
 
 ---
 
