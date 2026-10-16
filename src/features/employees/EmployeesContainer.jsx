@@ -350,8 +350,11 @@ const EmployeesContainer = () => {
       ) : (
         /* 3. Bố cục Master - Detail iPad 2 phần */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* CỘT TRÁI (MASTER): Danh sách Cán bộ & Bộ lọc nhanh */}
-          <div className="lg:col-span-4 xl:col-span-4">
+          {/* CỘT TRÁI (MASTER): Danh sách Cán bộ & Bộ lọc nhanh (Ẩn trên mobile khi ở tab OVERVIEW) */}
+          <div 
+            id="employee-master-sidebar"
+            className={`lg:col-span-4 xl:col-span-4 ${activeTab === 'OVERVIEW' ? 'hidden lg:block' : ''}`}
+          >
             <EmployeeMasterSidebar
               employees={viewableEmployees}
               selectedEmployeeId={selectedEmpId}
@@ -359,6 +362,12 @@ const EmployeesContainer = () => {
                 setSelectedEmpIdState(empId);
                 if (activeTab === 'OVERVIEW') {
                   setActiveTabState('PROFILE');
+                }
+                if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                  setTimeout(() => {
+                    const el = document.getElementById('employee-detail-panel');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
                 }
               }}
               searchTerm={searchTerm}
@@ -370,7 +379,42 @@ const EmployeesContainer = () => {
           </div>
 
           {/* CỘT PHẢI (DETAIL): Nội dung chi tiết theo từng Tab */}
-          <div className="lg:col-span-8 xl:col-span-8">
+          <div id="employee-detail-panel" className="lg:col-span-8 xl:col-span-8">
+            {/* Thanh điều hướng mini trên Mobile khi xem chi tiết cá nhân */}
+            {activeTab !== 'OVERVIEW' && activeTab !== 'SETTINGS' && currentEmp && (
+              <div className="block lg:hidden bg-white rounded-2xl border border-slate-200/90 p-3 mb-3.5 shadow-2xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 border border-emerald-200 overflow-hidden">
+                      {currentEmp.avatar ? (
+                        <img src={currentEmp.avatar} alt={currentEmp.name} className="w-full h-full object-cover" />
+                      ) : (
+                        currentEmp.name?.charAt(0) || 'C'
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-slate-900 truncate">
+                        {currentEmp.name}
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate">
+                        {currentEmp.position} • {currentEmp.department}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById('employee-master-sidebar');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 shrink-0 cursor-pointer active:scale-95 transition-all"
+                  >
+                    Đổi cán bộ ↑
+                  </button>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'OVERVIEW' && (
               <EmployeeOverviewTab
                 employees={viewableEmployees}

@@ -33,14 +33,28 @@ export const getUserProfile = async (uid, email) => {
       }
     }
 
-    // 2. Tra cứu theo email trong collection 'users'
+    // 2. Tra cứu theo email trong collection 'users' bằng Firestore Query có index
     if (email) {
       const normalizedEmail = email.trim().toLowerCase();
-      const usersSnap = await getDocs(collection(db, 'users'));
-      for (const d of usersSnap.docs) {
+      const emailQuery = query(collection(db, 'users'), where('email', '==', normalizedEmail));
+      const emailSnap = await getDocs(emailQuery);
+      if (!emailSnap.empty) {
+        const d = emailSnap.docs[0];
         const uData = d.data();
-        if (uData.email && uData.email.trim().toLowerCase() === normalizedEmail) {
-          // Lưu lại authUid để các lần sau tra cứu tức thì theo doc(db, 'users', uid)
+        if (uid && !uData.authUid) {
+          await setDoc(doc(db, 'users', d.id), { authUid: uid }, { merge: true }).catch(() => {});
+        }
+        return { id: d.id, ...uData };
+      }
+
+      // Fallback: Tra cứu email gốc (nếu trong DB lưu chữ hoa)
+      const rawEmail = email.trim();
+      if (rawEmail !== normalizedEmail) {
+        const rawEmailQuery = query(collection(db, 'users'), where('email', '==', rawEmail));
+        const rawSnap = await getDocs(rawEmailQuery);
+        if (!rawSnap.empty) {
+          const d = rawSnap.docs[0];
+          const uData = d.data();
           if (uid && !uData.authUid) {
             await setDoc(doc(db, 'users', d.id), { authUid: uid }, { merge: true }).catch(() => {});
           }

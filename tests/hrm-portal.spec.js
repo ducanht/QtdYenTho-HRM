@@ -95,17 +95,26 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
     // Kiểm tra hiển thị Thâm niên trên giao diện
     await expect(page.getByText(/Thâm niên/i).first()).toBeVisible();
 
-    // Kiểm tra các nút xuất báo cáo và in A4
+    // Kiểm tra nút xuất toàn bộ danh bạ cán bộ ở Master Sidebar
     await expect(page.getByTitle(/Xuất toàn bộ danh bạ cán bộ sang Excel/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /In trích ngang A4/i })).toBeVisible();
+
+    // Chuyển sang Tab Thông tin nhân sự hoặc click cán bộ để kiểm tra các nút in A4, xuất Word của hồ sơ
+    const profileTab = page.getByRole('button', { name: /Thông tin nhân sự|Hồ sơ trích ngang|Hồ sơ/i }).first();
+    if (await profileTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await profileTab.click();
+    } else {
+      await page.getByText('Nguyễn Thị Sinh').first().click();
+    }
+
+    await expect(page.getByRole('button', { name: /In trích ngang A4/i })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: /Xuất Word/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Xuất Excel/i }).first()).toBeVisible();
 
-    // Chuyển tab Luân chuyển công tác
-    const transferTab = page.getByRole('button', { name: /Luân chuyển công tác|Luân chuyển/i }).first();
+    // Chuyển tab Hợp đồng & Luân chuyển công tác
+    const transferTab = page.getByRole('button', { name: /Hợp đồng & Luân chuyển|Luân chuyển công tác|Luân chuyển/i }).first();
     if (await transferTab.isVisible({ timeout: 4000 }).catch(() => false)) {
       await transferTab.click();
-      await expect(page.getByText(/Theo Dõi Luân Chuyển Công Tác|Chu kỳ luân chuyển/i).first()).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/Quá Trình Công Tác & Luân Chuyển Vị Trí|Theo dõi chu kỳ địa bàn tín dụng/i).first()).toBeVisible({ timeout: 10000 });
     }
 
     // Chuyển tab Đào tạo & Chứng chỉ

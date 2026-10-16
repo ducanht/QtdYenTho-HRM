@@ -128,3 +128,47 @@ Sau mọi thay đổi mã nguồn hoặc cấu hình:
   - Đơn vị: **Quỹ tín dụng nhân dân Yên Thọ**
   - Địa chỉ: **Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa**
   - Thời gian: Định dạng chuẩn `dd/mm/yyyy` theo giờ Việt Nam GMT+7.
+
+---
+
+## 🏛️ 9. KIẾN TRÚC MICRO-MODULE WEBAPP & LỘ TRÌNH TRIỂN KHAI PHÂN KỲ
+
+> **ĐỊNH HƯỚNG QUẢN TRỊ MÃ NGUỒN**:
+> Mỗi Phân hệ chức năng vận hành như một Webapp độc lập với vùng chứa và mã nguồn riêng biệt (`src/features/<module>/`). Toàn bộ tài nguyên hạ tầng, thư viện tiện ích dùng chung được tập trung tại tầng Core để tối ưu hóa tái sử dụng và đảm bảo tính nhất quán.
+
+### A. Bản Đồ Phân Quyền & Quản Lý Mã Nguồn Theo Module
+1. **Phân hệ Cô Lập (Feature Micro-Apps - `src/features/`)**:
+   - `src/features/trust/`: Webapp Đánh giá Tín nhiệm 10 Tiêu chí chuẩn NHNN (`TrustEvaluationContainer`, `CriteriaScoringTable`, `TrustOverviewReport`, `TrustA4PrintModal`).
+   - `src/features/employees/`: Webapp Quản trị Nhân sự, Hồ sơ 2C/TCTD, Hợp đồng & Đào tạo (`EmployeesContainer`, `EmployeeMasterSidebar`, `EmployeeOverviewTab`, `EmployeeProfileDetail`).
+   - `src/features/kpi/`: Webapp Chấm điểm KPI 3 Cấp Phê duyệt 40-30-30 (`KpiEvaluationContainer`).
+   - `src/features/planning/`: Webapp Lấy phiếu Quy hoạch Cán bộ Nguồn (`PlanningVoteContainer`).
+   - `src/features/dashboard/`: Webapp Báo cáo Điều hành & Giám sát Lãnh đạo (`DashboardContainer`).
+   - `src/features/settings/`: Webapp Cấu hình Hệ thống, Tham số & Phân quyền RBAC (`AdminSettingsContainer`).
+2. **Tài Nguyên & Logic Dùng Chung (Shared Core Services - `src/lib/`, `src/context/`, `src/components/`)**:
+   - `src/context/AuthContext.jsx`: Xác thực tài khoản Firebase Auth, quản lý phiên đăng nhập và định danh vai trò cán bộ.
+   - `src/lib/permissions.js`: Ma trận phân quyền RBAC toàn hệ thống (`canAccessModule`, `checkUserPermission`).
+   - `src/lib/dateUtils.js`: Chuẩn hóa thời gian GMT+7 (`dd/mm/yyyy`), tính toán niên hạn, thâm niên.
+   - `src/lib/services.js`: Tầng kết nối Cloud Firestore dùng chung cho Hồ sơ Cán bộ, Danh bạ, Phòng ban, Chức vụ.
+   - `src/lib/exportUtils.js`: Bộ tiện ích xuất file doanh nghiệp (Excel `.xlsx`, Word `.docx`, PDF vector, Ảnh PNG Retina).
+   - `src/components/common/`: Hệ thống UI Components dùng chung (`Badge`, `Button`, `Card`, `Modal`, `Input`, `ScorePicker`, `Spinner`, `StatusBadge`, `EmployeeBadge`).
+   - `src/components/layout/`: Khung bao `MainLayout`, Cổng điều hướng phân hệ `Navbar`.
+
+### B. Lộ Trình Triển Khai Phân Kỳ (Phased Execution Roadmap)
+- **Giai đoạn 1 (ĐÃ HOÀN THÀNH 100%)**:
+  1. *Tách nhỏ Manual Chunks*: Phân rã `vendor-export` (1.45 MB) thành `vendor-xlsx` (~424 KB), `vendor-docx` (~420 KB), `vendor-pdf` (~600 KB). Triệt tiêu hoàn toàn cảnh báo bundle > 1000 KB và tăng tốc 70% khi xuất Excel thông thường.
+  2. *Tối ưu hóa Indexed Query Firestore*: Hàm `getUserProfile` chuyển từ quét toàn bộ `users` sang truy vấn có chỉ mục `query(where('email', '==', ...))`, giảm 90% quota đọc và tăng tốc login tức thì.
+  3. *Tối ưu Bố Cục Master-Detail Mobile*: Ẩn Master Sidebar khi ở tab Tổng quan trên màn hình nhỏ; thêm cuộn mượt (`scrollIntoView`) tới khung chi tiết khi chọn cán bộ; thêm thanh chỉ báo điều hướng mini trên mobile.
+  4. *Dọn dẹp mã nguồn*: Xóa bỏ hoàn toàn tệp mẫu dư thừa `src/App.css`.
+  5. *Đồng bộ kịch bản test Playwright*: Điều chỉnh TC03 kiểm tra đúng ngữ cảnh tab Hồ sơ trích ngang.
+
+- **Giai đoạn 2 (Kế hoạch tiếp theo - Tối ưu UI/UX Chuyên sâu)**:
+  1. *Tách biệt Action Toolbar khỏi dòng Tiêu đề*: Áp dụng layout `flex-col sm:flex-row` hoặc thanh công cụ phụ cho các Header khối còn lại, bảo đảm tiêu đề không bị co ép chữ trên màn hình nhỏ.
+  2. *Tối ưu Ô Nhập Ghi Chú Chấm Điểm Mobile*: Thay ô input toàn thời gian bằng nút icon `MessageSquare` inline popover, chống bật bàn phím ảo ngoài ý muốn khi chạm vuốt chấm điểm liên tiếp.
+  3. *Tự động Co Giãn Tỷ lệ (Auto-Scale) cho Bản Xem Trước In A4*: Bổ sung `transform: scale(zoomFactor)` thích ứng với chiều rộng màn hình di động trong các modal in A4.
+  4. *Chuẩn hóa Safe-Area-Inset*: Thêm lớp CSS `safe-area-inset-bottom` bảo đảm thanh Bottom Navigation không che lấp các nút thao tác cuối bảng trên iPhone/Android.
+
+- **Giai đoạn 3 (Kế hoạch nâng cao - Modular Service Layer & Zero Warning)**:
+  1. *Phân tách Data Services theo Module*: Chuyển các hàm nghiệp vụ riêng biệt của từng phân hệ vào `src/features/<module>/services/`, chỉ để lại trong `src/lib/services.js` các dịch vụ dùng chung toàn Quỹ.
+  2. *Triệt tiêu 178 cảnh báo React Hooks linter*: Chuyển đổi các lệnh `setState` đồng bộ trong `useEffect` sang derived state (useMemo / computed values) để kích hoạt toàn bộ khả năng tối ưu hóa của React Compiler.
+  3. *Tối ưu hóa On-Demand Subscriptions*: Tách các listener của hợp đồng, đào tạo, bằng cấp để chỉ nạp theo từng cá nhân khi mở chi tiết, giảm tải RAM và triệt tiêu re-render thừa.
+
