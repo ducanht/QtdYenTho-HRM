@@ -259,11 +259,12 @@ const TrustA4PrintModal = ({
       }
     >
       {/* Vùng in A4 có ID phục vụ xuất PDF & PNG chuẩn xác 100% */}
-      <div 
-        id="trust-a4-document-container"
-        style={{ fontFamily: '"Times New Roman", "Be Vietnam Pro", serif' }}
-        className="p-8 sm:p-10 bg-white text-slate-900 space-y-6 font-serif border border-slate-200 rounded-xl shadow-xs print:m-0 print:border-none print:shadow-none print:p-0"
-      >
+      <div className="overflow-x-auto -mx-4 sm:mx-0 p-1 sm:p-0">
+        <div 
+          id="trust-a4-document-container"
+          style={{ fontFamily: '"Times New Roman", "Be Vietnam Pro", serif' }}
+          className="min-w-[680px] p-8 sm:p-10 bg-white text-slate-900 space-y-6 font-serif border border-slate-200 rounded-xl shadow-xs print:min-w-0 print:m-0 print:border-none print:shadow-none print:p-0"
+        >
         {/* Header Quốc hiệu & Đơn vị chuẩn thể thức văn bản hành chính */}
         <div className="flex justify-between text-center pb-4 border-b border-slate-300">
           <div className="text-left sm:text-center">
@@ -368,7 +369,8 @@ const TrustA4PrintModal = ({
           </div>
         </div>
       </div>
-    </Modal>
+    </div>
+  </Modal>
   );
 };
 

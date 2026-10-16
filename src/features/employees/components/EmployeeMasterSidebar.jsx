@@ -80,43 +80,43 @@ const EmployeeMasterSidebar = ({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col h-full">
-      {/* Header Sidebar: Tiêu đề & Nút Thêm Cán Bộ / Xuất Excel */}
+      {/* Header Sidebar: Tiêu đề & Nút Thêm Cán Bộ / Xuất Excel tách biệt hàng */}
       <div className="p-4 border-b border-slate-100 space-y-3 bg-slate-50/50">
+        {/* Hàng 1: Tiêu đề và tổng số cán bộ */}
         <div className="flex items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-              <span>Danh Bạ Cán Bộ</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold tabular-nums">
-                {employees.length}
-              </span>
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">Quỹ TDND Yên Thọ</p>
-          </div>
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
+            <span>Danh Bạ Cán Bộ</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold tabular-nums">
+              {employees.length}
+            </span>
+          </h2>
+          <span className="text-[11px] font-semibold text-slate-500">Quỹ TDND Yên Thọ</span>
+        </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+        {/* Hàng 2: Thanh Toolbar công cụ thao tác riêng biệt */}
+        <div className="flex items-center gap-2 pt-0.5">
+          <button
+            type="button"
+            onClick={handleExportDirectory}
+            disabled={exportingExcel || employees.length === 0}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Xuất toàn bộ danh bạ cán bộ sang Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+            <span>{exportingExcel ? 'Đang tạo...' : 'Xuất Excel'}</span>
+          </button>
+
+          {canManage && (
             <button
               type="button"
-              onClick={handleExportDirectory}
-              disabled={exportingExcel || employees.length === 0}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
-              title="Xuất toàn bộ danh bạ cán bộ sang Excel (.xlsx)"
+              onClick={onOpenAddModal}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+              title="Thêm cán bộ mới"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-              <span>{exportingExcel ? '...' : 'Xuất Excel'}</span>
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Thêm mới</span>
             </button>
-
-            {canManage && (
-              <button
-                type="button"
-                onClick={onOpenAddModal}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-                title="Thêm cán bộ mới"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Thêm mới</span>
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Ô tìm kiếm nhanh */}

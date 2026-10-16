@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Search } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, MessageSquare, Check, X } from 'lucide-react';
 import ScorePicker from '../../../components/common/ScorePicker';
 
 /**
@@ -25,6 +25,8 @@ const CriteriaScoringTable = ({
   disabled = false,
   disabledMessage = '',
 }) => {
+  const [expandedNoteEmpId, setExpandedNoteEmpId] = useState(null);
+
   // Sắp xếp mặc định: Phòng ban -> Tên cán bộ (theo vần ABC tiếng Việt)
   const sortedEmployees = useMemo(() => {
     const list = [...employees];
@@ -316,18 +318,49 @@ const CriteriaScoringTable = ({
                   />
                 </div>
 
-                {/* Hàng 3: Ô nhập ghi chú mỏng gọn */}
+                {/* Hàng 3: Ô nhập ghi chú tiện dụng, chống vô tình chạm bàn phím khi vuốt chấm điểm */}
                 <div className="pt-0.5">
-                  <input
-                    type="text"
-                    placeholder={disabled ? 'Đang khóa cổng lấy phiếu...' : 'Ghi chú (tùy chọn)...'}
-                    value={empNote}
-                    disabled={disabled}
-                    onChange={(e) => !disabled && onSetNote(emp.id, e.target.value)}
-                    className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0f766e] bg-slate-50/50 hover:bg-white ${
-                      disabled ? 'cursor-not-allowed opacity-60 bg-slate-100' : ''
-                    }`}
-                  />
+                  {expandedNoteEmpId === emp.id ? (
+                    <div className="flex items-center gap-1.5 animate-in fade-in">
+                      <input
+                        type="text"
+                        placeholder={disabled ? 'Đang khóa cổng...' : 'Nhập ghi chú...'}
+                        value={empNote}
+                        disabled={disabled}
+                        autoFocus
+                        onChange={(e) => !disabled && onSetNote(emp.id, e.target.value)}
+                        className={`flex-1 text-xs px-2.5 py-1.5 border border-teal-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0f766e] bg-white ${
+                          disabled ? 'cursor-not-allowed opacity-60 bg-slate-100' : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setExpandedNoteEmpId(null)}
+                        className="p-1.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 text-xs font-bold"
+                        title="Xong"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => !disabled && setExpandedNoteEmpId(emp.id)}
+                        className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
+                          empNote
+                            ? 'bg-amber-50/80 text-amber-900 border-amber-300 font-medium'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700'
+                        }`}
+                      >
+                        <MessageSquare className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate max-w-[240px]">
+                          {empNote ? `Ghi chú: ${empNote}` : '+ Ghi chú'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

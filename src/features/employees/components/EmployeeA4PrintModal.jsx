@@ -122,10 +122,11 @@ const EmployeeA4PrintModal = ({
         </div>
       }
     >
-      <div 
-        ref={printRef}
-        className="p-6 sm:p-10 bg-white border border-slate-200 rounded-xl text-slate-900 space-y-6 text-sm print:border-0 print:p-0 print:m-0"
-      >
+      <div className="overflow-x-auto -mx-4 sm:mx-0 p-1 sm:p-0">
+        <div 
+          ref={printRef}
+          className="min-w-[680px] p-6 sm:p-10 bg-white border border-slate-200 rounded-xl text-slate-900 space-y-6 text-sm print:min-w-0 print:border-0 print:p-0 print:m-0"
+        >
         {/* Quốc hiệu & Tiêu ngữ */}
         <div className="grid grid-cols-2 text-center pb-4 border-b-2 border-slate-900">
           <div>
@@ -312,7 +313,8 @@ const EmployeeA4PrintModal = ({
           </div>
         </div>
       </div>
-    </Modal>
+    </div>
+  </Modal>
   );
 };
 
