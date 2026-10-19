@@ -53,7 +53,7 @@ const EmployeeOverviewTab = ({
 
     employees.forEach((emp) => {
       // Chỉ theo dõi Cán bộ Tín dụng phụ trách địa bàn (loại trừ HĐQT, BKS, Giám đốc, Kế toán, Thủ quỹ)
-      const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department) || Boolean(emp.assignedArea);
+      const isCreditOfficer = isCreditOfficerRole(emp.position, emp.department);
       if (!isCreditOfficer) return;
 
       const effectiveStart = emp.positionStartDate || emp.joinDate;
@@ -228,9 +228,14 @@ const EmployeeOverviewTab = ({
   // 5. Cơ cấu nhân sự theo Phòng ban / Bộ phận
   const departmentStats = useMemo(() => {
     const deptMap = {};
-    departments.forEach((d) => {
-      deptMap[d.name] = 0;
-    });
+    if (Array.isArray(departments)) {
+      departments.forEach((d) => {
+        const name = typeof d === 'string' ? d : d?.name || d?.title || '';
+        if (name && name !== 'undefined') {
+          deptMap[name] = 0;
+        }
+      });
+    }
 
     // Mặc định các bộ phận chuẩn nếu danh mục rỗng
     if (Object.keys(deptMap).length === 0) {
@@ -238,15 +243,18 @@ const EmployeeOverviewTab = ({
       deptMap['Ban Kiểm soát'] = 0;
       deptMap['Ban Điều hành'] = 0;
       deptMap['Phòng Tín dụng'] = 0;
-      deptMap['Bộ phận Kế toán - Ngân quỹ'] = 0;
+      deptMap['Phòng Kế toán - Ngân quỹ'] = 0;
     }
 
     employees.forEach((emp) => {
-      const deptName = emp.department || 'Bộ phận Kế toán - Ngân quỹ';
-      deptMap[deptName] = (deptMap[deptName] || 0) + 1;
+      const deptName = emp.department || 'Phòng Kế toán - Ngân quỹ';
+      if (deptName && deptName !== 'undefined') {
+        deptMap[deptName] = (deptMap[deptName] || 0) + 1;
+      }
     });
 
     return Object.keys(deptMap)
+      .filter((deptName) => deptName && deptName !== 'undefined')
       .map((deptName) => ({
         name: deptName,
         count: deptMap[deptName],

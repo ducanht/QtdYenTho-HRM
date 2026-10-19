@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { saveSubsystemConfig } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
+import { DEFAULT_MODULE_HR_SETTINGS } from '../../../lib/systemDefaults';
 
 /**
  * EmployeeSettingsTab: Cột Phải cho Tab SETTINGS
@@ -34,6 +35,23 @@ const EmployeeSettingsTab = ({
   const [canStaffUploadTraining, setCanStaffUploadTraining] = useState(true);
   const [creditRotationMonths, setCreditRotationMonths] = useState(36);
   const [creditWarningMonths, setCreditWarningMonths] = useState(6);
+
+  const workLocations = hrConfig?.workLocations || DEFAULT_MODULE_HR_SETTINGS.workLocations || [
+    'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+    'Phòng Giao dịch số 1 (Yên Thọ)',
+    'Điểm giao dịch lưu động',
+  ];
+
+  const creditAreas = hrConfig?.creditAreas || DEFAULT_MODULE_HR_SETTINGS.creditAreas || [
+    'Thôn Tân Lộc (xã Yên Thọ)',
+    'Thôn Tân Hưng (xã Yên Thọ)',
+    'Cụm Thôn 1, 2, 3 (xã Yên Thọ)',
+    'Cụm Thôn 4, 5, 6 (xã Yên Thọ)',
+    'Cụm Thôn 7, 8 (xã Quý Lộc)',
+    'Địa bàn xã Quý Lộc',
+    'Địa bàn xã Yên Thọ',
+    'Địa bàn liên xã mở rộng',
+  ];
 
   // Cấu hình hiển thị màn hình Tổng quan
   const [showKpis, setShowKpis] = useState(true);
@@ -410,6 +428,59 @@ const EmployeeSettingsTab = ({
               <span className="text-[11px] text-slate-500 font-medium">
                 (từ tháng thứ {Math.max(1, parsedRotMonths - parsedWarnMonths)})
               </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Danh Mục Nơi Làm Việc & Địa Bàn Tín Dụng Hoạt Động */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-emerald-700" />
+              <span>Nơi Làm Việc &amp; Địa Bàn Tín Dụng Hoạt Động</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Địa điểm làm việc chung toàn cơ quan và danh mục địa bàn phân công Cán bộ Tín dụng
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* Cột 1: Nơi làm việc / Điểm giao dịch */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+            <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+              <Building2 className="w-4 h-4 text-emerald-700" />
+              <span>Điểm Làm Việc &amp; Trụ Sở Hoạt Động ({workLocations.length})</span>
+            </h4>
+            <div className="space-y-2">
+              {workLocations.map((loc, idx) => (
+                <div key={idx} className="p-2.5 rounded-lg bg-white border border-slate-200 font-semibold text-slate-800 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </span>
+                  <span>{loc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cột 2: Địa bàn tín dụng */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+            <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-teal-700" />
+              <span>Địa Bàn Quản Lý Tín Dụng (CBTD) ({creditAreas.length})</span>
+            </h4>
+            <div className="space-y-2">
+              {creditAreas.map((area, idx) => (
+                <div key={idx} className="p-2.5 rounded-lg bg-white border border-slate-200 font-semibold text-slate-800 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-md bg-teal-100 text-teal-800 text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </span>
+                  <span>{area}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
