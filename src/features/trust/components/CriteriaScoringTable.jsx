@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Search, MessageSquare, Check, X } from 'lucide-react';
 import ScorePicker from '../../../components/common/ScorePicker';
 
@@ -306,7 +306,7 @@ const CriteriaScoringTable = ({
                 </div>
 
                 {/* Hàng 2: Bộ chọn điểm 1..10 (Dàn đều 10 nút chuẩn touch target trên mobile) */}
-                <div className="pt-1 overflow-x-auto pb-0.5 scrollbar-none">
+                <div className="pt-1 pb-0.5">
                   <ScorePicker
                     value={currentScore}
                     onChange={(score) => !disabled && onSetScore(emp.id, criterion.id, score)}
@@ -372,3 +372,4 @@ const CriteriaScoringTable = ({
 };
 
 export default React.memo(CriteriaScoringTable);
+

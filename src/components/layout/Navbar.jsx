@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { 
   ShieldCheck, 
@@ -264,3 +264,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
