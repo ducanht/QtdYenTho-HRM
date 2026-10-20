@@ -18,8 +18,12 @@ process.env.CI = 'true';
 function run(command, options = {}) {
   console.log(`\x1b[36m▶ [EXEC]\x1b[0m ${command}`);
   try {
-    return execSync(command, { stdio: ['ignore', 'inherit', 'inherit'], ...options });
+    const res = execSync(command, { stdio: ['ignore', 'pipe', 'pipe'], ...options });
+    if (res) process.stdout.write(res);
+    return res;
   } catch (error) {
+    if (error.stdout) process.stdout.write(error.stdout);
+    if (error.stderr) process.stderr.write(error.stderr);
     console.error(`\x1b[31m✖ [ERROR] Lệnh thất bại: ${command}\x1b[0m`);
     process.exit(1);
   }
