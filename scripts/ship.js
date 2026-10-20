@@ -12,10 +12,13 @@
 import { execSync } from 'child_process';
 import process from 'process';
 
+// Đảm bảo môi trường không tương tác (CI) để các công cụ CLI như Firebase không block đợi stdin
+process.env.CI = 'true';
+
 function run(command, options = {}) {
   console.log(`\x1b[36m▶ [EXEC]\x1b[0m ${command}`);
   try {
-    return execSync(command, { stdio: 'inherit', ...options });
+    return execSync(command, { stdio: ['ignore', 'inherit', 'inherit'], ...options });
   } catch (error) {
     console.error(`\x1b[31m✖ [ERROR] Lệnh thất bại: ${command}\x1b[0m`);
     process.exit(1);
@@ -41,7 +44,7 @@ console.log('\x1b[1m\x1b[32m====================================================
 // 1. Linting
 console.log('\x1b[34m[BƯỚC 1/4] Kiểm tra cú pháp mã nguồn (Linting)...\x1b[0m');
 try {
-  execSync('npm run lint', { stdio: 'inherit' });
+  execSync('npm run lint', { stdio: ['ignore', 'inherit', 'inherit'] });
 } catch (e) {
   console.warn('\x1b[33m⚠ Có cảnh báo linter nhưng cho phép tiếp tục quy trình build.\x1b[0m');
 }
