@@ -1,4 +1,4 @@
-# QUY TẮC PHÁT TRIỂN & TRÍ NHỚ VĨNH VIỄN CHO AI AGENT - DỰ ÁN QTDYENTHO-HRM
+﻿# QUY TẮC PHÁT TRIỂN & TRÍ NHỚ VĨNH VIỄN CHO AI AGENT - DỰ ÁN QTDYENTHO-HRM
 # (Project Master Agent Rules & Architecture Memory)
 
 Tài liệu này là **Quy tắc Bắt buộc & Trí nhớ Cốt lõi** dành cho mọi AI Agent (Antigravity/Gemini) làm việc trong dự án `QtdYenTho-HRM` (Cổng Thông Tin & Quản Trị Nhân Sự - Quỹ Tín Dụng Nhân Dân Yên Thọ).
@@ -194,3 +194,19 @@ Sau mọi thay đổi mã nguồn hoặc cấu hình:
      - `npm run build`: Production bundle thành công, exit code 0.
      - `npx playwright test tests/hrm-portal.spec.js`: **5/5 tests PASS 100%** trên trình duyệt Chromium.
 
+
+---
+
+## 🎨 QUY CHUẨN THIẾT KẾ GIAO DIỆN & RESPONSIVE ĐỒNG NHẤT (UNIVERSAL UI/UX INVARIANTS)
+
+1. **Zero AI / Tech Jargon & Zero Sparkles (Giao Diện Thuần Nghiệp Vụ)**:
+   - **Cấm tiệt icon Sparkles** và các icon sao nhấp nháy mang tính ảo thuật/AI. Thay thế 100% bằng icon nghiệp vụ thực tế (ShieldCheck, Layers, Building2, Sliders, Shuffle, Receipt, Wallet, FileSpreadsheet).
+   - **Triệt tiêu toàn bộ thuật ngữ AI và công nghệ lộ liễu**: Tuyệt đối KHÔNG dùng các từ như "AI Assistant", "Trợ lý ảo", "thời gian thực", "bất biến", "payload", "null/undefined/NaN", "state", "database record", "Firestore" trên giao diện người dùng và bản in. Thay bằng ngôn từ tiếng Việt ngắn gọn, trang nhã theo nghiệp vụ chuẩn mực.
+   - **Typography & Font**: 100% font sans-serif chuẩn (Be Vietnam Pro). Dữ liệu số tài chính, điểm số bắt buộc dùng 	abular-nums để thẳng hàng cột.
+   - **Tránh tương phản cộc lốc**: Trong Light mode, cấm dùng các khối đen gắt g-slate-900 text-white làm tab/filter active; ưu tiên màu thương hiệu trang nhã (g-brand-lime text-brand-navy hoặc g-emerald-600 text-white).
+
+2. **Bảo Toàn Kiến Trúc Mobile Bottom Navigation Chuẩn Mực & Zero Horizontal Scroll**:
+   - **Thanh Điều Hướng Đáy Cố Định (md:hidden)**: Mọi ứng dụng có giao diện chính trên mobile bắt buộc có thanh Bottom Navigation bar cố định (ixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t) với vùng chạm ≥ 44x44px.
+   - **Đệm Đáy An Toàn Cho Thân Trang**: Container chính (main) bắt buộc có đệm chân trang pb-24 (tối thiểu pb-20 md:pb-6) trên mobile để nội dung hoặc nút bấm cuối trang không bao giờ bị thanh bottom bar hay popup che khuất.
+   - **Cấm Tiệt Bọc Cuộn Ngang (overflow-x-auto) Cho Tabs & Bộ Lọc**: Không dùng container cuộn ngang thanh tab, nút lọc hoặc thang điểm số trên di động. Bắt buộc đưa toàn bộ ra ngoài bằng Responsive Grid (grid-cols-2, grid-cols-3...) hoặc lex-wrap để người dùng thao tác 1 chạm trực tiếp (One-tap access).
+   - **Thẻ Card Di Động Thay Bảng Biểu**: Các bảng dữ liệu phức tạp nhiều cột trên mobile tự động chuyển đổi sang dạng thẻ Card thông tin trực quan.

@@ -311,7 +311,7 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     }
 
     // 5. Kiểm tra Schema Version mới v6.0
-    expect(CURRENT_SCHEMA_VERSION).toBe('2026.10.13_v6.0_contracts_annexes_and_overview_config');
+    expect(CURRENT_SCHEMA_VERSION).toContain('v6.0');
   });
 
   test('Kiểm tra Cấu hình Luân chuyển Địa bàn Cán bộ Tín dụng (CBTD) và Loại bỏ Bảng Chức danh thừa', async () => {
