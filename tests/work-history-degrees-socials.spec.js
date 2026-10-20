@@ -34,14 +34,14 @@ import {
 import { TRANSFER_TYPES } from '../src/features/employees/components/WorkHistoryPeriodModal';
 import { 
   DEGREE_LEVEL_OPTIONS, 
-  TRAINING_TYPE_OPTIONS, 
-  CLASSIFICATION_OPTIONS 
+  TRAINING_TYPE_OPTIONS 
 } from '../src/features/employees/components/AddDegreeModal';
 import { SOCIAL_PLATFORMS } from '../src/features/employees/components/ManageSocialsModal';
 import { 
   exportEmployeeProfileToDocx, 
   exportEmployeeProfileToExcel 
 } from '../src/lib/exportUtils';
+import EmployeeFormModal from '../src/features/employees/components/EmployeeFormModal';
 
 
 test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Riêng Biệt (Degrees, Socials, Timeline Work History)', () => {
@@ -378,6 +378,35 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showEducationStructure).toBe(true);
     expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showCreditRotationMonitoring).toBe(true);
     expect(DEFAULT_MODULE_HR_SETTINGS.overviewDisplayConfig.showDepartmentDistribution).toBe(true);
+  });
+
+  test('Kiểm tra Modal Chỉnh Sửa Hồ Sơ Cán Bộ (EmployeeFormModal) 4 Phân Khu Đầy Đủ Thông Tin Lưu Trữ', async () => {
+    // 1. EmployeeFormModal component tồn tại và là React component (function hoặc memoized object)
+    expect(typeof (EmployeeFormModal.type || EmployeeFormModal)).toBe('function');
+
+    // 2. Kiểm tra dữ liệu mẫu cán bộ đầy đủ 4 nhóm thông tin
+    const sampleEmp = OFFICIAL_STAFF_EMPLOYEES[0];
+    // Nhóm 1: Thông tin cá nhân & Liên hệ
+    expect(sampleEmp.name || sampleEmp.fullName).toBeDefined();
+    expect(sampleEmp).toHaveProperty('gender');
+    expect(sampleEmp).toHaveProperty('cccd');
+    expect(sampleEmp.birthDate !== undefined || sampleEmp.dateOfBirth !== undefined).toBe(true);
+    expect(sampleEmp).toHaveProperty('phone');
+    expect(sampleEmp).toHaveProperty('email');
+
+    // Nhóm 2: Công tác & Thâm niên
+    expect(sampleEmp).toHaveProperty('department');
+    expect(sampleEmp).toHaveProperty('position');
+    expect(sampleEmp).toHaveProperty('contractType');
+    expect(sampleEmp).toHaveProperty('workLocation');
+
+    // Nhóm 3: Chính trị & Đảng - Đoàn thể
+    expect(sampleEmp.partyMember !== undefined || sampleEmp.isPartyMember !== undefined).toBe(true);
+
+    // Nhóm 4: Trình độ & Văn bằng chuyên môn
+    expect(sampleEmp.education || sampleEmp.qualification).toBeDefined();
+    expect(sampleEmp).toHaveProperty('itLevel');
+    expect(sampleEmp).toHaveProperty('foreignLanguage');
   });
 });
 

@@ -43,6 +43,7 @@ const WorkHistoryPeriodModal = ({
   positions = [],
   hrConfig = null,
   onSuccess,
+  zIndex = 'z-50',
 }) => {
   const selectedEmp = propSelectedEmp || emp;
   const editingRecord = propEditingRecord || record || null;
@@ -250,6 +251,7 @@ const WorkHistoryPeriodModal = ({
       title={editingRecord ? 'Chỉnh Sửa Mốc Quá Trình Công Tác' : 'Thêm Mốc Quá Trình Công Tác Mới'}
       subtitle={`Cán bộ: ${selectedEmp?.name || '—'} • Quỹ Tín Dụng Nhân Dân Yên Thọ`}
       maxWidth="max-w-2xl"
+      zIndex={zIndex}
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         {/* Khối 1: Thời gian công tác */}

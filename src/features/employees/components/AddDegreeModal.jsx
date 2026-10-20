@@ -75,6 +75,7 @@ const AddDegreeModal = ({
   initialData = null,
   existingDegreesCount = 0,
   onSuccess,
+  zIndex = 'z-50',
 }) => {
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -201,6 +202,7 @@ const AddDegreeModal = ({
       title={isEditing ? 'Chỉnh Sửa Văn Bằng Chuyên Môn' : 'Thêm Mới Văn Bằng Chuyên Môn'}
       subtitle={`Cán bộ: ${emp?.name || ''} • ${emp?.position || ''} - ${emp?.department || ''}`}
       maxWidth="max-w-2xl"
+      zIndex={zIndex}
     >
       <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
