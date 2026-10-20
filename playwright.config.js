@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Cấu hình kiểm thử tự động Playwright E2E cho Quỹ Tín Dụng Nhân Dân Yên Thọ - HRM
@@ -25,8 +30,9 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
+    cwd: __dirname,
     url: 'http://localhost:5173',
     reuseExistingServer: true,
-    timeout: 120 * 1000,
+    timeout: 60 * 1000,
   },
 });

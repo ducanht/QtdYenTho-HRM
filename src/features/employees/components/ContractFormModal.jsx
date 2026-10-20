@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
+import DatePicker from '../../../components/common/DatePicker';
 import { 
   FileText, 
   Calendar, 
@@ -222,45 +223,27 @@ const ContractFormModal = ({
 
         {/* Hàng 2: Ngày ký, Ngày hiệu lực, Ngày hết hạn */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Ngày ký kết (*):</span>
-            </label>
-            <input
-              type="date"
-              required
-              value={signDate}
-              onChange={(e) => setSignDate(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-            />
-          </div>
+          <DatePicker
+            label="Ngày ký kết"
+            required
+            value={signDate}
+            onChange={(val) => setSignDate(typeof val === 'string' ? val : val?.target?.value || '')}
+            placeholder="Chọn ngày ký kết"
+          />
 
-          <div>
-            <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Ngày có hiệu lực:</span>
-            </label>
-            <input
-              type="date"
-              value={effectiveDate}
-              onChange={(e) => setEffectiveDate(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-            />
-          </div>
+          <DatePicker
+            label="Ngày có hiệu lực"
+            value={effectiveDate}
+            onChange={(val) => setEffectiveDate(typeof val === 'string' ? val : val?.target?.value || '')}
+            placeholder="Chọn ngày hiệu lực"
+          />
 
-          <div>
-            <label className="block text-slate-700 font-bold mb-1 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Ngày hết hạn (nếu có):</span>
-            </label>
-            <input
-              type="date"
-              value={expirationDate}
-              onChange={(e) => setExpirationDate(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-            />
-          </div>
+          <DatePicker
+            label="Ngày hết hạn (nếu có)"
+            value={expirationDate}
+            onChange={(val) => setExpirationDate(typeof val === 'string' ? val : val?.target?.value || '')}
+            placeholder="Chọn ngày hết hạn"
+          />
         </div>
 
         {/* Hàng 3: Chức danh & Phòng ban */}

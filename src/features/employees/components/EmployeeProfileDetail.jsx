@@ -16,7 +16,8 @@ import {
   Share2,
   ExternalLink,
   Edit2,
-  Eye
+  Eye,
+  MoreHorizontal
 } from 'lucide-react';
 import { calculatePositionTenure, calculateAreaTenureAndDueDate, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
@@ -30,6 +31,8 @@ import { exportEmployeeProfileToDocx, exportEmployeeProfileToExcel } from '../..
 import { useToast } from '../../../context/ToastContext';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
+import Tooltip from '../../../components/common/Tooltip';
+import DropdownMenu from '../../../components/common/DropdownMenu';
 import AddDegreeModal from './AddDegreeModal';
 import ManageSocialsModal, { SOCIAL_PLATFORMS } from './ManageSocialsModal';
 import EditSkillsModal from './EditSkillsModal';
@@ -228,59 +231,131 @@ const EmployeeProfileDetail = ({
         <div className="pt-3.5 mt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
           {/* Nhóm Xuất Báo Cáo & In Ấn */}
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={handleExportWord}
-              disabled={exportingWord}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
-              title="Xuất sơ yếu lý lịch sang Microsoft Word (.docx)"
-            >
-              <FileText className="w-3.5 h-3.5 text-blue-700" />
-              <span>{exportingWord ? 'Đang tạo...' : 'Xuất Word'}</span>
-            </button>
+            <Tooltip content="Xuất sơ yếu lý lịch 2C/TCTD sang Microsoft Word (.docx)" position="top">
+              <button
+                type="button"
+                onClick={handleExportWord}
+                disabled={exportingWord}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+                title="Xuất sơ yếu lý lịch sang Microsoft Word (.docx)"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-700" />
+                <span>{exportingWord ? 'Đang tạo...' : 'Xuất Word'}</span>
+              </button>
+            </Tooltip>
 
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              disabled={exportingExcel}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
-              title="Xuất sơ yếu lý lịch sang Microsoft Excel (.xlsx)"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-              <span>{exportingExcel ? 'Đang tạo...' : 'Xuất Excel'}</span>
-            </button>
+            <Tooltip content="Xuất bảng lý lịch trích ngang sang Microsoft Excel (.xlsx)" position="top">
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                disabled={exportingExcel}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+                title="Xuất sơ yếu lý lịch sang Microsoft Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                <span>{exportingExcel ? 'Đang tạo...' : 'Xuất Excel'}</span>
+              </button>
+            </Tooltip>
 
-            <button
-              type="button"
-              onClick={() => onOpenPrint(emp)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-            >
-              <Printer className="w-3.5 h-3.5 text-slate-500" />
-              <span>In trích ngang A4</span>
-            </button>
+            <Tooltip content="Xem trước và in trích ngang sơ yếu lý lịch chuẩn khổ A4" position="top">
+              <button
+                type="button"
+                onClick={() => onOpenPrint(emp)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                <span>In trích ngang A4</span>
+              </button>
+            </Tooltip>
+
+            {/* Menu Popup Chọn Nhanh Tác Vụ */}
+            <DropdownMenu
+              align="left"
+              trigger={({ isOpen }) => (
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 border rounded-xl text-xs font-bold transition-all cursor-pointer select-none active:scale-95 ${
+                    isOpen
+                      ? 'bg-emerald-800 text-white border-emerald-800 shadow-xs'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 shadow-2xs'
+                  }`}
+                  title="Menu thao tác nhanh"
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                  <span>Tác vụ nhanh</span>
+                </button>
+              )}
+              items={[
+                {
+                  id: 'quick-print',
+                  label: 'In trích ngang A4',
+                  description: 'Chuẩn thể thức văn bản hành chính',
+                  icon: Printer,
+                  onClick: () => onOpenPrint(emp),
+                },
+                {
+                  id: 'quick-word',
+                  label: 'Xuất file Word (2C/TCTD)',
+                  description: 'Sơ yếu lý lịch chuẩn NHNN',
+                  icon: FileText,
+                  onClick: handleExportWord,
+                },
+                {
+                  id: 'quick-excel',
+                  label: 'Xuất bảng tính Excel',
+                  description: 'Báo cáo tổng hợp số liệu cán bộ',
+                  icon: FileSpreadsheet,
+                  onClick: handleExportExcel,
+                },
+                ...(canManage
+                  ? [
+                      { divider: true },
+                      {
+                        id: 'quick-edit',
+                        label: 'Chỉnh sửa hồ sơ cán bộ',
+                        description: 'Cập nhật lý lịch, chức vụ, liên hệ',
+                        icon: Edit3,
+                        onClick: () => onOpenEdit(emp),
+                      },
+                      {
+                        id: 'quick-delete',
+                        label: 'Xóa hồ sơ cán bộ',
+                        description: 'Xóa vĩnh viễn khỏi hệ thống Quỹ',
+                        icon: Trash2,
+                        danger: true,
+                        onClick: () => setIsDeleteModalOpen(true),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           </div>
 
           {/* Nhóm Quản Trị Cán Bộ */}
           {canManage && (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onOpenEdit(emp)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Chỉnh sửa hồ sơ</span>
-              </button>
+              <Tooltip content="Mở form chỉnh sửa hồ sơ cán bộ" position="top">
+                <button
+                  type="button"
+                  onClick={() => onOpenEdit(emp)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Chỉnh sửa hồ sơ</span>
+                </button>
+              </Tooltip>
 
-              <button
-                type="button"
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-                title="Xóa hồ sơ cán bộ khỏi hệ thống"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span>Xóa cán bộ</span>
-              </button>
+              <Tooltip content="Xóa hồ sơ cán bộ (Hành động không thể hoàn tác)" position="top">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  title="Xóa hồ sơ cán bộ khỏi hệ thống"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Xóa cán bộ</span>
+                </button>
+              </Tooltip>
             </div>
           )}
         </div>

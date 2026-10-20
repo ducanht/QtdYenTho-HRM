@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
+import DatePicker from '../../../components/common/DatePicker';
 import { saveWorkHistory, updateEmployeeProfile } from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
 import { isCreditOfficerRole } from '../../../lib/evaluationUtils';
@@ -274,37 +275,22 @@ const WorkHistoryPeriodModal = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">
-                Từ ngày (Bắt đầu): <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-              />
-            </div>
+            <DatePicker
+              label="Từ ngày (Bắt đầu)"
+              required
+              value={startDate}
+              onChange={(val) => setStartDate(typeof val === 'string' ? val : val?.target?.value || '')}
+              placeholder="Chọn ngày bắt đầu"
+            />
 
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">
-                Đến ngày (Kết thúc): {!isCurrent && <span className="text-rose-500">*</span>}
-              </label>
-              <input
-                type="date"
-                disabled={isCurrent}
-                required={!isCurrent}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                placeholder={isCurrent ? 'Đang công tác (Đến nay)' : ''}
-                className={`w-full px-3 py-2 border rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 ${
-                  isCurrent 
-                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed italic' 
-                    : 'bg-white border-slate-200'
-                }`}
-              />
-            </div>
+            <DatePicker
+              label="Đến ngày (Kết thúc)"
+              disabled={isCurrent}
+              required={!isCurrent}
+              value={endDate}
+              onChange={(val) => setEndDate(typeof val === 'string' ? val : val?.target?.value || '')}
+              placeholder={isCurrent ? 'Đang công tác (Đến nay)' : 'Chọn ngày kết thúc'}
+            />
           </div>
 
           {isCurrent && (
@@ -442,15 +428,12 @@ const WorkHistoryPeriodModal = ({
             />
           </div>
 
-          <div>
-            <label className="block text-slate-700 font-bold mb-1">Ngày ký quyết định:</label>
-            <input
-              type="date"
-              value={decisionDate}
-              onChange={(e) => setDecisionDate(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20"
-            />
-          </div>
+          <DatePicker
+            label="Ngày ký quyết định"
+            value={decisionDate}
+            onChange={(val) => setDecisionDate(typeof val === 'string' ? val : val?.target?.value || '')}
+            placeholder="Chọn ngày ký quyết định"
+          />
         </div>
 
         {/* Khối 6: Người ký & Ghi chú */}

@@ -37,12 +37,12 @@ const Input = forwardRef(
             ref={ref}
             id={inputId}
             type={type}
-            className={`w-full rounded-xl border bg-white text-slate-900 text-sm transition-all duration-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed ${
-              Icon ? 'pl-10 pr-3.5 py-2.5' : 'px-3.5 py-2.5'
+            className={`w-full rounded-xl border bg-white text-slate-900 text-sm transition-all duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed ${
+              Icon ? 'pl-10 pr-3.5 py-2' : 'px-3.5 py-2'
             } ${
               error
                 ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20'
-                : 'border-slate-300 hover:border-slate-400 focus:border-[#0f766e] focus:ring-[#0f766e]/20'
+                : 'border-slate-300 hover:border-slate-400 focus:border-emerald-700 focus:ring-emerald-700/20'
             } ${className}`}
             {...props}
           />
@@ -58,4 +58,4 @@ const Input = forwardRef(
 
 Input.displayName = 'Input';
 
-export default Input;
+export default React.memo(Input);
