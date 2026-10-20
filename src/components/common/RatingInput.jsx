@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Minus, Plus } from 'lucide-react';
 
 const RatingInput = ({
@@ -110,7 +110,7 @@ const RatingInput = ({
         </div>
 
         {/* Quick select score pills (0 to 10) */}
-        <div className="flex items-center gap-1 overflow-x-auto w-full py-1 scrollbar-thin">
+        <div className="grid grid-cols-11 gap-1 w-full py-1">
           {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => {
             const isSelected = currentVal === score;
             return (
@@ -138,3 +138,4 @@ const RatingInput = ({
 };
 
 export default RatingInput;
+

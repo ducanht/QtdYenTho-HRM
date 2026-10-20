@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, ShieldAlert, ArrowRight, X, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ArrowRight, X, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { subscribeEvaluationPeriods, subscribeTrustEvaluations, subscribeEmployees } from '../../lib/services';
 import { formatDateRangeVN } from '../../lib/dateUtils';

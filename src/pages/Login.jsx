@@ -8,8 +8,7 @@ import {
   ShieldCheck, 
   AlertCircle, 
   CheckCircle2,
-  Shield,
-  Sparkles
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';

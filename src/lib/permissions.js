@@ -63,7 +63,7 @@ export const SYSTEM_MODULES = {
     name: 'Bảng Điều Khiển Tổng Quan',
     shortName: 'Tổng quan',
     category: 'Giám sát Điều hành',
-    description: 'Báo cáo tổng hợp số liệu tín nhiệm, tiến độ đánh giá KPI và kết quả quy hoạch nguồn thời gian thực phục vụ Lãnh đạo Quỹ.',
+    description: 'Báo cáo tổng hợp số liệu tín nhiệm, tiến độ đánh giá KPI và kết quả quy hoạch nguồn tức thời phục vụ Lãnh đạo Quỹ.',
     status: 'ACTIVE',
     icon: 'BarChart2',
     route: '/dashboard',

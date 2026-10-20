@@ -12,7 +12,6 @@ import {
   ArrowRight, 
   Lock, 
   CheckCircle2, 
-  Sparkles, 
   Building2, 
   Database,
   Calendar,
