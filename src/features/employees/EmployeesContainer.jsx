@@ -64,6 +64,8 @@ const EmployeesContainer = () => {
   const [socials, setSocials] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [contractAnnexes, setContractAnnexes] = useState([]);
+  const [allDegrees, setAllDegrees] = useState([]);
+  const [allContracts, setAllContracts] = useState([]);
   const [hrConfig, setHrConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -353,11 +355,21 @@ const EmployeesContainer = () => {
       setHrConfig(cfg || null);
     });
 
+    const unsubAllDegrees = subscribeEmployeeDegrees(null, (list) => {
+      setAllDegrees(list || []);
+    });
+
+    const unsubAllContracts = subscribeEmployeeContracts(null, (list) => {
+      setAllContracts(list || []);
+    });
+
     return () => {
       unsubEmp();
       unsubDept();
       unsubPos();
       unsubConfig();
+      unsubAllDegrees();
+      unsubAllContracts();
     };
   }, []);
 
@@ -461,8 +473,8 @@ const EmployeesContainer = () => {
             <EmployeeOverviewTab
               employees={viewableEmployees}
               departments={departments}
-              degrees={degrees}
-              contracts={contracts}
+              degrees={allDegrees}
+              contracts={allContracts}
               hrConfig={hrConfig}
               overviewDisplayConfig={overviewDisplayConfig}
               onOpenDisplayConfigModal={() => setIsDisplayConfigModalOpen(true)}
@@ -658,7 +670,7 @@ const EmployeesContainer = () => {
           positions={positions}
           existingEmployees={officialEmployees}
           hrConfig={hrConfig}
-          degrees={degrees}
+          degrees={allDegrees}
           socials={socials}
           workHistory={workHistory}
           onSuccess={(saved) => {

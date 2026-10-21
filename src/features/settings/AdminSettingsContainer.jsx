@@ -13,7 +13,14 @@ import {
   subscribeSystemModules,
   updateSystemModule,
   subscribeRolePermissions,
-  saveRolePermissions
+  saveRolePermissions,
+  subscribeWorkLocations,
+  saveWorkLocation,
+  deleteWorkLocation,
+  subscribeCreditAreas,
+  saveCreditArea,
+  deleteCreditArea,
+  subscribeEmployees
 } from '../../lib/services';
 import { DEFAULT_SYSTEM_SETTINGS } from '../../lib/systemDefaults';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../lib/permissions';
@@ -28,7 +35,7 @@ import DatabaseManagementSettings from './components/global/DatabaseManagementSe
 
 /**
  * Container Quản trị Cấu hình Hệ thống Chung (Global Settings)
- * Quản lý Thông tin Pháp nhân, Cơ cấu Tổ chức, Bật/Tắt Phân hệ và Phân quyền Vai trò
+ * Quản lý Thông tin Pháp nhân, Cơ cấu Tổ chức, Địa bàn Hoạt động, Bật/Tắt Phân hệ và Phân quyền Vai trò
  */
 const AdminSettingsContainer = () => {
   const toast = useToast();
@@ -45,18 +52,24 @@ const AdminSettingsContainer = () => {
   // Loading states
   const [savingSection, setSavingSection] = useState(null);
 
-  // Dữ liệu Realtime Firestore: Cấu hình chung
+  // Dữ liệu Realtime Firestore: Cấu hình chung & Tổ chức
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
+  const [workLocations, setWorkLocations] = useState([]);
+  const [creditAreas, setCreditAreas] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [systemSettings, setSystemSettings] = useState(DEFAULT_SYSTEM_SETTINGS);
   const [modulesList, setModulesList] = useState([]);
   const [rolePermissions, setRolePermissions] = useState(DEFAULT_ROLE_PERMISSIONS);
 
   // 1. Subscribe Realtime Firestore
   useEffect(() => {
-    const unsubDept = subscribeDepartments((list) => setDepartments(list));
-    const unsubPos = subscribePositions((list) => setPositions(list));
-    const unsubMod = subscribeSystemModules((list) => setModulesList(list));
+    const unsubDept = subscribeDepartments((list) => setDepartments(list || []));
+    const unsubPos = subscribePositions((list) => setPositions(list || []));
+    const unsubLoc = subscribeWorkLocations((list) => setWorkLocations(list || []));
+    const unsubArea = subscribeCreditAreas((list) => setCreditAreas(list || []));
+    const unsubEmp = subscribeEmployees((list) => setEmployees(list || []));
+    const unsubMod = subscribeSystemModules((list) => setModulesList(list || []));
     const unsubSet = subscribeSystemSettings((data) => {
       if (data) setSystemSettings((prev) => ({ ...prev, ...data }));
     });
@@ -67,6 +80,9 @@ const AdminSettingsContainer = () => {
     return () => {
       unsubDept();
       unsubPos();
+      unsubLoc();
+      unsubArea();
+      unsubEmp();
       unsubMod();
       unsubSet();
       unsubPerms();
@@ -165,6 +181,50 @@ const AdminSettingsContainer = () => {
     }
   };
 
+  // Handler: Điểm làm việc & Trụ sở hoạt động
+  const handleSaveLocation = async (locData, oldName) => {
+    try {
+      await saveWorkLocation(locData, oldName);
+      toast.success(`${oldName ? 'Cập nhật' : 'Thêm mới'} điểm làm việc thành công!`);
+      return true;
+    } catch (err) {
+      toast.error('Lỗi lưu điểm làm việc: ' + err.message);
+      return false;
+    }
+  };
+
+  const handleDeleteLocation = async (id, name) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa điểm làm việc [${name}] khỏi hệ thống?`)) return;
+    try {
+      await deleteWorkLocation(id, name);
+      toast.success(`Đã xóa điểm làm việc [${name}].`);
+    } catch (err) {
+      toast.error('Lỗi khi xóa điểm làm việc: ' + err.message);
+    }
+  };
+
+  // Handler: Địa bàn tín dụng
+  const handleSaveArea = async (areaData, oldName) => {
+    try {
+      await saveCreditArea(areaData, oldName);
+      toast.success(`${oldName ? 'Cập nhật' : 'Thêm mới'} địa bàn tín dụng thành công!`);
+      return true;
+    } catch (err) {
+      toast.error('Lỗi lưu địa bàn: ' + err.message);
+      return false;
+    }
+  };
+
+  const handleDeleteArea = async (id, name) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa địa bàn tín dụng [${name}] khỏi hệ thống?`)) return;
+    try {
+      await deleteCreditArea(id, name);
+      toast.success(`Đã xóa địa bàn tín dụng [${name}].`);
+    } catch (err) {
+      toast.error('Lỗi khi xóa địa bàn: ' + err.message);
+    }
+  };
+
   // Handler: Bật/Tắt module webapp
   const handleToggleModuleStatus = async (moduleCode, currentStatus) => {
     if (moduleCode === 'MODULE_SETTINGS') {
@@ -209,7 +269,7 @@ const AdminSettingsContainer = () => {
             Cấu Hình & Quản Trị Hệ Thống
           </h2>
           <p className="text-xs text-teal-100 mt-1 max-w-2xl leading-relaxed">
-            Thiết lập thông tin đơn vị, cơ cấu tổ chức, phân hệ nghiệp vụ và phân quyền người dùng.
+            Thiết lập thông tin đơn vị, cơ cấu tổ chức, điểm làm việc, địa bàn tín dụng và phân quyền vai trò.
           </p>
         </div>
         <div className="text-xs bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 self-start sm:self-auto">
@@ -224,6 +284,8 @@ const AdminSettingsContainer = () => {
         onTabChange={(tab) => setActiveTab(tab)}
         departmentsCount={departments.length}
         positionsCount={positions.length}
+        workLocationsCount={workLocations.length}
+        creditAreasCount={creditAreas.length}
         canToggleModules={canToggleModules}
         canConfigureWebapp={canConfigureWebapp}
         canManageDatabase={canManageDatabase}
@@ -245,10 +307,17 @@ const AdminSettingsContainer = () => {
         <OrganizationSettings
           departments={departments}
           positions={positions}
+          workLocations={workLocations}
+          creditAreas={creditAreas}
+          employees={employees}
           onSaveDept={handleSaveDept}
           onDeleteDept={handleDeleteDept}
           onSavePos={handleSavePos}
           onDeletePos={handleDeletePos}
+          onSaveLocation={handleSaveLocation}
+          onDeleteLocation={handleDeleteLocation}
+          onSaveArea={handleSaveArea}
+          onDeleteArea={handleDeleteArea}
         />
       )}
 

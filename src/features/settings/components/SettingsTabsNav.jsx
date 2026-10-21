@@ -16,6 +16,8 @@ const SettingsTabsNav = ({
   onTabChange,
   departmentsCount = 0,
   positionsCount = 0,
+  workLocationsCount = 0,
+  creditAreasCount = 0,
   canToggleModules = false,
   canConfigureWebapp = false,
   canManageDatabase = false,
@@ -46,9 +48,9 @@ const SettingsTabsNav = ({
         }`}
       >
         <Users className="w-4 h-4 text-teal-600" />
-        <span>2. Phòng Ban & Chức Vụ</span>
+        <span>2. Cơ Cấu & Địa Bàn Hoạt Động</span>
         <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
-          {departmentsCount} PB / {positionsCount} CV
+          {departmentsCount} PB / {positionsCount} CV / {workLocationsCount} Điểm / {creditAreasCount} ĐB
         </span>
       </button>
 

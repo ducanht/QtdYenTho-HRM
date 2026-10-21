@@ -7,6 +7,8 @@ import {
   OFFICIAL_WORK_HISTORY,
   OFFICIAL_STAFF_EMPLOYEES,
   DEFAULT_MODULE_HR_SETTINGS,
+  DEFAULT_WORK_LOCATIONS,
+  DEFAULT_CREDIT_AREAS,
 } from '../src/lib/systemDefaults';
 import { isCreditOfficerRole } from '../src/lib/evaluationUtils';
 import { 
@@ -29,7 +31,13 @@ import {
   deleteEmployeeContract,
   subscribeContractAnnexes,
   saveContractAnnex,
-  deleteContractAnnex
+  deleteContractAnnex,
+  subscribeWorkLocations,
+  saveWorkLocation,
+  deleteWorkLocation,
+  subscribeCreditAreas,
+  saveCreditArea,
+  deleteCreditArea,
 } from '../src/lib/services';
 import { TRANSFER_TYPES } from '../src/features/employees/components/WorkHistoryPeriodModal';
 import { 
@@ -52,6 +60,8 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     expect(CORE_COLLECTIONS).toContain('employee_degrees');
     expect(CORE_COLLECTIONS).toContain('employee_socials');
     expect(CORE_COLLECTIONS).toContain('work_history');
+    expect(CORE_COLLECTIONS).toContain('work_locations');
+    expect(CORE_COLLECTIONS).toContain('credit_areas');
     expect(typeof autoInitializeDatabase).toBe('function');
 
     // 2. Kiểm tra DEFAULT_EMPLOYEE_DEGREES (Bảng riêng văn bằng đa cấp)
@@ -137,6 +147,14 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     const unsubWork = subscribeWorkHistory('emp-001', () => {});
     expect(typeof unsubWork).toBe('function');
     unsubWork();
+
+    // 4. Kiểm tra Services Điểm làm việc (work_locations) & Địa bàn tín dụng (credit_areas)
+    expect(typeof subscribeWorkLocations).toBe('function');
+    expect(typeof saveWorkLocation).toBe('function');
+    expect(typeof deleteWorkLocation).toBe('function');
+    expect(typeof subscribeCreditAreas).toBe('function');
+    expect(typeof saveCreditArea).toBe('function');
+    expect(typeof deleteCreditArea).toBe('function');
   });
 
   test('Kiểm tra Component WorkHistoryPeriodModal & Quy tắc Sắp xếp Timeline Mốc Công Tác', async () => {
@@ -311,8 +329,10 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
       expect(emp.workLocation).toContain('Trụ sở chính');
     }
 
-    // 5. Kiểm tra Schema Version mới v6.0
-    expect(CURRENT_SCHEMA_VERSION).toContain('v6.0');
+    // 5. Kiểm tra Schema Version mới v6.x & Dữ liệu mặc định 2 bảng mới
+    expect(CURRENT_SCHEMA_VERSION).toMatch(/v6\.(0|1)/);
+    expect(DEFAULT_WORK_LOCATIONS.length).toBeGreaterThanOrEqual(3);
+    expect(DEFAULT_CREDIT_AREAS.length).toBeGreaterThanOrEqual(8);
 
     // 6. Kiểm tra cấu trúc CSDL và liên kết quan hệ Nơi làm việc & Địa bàn tín dụng
     const sampleWorkLocations = [...DEFAULT_MODULE_HR_SETTINGS.workLocations];

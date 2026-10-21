@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Save, RotateCcw, X, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Save, RotateCcw } from 'lucide-react';
 import Modal from '../../../components/common/Modal';
 import Button from '../../../components/common/Button';
 

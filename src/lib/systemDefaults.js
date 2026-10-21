@@ -38,6 +38,53 @@ export const DEFAULT_POSITIONS = [
 // ============================================================================
 // 3. DANH MỤC CHỨC DANH QUY HOẠCH CÁN BỘ NGUỒN
 // ============================================================================
+// ============================================================================
+// 2b. DANH MỤC ĐIỂM LÀM VIỆC & TRỤ SỞ HOẠT ĐỘNG
+// ============================================================================
+export const DEFAULT_WORK_LOCATIONS = [
+  {
+    id: 'loc-001',
+    code: 'TS_CHINH',
+    name: 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+    address: 'Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa',
+    phone: '',
+    isHeadquarters: true,
+    order: 1,
+  },
+  {
+    id: 'loc-002',
+    code: 'PGD_01',
+    name: 'Phòng Giao dịch số 1 (Yên Thọ)',
+    address: 'Xã Yên Thọ, tỉnh Thanh Hóa',
+    phone: '',
+    isHeadquarters: false,
+    order: 2,
+  },
+  {
+    id: 'loc-003',
+    code: 'PGD_LUU_DONG',
+    name: 'Điểm giao dịch lưu động',
+    address: 'Địa bàn hoạt động lưu động theo kế hoạch',
+    phone: '',
+    isHeadquarters: false,
+    order: 3,
+  },
+];
+
+// ============================================================================
+// 2c. DANH MỤC ĐỊA BÀN QUẢN LÝ TÍN DỤNG (CBTD)
+// ============================================================================
+export const DEFAULT_CREDIT_AREAS = [
+  { id: 'area-001', code: 'DB_TAN_LOC', name: 'Thôn Tân Lộc (xã Yên Thọ)', village: 'Tân Lộc', commune: 'Yên Thọ', order: 1 },
+  { id: 'area-002', code: 'DB_TAN_HUNG', name: 'Thôn Tân Hưng (xã Yên Thọ)', village: 'Tân Hưng', commune: 'Yên Thọ', order: 2 },
+  { id: 'area-003', code: 'DB_CUM_123', name: 'Cụm Thôn 1, 2, 3 (xã Yên Thọ)', village: 'Cụm 1, 2, 3', commune: 'Yên Thọ', order: 3 },
+  { id: 'area-004', code: 'DB_CUM_456', name: 'Cụm Thôn 4, 5, 6 (xã Yên Thọ)', village: 'Cụm 4, 5, 6', commune: 'Yên Thọ', order: 4 },
+  { id: 'area-005', code: 'DB_CUM_78', name: 'Cụm Thôn 7, 8 (xã Quý Lộc)', village: 'Cụm 7, 8', commune: 'Quý Lộc', order: 5 },
+  { id: 'area-006', code: 'DB_QUY_LOC', name: 'Địa bàn xã Quý Lộc', village: 'Toàn xã', commune: 'Quý Lộc', order: 6 },
+  { id: 'area-007', code: 'DB_YEN_THO', name: 'Địa bàn xã Yên Thọ', village: 'Toàn xã', commune: 'Yên Thọ', order: 7 },
+  { id: 'area-008', code: 'DB_LIEN_XA', name: 'Địa bàn liên xã mở rộng', village: 'Liên xã', commune: 'Khu vực lân cận', order: 8 },
+];
+
 export const DEFAULT_PLANNING_POSITIONS = [
   'Chủ tịch Hội đồng Quản trị',
   'Thành viên chuyên trách HĐQT',

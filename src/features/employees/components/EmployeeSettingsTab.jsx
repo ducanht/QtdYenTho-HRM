@@ -18,7 +18,16 @@ import {
   Users,
   UserCheck
 } from 'lucide-react';
-import { saveSubsystemConfig, updateEmployeeProfile } from '../../../lib/services';
+import { 
+  saveSubsystemConfig, 
+  updateEmployeeProfile,
+  subscribeWorkLocations,
+  saveWorkLocation,
+  deleteWorkLocation,
+  subscribeCreditAreas,
+  saveCreditArea,
+  deleteCreditArea
+} from '../../../lib/services';
 import { useToast } from '../../../context/ToastContext';
 import { DEFAULT_MODULE_HR_SETTINGS } from '../../../lib/systemDefaults';
 import { isCreditOfficerRole } from '../../../lib/evaluationUtils';
@@ -70,7 +79,30 @@ const EmployeeSettingsTab = ({
     ]
   );
 
-  // State thêm mới & chỉnh sửa trực tiếp
+  // Danh sách chi tiết kèm ID từ CSDL Firestore
+  const [workLocationsList, setWorkLocationsList] = useState([]);
+  const [creditAreasList, setCreditAreasList] = useState([]);
+
+  useEffect(() => {
+    const unsubLoc = subscribeWorkLocations((list) => {
+      if (list && list.length > 0) {
+        setWorkLocationsList(list);
+        setWorkLocations(list.map((l) => l.name));
+      }
+    });
+    const unsubArea = subscribeCreditAreas((list) => {
+      if (list && list.length > 0) {
+        setCreditAreasList(list);
+        setCreditAreas(list.map((a) => a.name));
+      }
+    });
+    return () => {
+      unsubLoc();
+      unsubArea();
+    };
+  }, []);
+
+    // State thêm mới & chỉnh sửa trực tiếp
   const [newWorkLocation, setNewWorkLocation] = useState('');
   const [newCreditArea, setNewCreditArea] = useState('');
   const [editingWorkLocIndex, setEditingWorkLocIndex] = useState(null);
@@ -215,7 +247,7 @@ const EmployeeSettingsTab = ({
   };
 
   // --- THAO TÁC NƠI LÀM VIỆC (WORK LOCATIONS) ---
-  const handleAddWorkLocation = (e) => {
+  const handleAddWorkLocation = async (e) => {
     e?.preventDefault?.();
     const val = newWorkLocation.trim();
     if (!val) return;
@@ -223,8 +255,20 @@ const EmployeeSettingsTab = ({
       alert('Điểm làm việc này đã tồn tại trong danh mục!');
       return;
     }
-    setWorkLocations((prev) => [...prev, val]);
-    setNewWorkLocation('');
+    try {
+      await saveWorkLocation({
+        name: val,
+        order: workLocations.length + 1,
+      });
+      setWorkLocations((prev) => [...prev, val]);
+      setNewWorkLocation('');
+      const msg = `Đã thêm điểm làm việc "${val}" vào CSDL thành công!`;
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showSuccess) toast.showSuccess(msg);
+    } catch (err) {
+      console.error('Lỗi thêm điểm làm việc:', err);
+      alert('Lỗi thêm điểm làm việc: ' + err.message);
+    }
   };
 
   const handleStartEditWorkLoc = (idx, loc) => {
@@ -244,33 +288,29 @@ const EmployeeSettingsTab = ({
       return;
     }
 
-    // Kiểm tra và hỏi đồng bộ cán bộ có liên quan
-    const affectedEmps = employees.filter((e) => (e.workLocation || '').trim().toLowerCase() === oldVal.trim().toLowerCase());
-    if (affectedEmps.length > 0) {
-      const shouldSync = window.confirm(
-        `Hiện có ${affectedEmps.length} cán bộ đang làm việc tại "${oldVal}". Đồng chí có muốn tự động cập nhật tên mới "${newVal}" cho toàn bộ hồ sơ cán bộ này không?`
-      );
-      if (shouldSync) {
-        try {
-          await Promise.all(affectedEmps.map((emp) => updateEmployeeProfile(emp.id, { workLocation: newVal })));
-          const syncMsg = `Đã cập nhật đồng bộ nơi làm việc cho ${affectedEmps.length} cán bộ!`;
-          if (toast?.success) toast.success(syncMsg);
-          else if (toast?.showSuccess) toast.showSuccess(syncMsg);
-        } catch (err) {
-          console.warn('Lỗi cập nhật đồng bộ cán bộ:', err);
-        }
-      }
-    }
+    const existingItem = workLocationsList.find((l) => l.name === oldVal) || {};
+    try {
+      await saveWorkLocation({
+        ...existingItem,
+        name: newVal,
+      }, oldVal);
 
-    setWorkLocations((prev) => {
-      const next = [...prev];
-      next[idx] = newVal;
-      return next;
-    });
-    setEditingWorkLocIndex(null);
+      setWorkLocations((prev) => {
+        const next = [...prev];
+        next[idx] = newVal;
+        return next;
+      });
+      setEditingWorkLocIndex(null);
+      const msg = `Đã cập nhật điểm làm việc "${newVal}" vào CSDL thành công!`;
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showSuccess) toast.showSuccess(msg);
+    } catch (err) {
+      console.error('Lỗi lưu điểm làm việc:', err);
+      alert('Lỗi lưu điểm làm việc: ' + err.message);
+    }
   };
 
-  const handleDeleteWorkLoc = (idx, locToDelete) => {
+  const handleDeleteWorkLoc = async (idx, locToDelete) => {
     if (workLocations.length <= 1) {
       alert('Cần duy trì ít nhất một điểm làm việc trong danh mục!');
       return;
@@ -285,11 +325,26 @@ const EmployeeSettingsTab = ({
       if (!window.confirm(`Bạn có chắc chắn muốn xóa điểm làm việc "${locToDelete}" khỏi danh mục không?`)) return;
     }
 
-    setWorkLocations((prev) => prev.filter((_, i) => i !== idx));
+    const existingItem = workLocationsList.find((l) => l.name === locToDelete);
+    try {
+      if (existingItem?.id) {
+        await deleteWorkLocation(existingItem.id, locToDelete);
+      } else {
+        const next = workLocations.filter((_, i) => i !== idx);
+        await saveSubsystemConfig('hr', { workLocations: next });
+      }
+      setWorkLocations((prev) => prev.filter((_, i) => i !== idx));
+      const msg = `Đã xóa điểm làm việc "${locToDelete}" khỏi CSDL thành công!`;
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showSuccess) toast.showSuccess(msg);
+    } catch (err) {
+      console.error('Lỗi xóa điểm làm việc:', err);
+      alert('Lỗi xóa điểm làm việc: ' + err.message);
+    }
   };
 
   // --- THAO TÁC ĐỊA BÀN TÍN DỤNG (CREDIT AREAS) ---
-  const handleAddCreditArea = (e) => {
+  const handleAddCreditArea = async (e) => {
     e?.preventDefault?.();
     const val = newCreditArea.trim();
     if (!val) return;
@@ -297,8 +352,20 @@ const EmployeeSettingsTab = ({
       alert('Địa bàn tín dụng này đã tồn tại trong danh mục!');
       return;
     }
-    setCreditAreas((prev) => [...prev, val]);
-    setNewCreditArea('');
+    try {
+      await saveCreditArea({
+        name: val,
+        order: creditAreas.length + 1,
+      });
+      setCreditAreas((prev) => [...prev, val]);
+      setNewCreditArea('');
+      const msg = `Đã thêm địa bàn tín dụng "${val}" vào CSDL thành công!`;
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showSuccess) toast.showSuccess(msg);
+    } catch (err) {
+      console.error('Lỗi thêm địa bàn:', err);
+      alert('Lỗi thêm địa bàn: ' + err.message);
+    }
   };
 
   const handleStartEditCreditArea = (idx, area) => {
@@ -318,36 +385,29 @@ const EmployeeSettingsTab = ({
       return;
     }
 
-    // Kiểm tra và hỏi đồng bộ CBTD đang phụ trách
-    const affectedOfficers = employees.filter(
-      (e) => isCreditOfficerRole(e.position, e.department) && (e.assignedArea || '').trim().toLowerCase() === oldVal.trim().toLowerCase()
-    );
-    if (affectedOfficers.length > 0) {
-      const officerNames = affectedOfficers.map((o) => o.name).join(', ');
-      const shouldSync = window.confirm(
-        `Địa bàn "${oldVal}" đang được phân công cho Cán bộ tín dụng [${officerNames}]. Đồng chí có muốn tự động cập nhật tên mới "${newVal}" cho hồ sơ CBTD không?`
-      );
-      if (shouldSync) {
-        try {
-          await Promise.all(affectedOfficers.map((emp) => updateEmployeeProfile(emp.id, { assignedArea: newVal })));
-          const syncMsg = `Đã cập nhật đồng bộ địa bàn cho CBTD: ${officerNames}!`;
-          if (toast?.success) toast.success(syncMsg);
-          else if (toast?.showSuccess) toast.showSuccess(syncMsg);
-        } catch (err) {
-          console.warn('Lỗi cập nhật đồng bộ CBTD:', err);
-        }
-      }
-    }
+    const existingItem = creditAreasList.find((a) => a.name === oldVal) || {};
+    try {
+      await saveCreditArea({
+        ...existingItem,
+        name: newVal,
+      }, oldVal);
 
-    setCreditAreas((prev) => {
-      const next = [...prev];
-      next[idx] = newVal;
-      return next;
-    });
-    setEditingCreditAreaIndex(null);
+      setCreditAreas((prev) => {
+        const next = [...prev];
+        next[idx] = newVal;
+        return next;
+      });
+      setEditingCreditAreaIndex(null);
+      const msg = `Đã cập nhật địa bàn tín dụng "${newVal}" vào CSDL thành công!`;
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showSuccess) toast.showSuccess(msg);
+    } catch (err) {
+      console.error('Lỗi lưu địa bàn:', err);
+      alert('Lỗi lưu địa bàn: ' + err.message);
+    }
   };
 
-  const handleDeleteCreditArea = (idx, areaToDelete) => {
+  const handleDeleteCreditArea = async (idx, areaToDelete) => {
     if (creditAreas.length <= 1) {
       alert('Cần duy trì ít nhất một địa bàn tín dụng trong danh mục!');
       return;
@@ -365,7 +425,22 @@ const EmployeeSettingsTab = ({
       if (!window.confirm(`Bạn có chắc chắn muốn xóa địa bàn "${areaToDelete}" khỏi danh mục không?`)) return;
     }
 
-    setCreditAreas((prev) => prev.filter((_, i) => i !== idx));
+    const existingItem = creditAreasList.find((a) => a.name === areaToDelete);
+    try {
+      if (existingItem?.id) {
+        await deleteCreditArea(existingItem.id, areaToDelete);
+      } else {
+        const next = creditAreas.filter((_, i) => i !== idx);
+        await saveSubsystemConfig('hr', { creditAreas: next });
+      }
+      setCreditAreas((prev) => prev.filter((_, i) => i !== idx));
+      const msg = `Đã xóa địa bàn tín dụng "${areaToDelete}" khỏi CSDL thành công!`;
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showSuccess) toast.showSuccess(msg);
+    } catch (err) {
+      console.error('Lỗi xóa địa bàn:', err);
+      alert('Lỗi xóa địa bàn: ' + err.message);
+    }
   };
 
   // Khôi phục mặc định

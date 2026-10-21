@@ -99,10 +99,10 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.16_v6.0_modular_services_and_contract_management';
+export const CURRENT_SCHEMA_VERSION = '2026.10.21_v6.1_work_locations_and_credit_areas_tables';
 
 /**
- * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (22 Collections chuẩn hóa)
+ * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (24 Collections chuẩn hóa)
  */
 export const CORE_COLLECTIONS = [
   'accounts',
@@ -127,6 +127,8 @@ export const CORE_COLLECTIONS = [
   'evaluations_planning',
   'employee_training',
   'employee_kpi_history',
+  'work_locations',
+  'credit_areas',
 ];
 
 /**
@@ -433,6 +435,28 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       for (const annex of DEFAULT_CONTRACT_ANNEXES) {
         await setDoc(doc(db, 'employee_contract_annexes', annex.id), {
           ...annex,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
+    // 15b. Danh mục Điểm làm việc & Trụ sở hoạt động (work_locations)
+    const locsSnap = await getDocs(collection(db, 'work_locations')).catch(() => null);
+    if (!locsSnap || locsSnap.empty || force) {
+      for (const loc of DEFAULT_WORK_LOCATIONS) {
+        await setDoc(doc(db, 'work_locations', loc.id), {
+          ...loc,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
+    // 15c. Danh mục Địa bàn quản lý tín dụng CBTD (credit_areas)
+    const areasSnap = await getDocs(collection(db, 'credit_areas')).catch(() => null);
+    if (!areasSnap || areasSnap.empty || force) {
+      for (const area of DEFAULT_CREDIT_AREAS) {
+        await setDoc(doc(db, 'credit_areas', area.id), {
+          ...area,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -756,9 +780,25 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 16/18: Xác nhận tính toàn vẹn các bảng phân hệ đánh giá...');
+    onProgress('Bước 16/20: Khởi tạo Danh mục Điểm làm việc & Trụ sở hoạt động (work_locations)...');
+    for (const loc of DEFAULT_WORK_LOCATIONS) {
+      await setDoc(doc(db, 'work_locations', loc.id), {
+        ...loc,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
 
-    onProgress('Bước 17/18: Thống kê và tổng hợp số liệu 22 bảng CSDL Firestore...');
+    onProgress('Bước 17/20: Khởi tạo Danh mục Địa bàn Quản lý Tín dụng (credit_areas)...');
+    for (const area of DEFAULT_CREDIT_AREAS) {
+      await setDoc(doc(db, 'credit_areas', area.id), {
+        ...area,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 18/20: Xác nhận tính toàn vẹn các bảng phân hệ đánh giá...');
+
+    onProgress('Bước 19/20: Thống kê và tổng hợp số liệu 24 bảng CSDL Firestore...');
     const details = {};
     for (const colName of CORE_COLLECTIONS) {
       try {
@@ -774,9 +814,9 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       sessionStorage.setItem('qtd_hrm_schema_synced_ver', CURRENT_SCHEMA_VERSION);
     }
 
-    onProgress('Bước 18/18: Hoàn tất 100%! Toàn bộ 22 bảng CSDL Firestore đã sẵn sàng vận hành.');
+    onProgress('Bước 20/20: Hoàn tất 100%! Toàn bộ 24 bảng CSDL Firestore đã sẵn sàng vận hành.');
     result.success = true;
-    result.message = 'Khởi tạo và đồng bộ 22 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
+    result.message = 'Khởi tạo và đồng bộ 24 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
     return result;
   } catch (error) {
     console.error('Lỗi tự động khởi tạo CSDL Firebase:', error);

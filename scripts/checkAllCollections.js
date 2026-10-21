@@ -30,11 +30,13 @@ const collections = [
   'system_modules',
   'system_settings',
   'roles_permissions',
+  'work_locations',
+  'credit_areas',
 ];
 
 async function check() {
   await signInWithEmailAndPassword(auth, 'ducanht@gmail.com', 'Qtd@2003');
-  console.log('=== TỔNG HỢP DOCUMENT CỦA TOÀN BỘ 18 BẢNG TRONG CSDL FIRESTORE ===');
+  console.log('=== TỔNG HỢP DOCUMENT CỦA TOÀN BỘ 24 BẢNG TRONG CSDL FIRESTORE ===');
   for (const c of collections) {
     try {
       const snap = await getDocs(collection(db, c));
@@ -43,6 +45,7 @@ async function check() {
       console.error(`- ${c.padEnd(25)}: LỖI (${err.message})`);
     }
   }
+  process.exit(0);
 }
 
 check().catch(console.error);

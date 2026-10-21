@@ -940,3 +940,258 @@ export const deleteContractAnnex = async (annexId) => {
 
 
 
+
+// ============================================================================
+// 19. ĐIỂM LÀM VIỆC & TRỤ SỞ HOẠT ĐỘNG (work_locations collection)
+// ============================================================================
+export const subscribeWorkLocations = (callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    const q = collection(db, 'work_locations');
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+        callback(list);
+      },
+      (error) => {
+        console.warn('Lỗi onSnapshot work_locations:', error.message || error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi subscribeWorkLocations:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const saveWorkLocation = async (locationData, oldLocationName = null) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!locationData.name?.trim()) throw new Error('Tên điểm làm việc không được để trống');
+
+  const locName = locationData.name.trim();
+  const targetId = locationData.id || `loc_${generateUUID()}`;
+
+  const payload = {
+    ...locationData,
+    id: targetId,
+    name: locName,
+    code: (locationData.code || '').trim() || `LOC_${Date.now().toString(36).toUpperCase()}`,
+    address: (locationData.address || '').trim(),
+    phone: (locationData.phone || '').trim(),
+    isHeadquarters: Boolean(locationData.isHeadquarters),
+    order: Number(locationData.order) || 99,
+    updatedAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
+  };
+
+  if (!payload.createdAt) {
+    payload.createdAt = new Date().toISOString();
+  }
+
+  // 1. Lưu vào collection work_locations
+  await setDoc(doc(db, 'work_locations', targetId), payload, { merge: true });
+
+  // 2. Đồng bộ vào system_settings/module_hr (mảng workLocations)
+  try {
+    const hrSnap = await getDoc(doc(db, 'system_settings', 'module_hr'));
+    const currentLocs = hrSnap.exists() && Array.isArray(hrSnap.data().workLocations)
+      ? hrSnap.data().workLocations
+      : [];
+    
+    let updatedLocs = [...currentLocs];
+    if (oldLocationName && oldLocationName !== locName) {
+      updatedLocs = updatedLocs.map((l) => (l.trim().toLowerCase() === oldLocationName.trim().toLowerCase() ? locName : l));
+    }
+    if (!updatedLocs.some((l) => l.trim().toLowerCase() === locName.toLowerCase())) {
+      updatedLocs.push(locName);
+    }
+    await setDoc(doc(db, 'system_settings', 'module_hr'), {
+      workLocations: updatedLocs,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('Lỗi đồng bộ workLocations sang system_settings:', err);
+  }
+
+  // 3. Nếu đổi tên, tự động cập nhật đồng bộ các hồ sơ cán bộ liên quan
+  if (oldLocationName && oldLocationName.trim().toLowerCase() !== locName.toLowerCase()) {
+    try {
+      const empSnap = await getDocs(collection(db, 'employees'));
+      const oldLower = oldLocationName.trim().toLowerCase();
+      const updates = [];
+      empSnap.forEach((d) => {
+        const data = d.data();
+        if ((data.workLocation || '').trim().toLowerCase() === oldLower) {
+          updates.push(updateDoc(doc(db, 'employees', d.id), { workLocation: locName }));
+          updates.push(updateDoc(doc(db, 'users', d.id), { workLocation: locName }).catch(() => {}));
+        }
+      });
+      await Promise.all(updates);
+    } catch (err) {
+      console.warn('Lỗi đồng bộ hồ sơ cán bộ khi đổi tên điểm làm việc:', err);
+    }
+  }
+
+  return { success: true, id: targetId, data: payload };
+};
+
+export const deleteWorkLocation = async (locationId, locationName = null) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!locationId) throw new Error('Thiếu ID điểm làm việc cần xóa');
+
+  await deleteDoc(doc(db, 'work_locations', locationId));
+
+  // Đồng bộ xóa khỏi system_settings/module_hr
+  if (locationName) {
+    try {
+      const hrSnap = await getDoc(doc(db, 'system_settings', 'module_hr'));
+      if (hrSnap.exists() && Array.isArray(hrSnap.data().workLocations)) {
+        const updated = hrSnap.data().workLocations.filter(
+          (l) => l.trim().toLowerCase() !== locationName.trim().toLowerCase()
+        );
+        await setDoc(doc(db, 'system_settings', 'module_hr'), {
+          workLocations: updated,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } catch (err) {
+      console.warn('Lỗi xóa workLocation khỏi system_settings:', err);
+    }
+  }
+
+  return { success: true, id: locationId };
+};
+
+// ============================================================================
+// 20. ĐỊA BÀN QUẢN LÝ TÍN DỤNG CBTD (credit_areas collection)
+// ============================================================================
+export const subscribeCreditAreas = (callback) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    const q = collection(db, 'credit_areas');
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+        callback(list);
+      },
+      (error) => {
+        console.warn('Lỗi onSnapshot credit_areas:', error.message || error);
+        callback([]);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi subscribeCreditAreas:', err);
+    callback([]);
+    return () => {};
+  }
+};
+
+export const saveCreditArea = async (areaData, oldAreaName = null) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!areaData.name?.trim()) throw new Error('Tên địa bàn tín dụng không được để trống');
+
+  const areaName = areaData.name.trim();
+  const targetId = areaData.id || `area_${generateUUID()}`;
+
+  const payload = {
+    ...areaData,
+    id: targetId,
+    name: areaName,
+    code: (areaData.code || '').trim() || `AREA_${Date.now().toString(36).toUpperCase()}`,
+    village: (areaData.village || '').trim(),
+    commune: (areaData.commune || '').trim(),
+    order: Number(areaData.order) || 99,
+    updatedAt: new Date().toISOString(),
+    serverTime: serverTimestamp(),
+  };
+
+  if (!payload.createdAt) {
+    payload.createdAt = new Date().toISOString();
+  }
+
+  // 1. Lưu vào collection credit_areas
+  await setDoc(doc(db, 'credit_areas', targetId), payload, { merge: true });
+
+  // 2. Đồng bộ vào system_settings/module_hr (mảng creditAreas)
+  try {
+    const hrSnap = await getDoc(doc(db, 'system_settings', 'module_hr'));
+    const currentAreas = hrSnap.exists() && Array.isArray(hrSnap.data().creditAreas)
+      ? hrSnap.data().creditAreas
+      : [];
+    
+    let updatedAreas = [...currentAreas];
+    if (oldAreaName && oldAreaName !== areaName) {
+      updatedAreas = updatedAreas.map((a) => (a.trim().toLowerCase() === oldAreaName.trim().toLowerCase() ? areaName : a));
+    }
+    if (!updatedAreas.some((a) => a.trim().toLowerCase() === areaName.toLowerCase())) {
+      updatedAreas.push(areaName);
+    }
+    await setDoc(doc(db, 'system_settings', 'module_hr'), {
+      creditAreas: updatedAreas,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('Lỗi đồng bộ creditAreas sang system_settings:', err);
+  }
+
+  // 3. Nếu đổi tên, tự động cập nhật đồng bộ các cán bộ tín dụng liên quan
+  if (oldAreaName && oldAreaName.trim().toLowerCase() !== areaName.toLowerCase()) {
+    try {
+      const empSnap = await getDocs(collection(db, 'employees'));
+      const oldLower = oldAreaName.trim().toLowerCase();
+      const updates = [];
+      empSnap.forEach((d) => {
+        const data = d.data();
+        if ((data.assignedArea || '').trim().toLowerCase() === oldLower) {
+          updates.push(updateDoc(doc(db, 'employees', d.id), { assignedArea: areaName }));
+          updates.push(updateDoc(doc(db, 'users', d.id), { assignedArea: areaName }).catch(() => {}));
+        }
+      });
+      await Promise.all(updates);
+    } catch (err) {
+      console.warn('Lỗi đồng bộ hồ sơ cán bộ khi đổi tên địa bàn tín dụng:', err);
+    }
+  }
+
+  return { success: true, id: targetId, data: payload };
+};
+
+export const deleteCreditArea = async (areaId, areaName = null) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!areaId) throw new Error('Thiếu ID địa bàn cần xóa');
+
+  await deleteDoc(doc(db, 'credit_areas', areaId));
+
+  // Đồng bộ xóa khỏi system_settings/module_hr
+  if (areaName) {
+    try {
+      const hrSnap = await getDoc(doc(db, 'system_settings', 'module_hr'));
+      if (hrSnap.exists() && Array.isArray(hrSnap.data().creditAreas)) {
+        const updated = hrSnap.data().creditAreas.filter(
+          (a) => a.trim().toLowerCase() !== areaName.trim().toLowerCase()
+        );
+        await setDoc(doc(db, 'system_settings', 'module_hr'), {
+          creditAreas: updated,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } catch (err) {
+      console.warn('Lỗi xóa creditArea khỏi system_settings:', err);
+    }
+  }
+
+  return { success: true, id: areaId };
+};

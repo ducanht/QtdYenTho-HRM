@@ -308,7 +308,28 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isBoardOrAdmin();
     }
+
+    // ===============================================================
+    // 21. Danh mục Điểm làm việc & Trụ sở hoạt động (work_locations)
+    // Cán bộ đăng nhập xem được danh mục điểm làm việc của Quỹ;
+    // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
+    // ===============================================================
+    match /work_locations/{locationId} {
+      allow read: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
+    }
+
+    // ===============================================================
+    // 22. Danh mục Địa bàn Quản lý Tín dụng CBTD (credit_areas)
+    // Cán bộ đăng nhập xem được danh mục địa bàn tín dụng của Quỹ;
+    // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
+    // ===============================================================
+    match /credit_areas/{areaId} {
+      allow read: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
+    }
   }
 }
+
 
 
