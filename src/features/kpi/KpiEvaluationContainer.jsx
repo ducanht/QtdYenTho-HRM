@@ -1,51 +1,90 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import {
-  saveKpiStep1Self,
-  updateKpiStep2Manager,
-  updateKpiStep3Chairman,
-  subscribeKpiEvaluations,
   subscribeEmployees,
-  subscribeEvaluationPeriods
+  subscribeEvaluationPeriods,
+  subscribeDepartments,
 } from '../../lib/services';
+import {
+  subscribeKpiEvaluations,
+  subscribeKpiCriteria,
+  subscribeEmployeeKpiHistory,
+  saveKpiStep1Self,
+} from './services/kpiService';
 import { ROLES } from '../../lib/constants';
 
-// Subcomponents phân rã sạch
-import KpiActionBar from './components/KpiActionBar';
-import KpiWeightingCard from './components/KpiWeightingCard';
-import KpiSelfEvaluationForm from './components/KpiSelfEvaluationForm';
-import KpiApprovalTable from './components/KpiApprovalTable';
-import KpiGradingModal from './components/KpiGradingModal';
+// Shared Components
+import KpiPeriodSelector from './components/shared/KpiPeriodSelector';
+import KpiModuleTabsNav from './components/shared/KpiModuleTabsNav';
+import KpiBottomNav from './components/shared/KpiBottomNav';
+import KpiA4PrintModal from './components/shared/KpiA4PrintModal';
+
+// Specific Tabs
+import KpiOverviewTab from './components/overview/KpiOverviewTab';
+import KpiScoringTab from './components/scoring/KpiScoringTab';
+import KpiMyResultsTab from './components/results/KpiMyResultsTab';
+import KpiHistoryTab from './components/history/KpiHistoryTab';
+import KpiSettingsTab from './components/settings/KpiSettingsTab';
 
 /**
- * Container điều phối Phân Hệ Chấm Điểm KPI 3 Cấp (40% - 30% - 30%)
+ * KpiEvaluationContainer: Bộ điều phối trung tâm Phân Hệ Chấm Điểm KPI 3 Cấp
+ * Quy trình đánh giá: Cán bộ tự chấm (40%) -> Trưởng bộ phận thẩm định (30%) -> HĐQT phê chuẩn (30%)
+ * Đáp ứng đầy đủ 5 phân hệ chức năng:
+ *  1. Tổng Quan HĐQT (KPI Overview & Tiến trình xét duyệt toàn đơn vị)
+ *  2. Chấm Điểm 3 Cấp (Tự chấm, Thẩm định, Phê chuẩn, Khiếu nại)
+ *  3. Kết Quả Cá Nhân (Chi tiết phiếu cá nhân, khiếu nại, in A4)
+ *  4. Lịch Sử Đa Kỳ (Tra cứu toàn Quỹ & Visual timeline cá nhân)
+ *  5. Cấu Hình & Tiêu Chí (Trọng số 40-30-30 & Danh mục tiêu chí động)
  */
 const KpiEvaluationContainer = () => {
   const { currentUser, role, isManager, isChairman } = useAuth();
+  const isAdmin = role === ROLES.ADMIN || role === 'SUPER_ADMIN';
   const toast = useToast();
 
+  // Danh mục dữ liệu chính từ Firestore
   const [kpiList, setKpiList] = useState([]);
+  const [criteriaList, setCriteriaList] = useState([]);
+  const [historyList, setHistoryList] = useState([]);
   const [, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [periods, setPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Kỳ đánh giá được chọn
   const [period, setPeriod] = useState('Quý III / 2026');
 
-  // Step 1 Form State (Cán bộ tự chấm)
-  const [selfScore, setSelfScore] = useState(85);
-  const [selfNotes, setSelfNotes] = useState('');
+  // Điều phối Tab hiện tại: 'OVERVIEW' | 'SCORING' | 'MY_RESULTS' | 'HISTORY' | 'SETTINGS'
+  const canAccessOverview = isChairman || isManager || isAdmin;
+  const canAccessSettings = isChairman || isAdmin;
+
+  const defaultTab = canAccessOverview ? 'OVERVIEW' : 'SCORING';
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  // Form State Cấp 1
   const [submittingStep1, setSubmittingStep1] = useState(false);
 
-  // Modal Step 2 (Manager chấm) & Step 3 (Chairman chấm)
-  const [activeModalItem, setActiveModalItem] = useState(null);
-  const [modalScore, setModalScore] = useState(85);
-  const [modalNotes, setModalNotes] = useState('');
-  const [modalSubmitting, setModalSubmitting] = useState(false);
+  // Modal In Ấn Chuẩn A4
+  const [printModalState, setPrintModalState] = useState({
+    isOpen: false,
+    mode: 'PERSONAL', // 'PERSONAL' | 'FUND_SUMMARY'
+    personalData: null,
+    fundList: [],
+  });
 
-  // Filter & Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('ALL');
+  // Cấu hình tỷ trọng & xếp loại (Có thể lưu Firestore hoặc dùng mặc định chuẩn hóa)
+  const [kpiSettings, setKpiSettings] = useState({
+    self: 40,
+    manager: 30,
+    chairman: 30,
+  });
+  const [thresholds, setThresholds] = useState({
+    excellent: 90,
+    good: 75,
+    pass: 60,
+  });
 
+  // 1. Lắng nghe danh sách Cán bộ nhân viên
   useEffect(() => {
     const unsubEmp = subscribeEmployees((list) => {
       if (list) setEmployees(list);
@@ -53,6 +92,15 @@ const KpiEvaluationContainer = () => {
     return () => unsubEmp();
   }, []);
 
+  // 2. Lắng nghe danh mục Phòng ban
+  useEffect(() => {
+    const unsubDept = subscribeDepartments((list) => {
+      if (list) setDepartments(list);
+    });
+    return () => unsubDept();
+  }, []);
+
+  // 3. Lắng nghe các kỳ đánh giá động
   useEffect(() => {
     const unsubPeriods = subscribeEvaluationPeriods((list) => {
       if (list && list.length > 0) {
@@ -71,22 +119,38 @@ const KpiEvaluationContainer = () => {
     return () => unsubPeriods();
   }, []);
 
+  // 4. Lắng nghe danh sách phiếu KPI theo thời gian thực
   useEffect(() => {
     setLoading(true);
-    const unsub = subscribeKpiEvaluations((data) => {
+    const unsubKpi = subscribeKpiEvaluations((data) => {
       setKpiList(data || []);
       setLoading(false);
     });
-    return () => unsub();
+    return () => unsubKpi();
   }, []);
 
-  // Danh sách các kỳ đánh giá động từ Firestore
+  // 5. Lắng nghe danh mục tiêu chí đánh giá động (25 collections chuẩn hóa)
+  useEffect(() => {
+    const unsubCriteria = subscribeKpiCriteria((data) => {
+      setCriteriaList(data || []);
+    });
+    return () => unsubCriteria();
+  }, []);
+
+  // 6. Lắng nghe lịch sử KPI đa kỳ (employee_kpi_history)
+  useEffect(() => {
+    const unsubHistory = subscribeEmployeeKpiHistory(null, (data) => {
+      setHistoryList(data || []);
+    });
+    return () => unsubHistory();
+  }, []);
+
+  // Danh sách các kỳ đánh giá kết hợp từ evaluation_periods và dữ liệu thực tế
   const periodOptions = useMemo(() => {
     const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
     const seen = new Set();
     const opts = [];
 
-    // 1. Thêm từ evaluation_periods collection
     periods.forEach((p) => {
       const code =
         p.quarter && p.year
@@ -102,7 +166,6 @@ const KpiEvaluationContainer = () => {
       }
     });
 
-    // 2. Thêm các kỳ đã có trong kpiList (bảo toàn lịch sử)
     kpiList.forEach((k) => {
       if (k.period && !seen.has(k.period)) {
         seen.add(k.period);
@@ -115,13 +178,13 @@ const KpiEvaluationContainer = () => {
     });
 
     if (opts.length === 0) {
-      opts.push({ value: 'Quý III / 2026', label: 'Quý III / 2026' });
+      opts.push({ value: 'Quý III / 2026', label: 'Quý III / 2026 (Đang diễn ra)' });
     }
 
     return opts;
   }, [periods, kpiList]);
 
-  // Kiểm tra xem user hiện tại đã gửi Step 1 trong kỳ này chưa
+  // Phiếu KPI cá nhân của người dùng hiện tại trong kỳ đã chọn
   const myCurrentKpi = useMemo(() => {
     return kpiList.find(
       (k) =>
@@ -132,152 +195,213 @@ const KpiEvaluationContainer = () => {
     );
   }, [kpiList, currentUser, period]);
 
-  // Xử lý nộp Step 1 (Self-Evaluation - Trọng số 40%)
-  const handleSubmitStep1 = async (e) => {
-    e.preventDefault();
-    const scoreNum = Number(selfScore);
-    if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
-      toast.error('Điểm tự đánh giá phải nằm trong khoảng từ 0 đến 100.');
-      return;
-    }
+  // Lịch sử cá nhân qua tất cả các kỳ
+  const personalHistory = useMemo(() => {
+    const uid = currentUser?.id || currentUser?.uid;
+    const fromHistory = historyList.filter(
+      (h) => h.employeeId === uid || h.employeeName === currentUser?.name
+    );
+    if (fromHistory.length > 0) return fromHistory;
 
+    // Fallback từ kpiList nếu historyList chưa nạp xong
+    return kpiList.filter(
+      (k) => k.employeeId === uid || k.employeeName === currentUser?.name
+    );
+  }, [historyList, kpiList, currentUser]);
+
+  // Tính toán số lượng cần xử lý cho từng vai trò (Pending Badges)
+  const pendingCounts = useMemo(() => {
+    const currentPeriodList = kpiList.filter((k) => !period || k.period === period);
+    const chairmanCount = currentPeriodList.filter((k) => k.status === 'pending_chairman').length;
+    const managerCount = currentPeriodList.filter((k) => k.status === 'pending_manager').length;
+    const appealsCount = currentPeriodList.filter((k) => k.appealStatus === 'PENDING').length;
+    const selfCount = myCurrentKpi ? 0 : 1;
+
+    return {
+      self: selfCount,
+      manager: managerCount,
+      chairman: chairmanCount,
+      appeals: appealsCount,
+    };
+  }, [kpiList, period, myCurrentKpi]);
+
+  // Tự động kiểm tra quyền hạn khi chuyển tab
+  useEffect(() => {
+    if (activeTab === 'OVERVIEW' && !canAccessOverview) {
+      setActiveTab('SCORING');
+    }
+    if (activeTab === 'SETTINGS' && !canAccessSettings) {
+      setActiveTab('SCORING');
+    }
+  }, [activeTab, canAccessOverview, canAccessSettings]);
+
+  // Xử lý nộp phiếu Cấp 1 (Tự chấm)
+  const handleSubmitStep1 = useCallback(async (formData) => {
     setSubmittingStep1(true);
     try {
       await saveKpiStep1Self({
+        ...formData,
         period,
         employeeId: currentUser?.uid || currentUser?.id,
         employeeName: currentUser?.name,
         department: currentUser?.department,
         position: currentUser?.position,
-        scoreSelf: scoreNum,
-        selfNotes: selfNotes.trim(),
       });
-      toast.success('Đã gửi phiếu tự chấm điểm KPI (Bước 1: Trọng số 40%) thành công!');
-      setSelfNotes('');
-    } catch {
-      toast.error('Lỗi khi nộp điểm tự đánh giá KPI.');
+      toast.success('Đã gửi phiếu tự chấm điểm KPI Cấp 1 thành công! Đã chuyển tiếp tới Trưởng bộ phận thẩm định.');
+    } catch (err) {
+      console.error('Lỗi khi nộp điểm tự đánh giá KPI:', err);
+      toast.error('Có lỗi xảy ra khi nộp điểm tự đánh giá KPI.');
     } finally {
       setSubmittingStep1(false);
     }
-  };
+  }, [period, currentUser, toast]);
 
-  // Mở modal chấm điểm cấp 2 hoặc cấp 3
-  const openActionModal = (item) => {
-    setActiveModalItem(item);
-    if (role === ROLES.MANAGER) {
-      setModalScore(item.scoreManager ?? 85);
-      setModalNotes(item.managerNotes || '');
-    } else if (role === ROLES.CHAIRMAN) {
-      setModalScore(item.scoreChairman ?? 85);
-      setModalNotes(item.chairmanNotes || '');
-    }
-  };
-
-  // Xử lý lưu điểm Step 2 (Manager - 30%) hoặc Step 3 (Chairman - 30%)
-  const handleSaveModalScore = async () => {
-    if (!activeModalItem) return;
-    const scoreNum = Number(modalScore);
-    if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
-      toast.error('Điểm đánh giá phải từ 0 đến 100.');
-      return;
-    }
-
-    setModalSubmitting(true);
-    try {
-      if (role === ROLES.MANAGER) {
-        await updateKpiStep2Manager(activeModalItem.id, scoreNum, modalNotes);
-        toast.success(
-          `Ban điều hành đã chấm ${scoreNum} điểm cho đ/c ${activeModalItem.employeeName}! Chuyển tiếp tới Chủ tịch HĐQT.`
-        );
-      } else if (role === ROLES.CHAIRMAN) {
-        const res = await updateKpiStep3Chairman(
-          activeModalItem.id,
-          scoreNum,
-          modalNotes,
-          activeModalItem.scoreSelf,
-          activeModalItem.scoreManager
-        );
-        toast.success(
-          `Chủ tịch HĐQT đã hoàn tất phê duyệt! Điểm tổng kết: ${res.finalScore} điểm.`
-        );
-      }
-      setActiveModalItem(null);
-    } catch {
-      toast.error('Có lỗi xảy ra khi lưu điểm KPI.');
-    } finally {
-      setModalSubmitting(false);
-    }
-  };
-
-  // Lọc danh sách KPI
-  const filteredKpiList = useMemo(() => {
-    return kpiList.filter((item) => {
-      const matchPeriod = !period || item.period === period;
-      const matchStatus = filterStatus === 'ALL' || item.status === filterStatus;
-      const matchSearch =
-        !searchTerm.trim() ||
-        item.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.department?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchPeriod && matchStatus && matchSearch;
+  // Mở modal in ấn A4
+  const handleOpenPrintModal = useCallback((mode = 'PERSONAL', data = null) => {
+    const currentPeriodList = kpiList.filter((k) => !period || k.period === period);
+    setPrintModalState({
+      isOpen: true,
+      mode,
+      personalData: mode === 'PERSONAL' ? (data || myCurrentKpi) : null,
+      fundList: mode === 'FUND_SUMMARY' ? (data || currentPeriodList) : currentPeriodList,
     });
-  }, [kpiList, period, filterStatus, searchTerm]);
+  }, [kpiList, period, myCurrentKpi]);
+
+  // Lưu cấu hình tỷ trọng
+  const handleSaveConfig = useCallback((newWeights, newThresholds) => {
+    setKpiSettings(newWeights);
+    setThresholds(newThresholds);
+    toast.success('Đã cập nhật tỷ trọng và thang điểm KPI thành công!');
+  }, [toast]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
-      {/* 1. Thanh tác vụ chọn kỳ đánh giá */}
-      <KpiActionBar
-        period={period}
-        setPeriod={setPeriod}
-        periodOptions={periodOptions}
-      />
-
-      {/* 2. Banner cơ cấu tỷ trọng 3 cấp */}
-      <KpiWeightingCard />
-
-      {/* 3. Bố cục 2 cột: Cán bộ tự chấm & Bảng theo dõi toàn đơn vị */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Cột trái (5 cols): Step 1 Cán bộ tự chấm */}
-        <div className="lg:col-span-5 space-y-6">
-          <KpiSelfEvaluationForm
-            period={period}
-            currentUser={currentUser}
-            myCurrentKpi={myCurrentKpi}
-            selfScore={selfScore}
-            setSelfScore={setSelfScore}
-            selfNotes={selfNotes}
-            setSelfNotes={setSelfNotes}
-            onSubmitStep1={handleSubmitStep1}
-            isSubmitting={submittingStep1}
-          />
+    <div className="space-y-6 pb-20 lg:pb-8 animate-in fade-in duration-200">
+      {/* 1. Header & Bộ Chọn Kỳ Đánh Giá Động */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-6 bg-emerald-600 rounded-full"></div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              Phân Hệ Đánh Giá KPI 3 Cấp
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 pl-5">
+            Quy trình: Cán bộ tự chấm (40%) → Trưởng phòng thẩm định (30%) → HĐQT phê duyệt (30%)
+          </p>
         </div>
 
-        {/* Cột phải (7 cols): Theo dõi tiến trình 3 cấp toàn đơn vị */}
-        <div className="lg:col-span-7 space-y-6">
-          <KpiApprovalTable
-            kpiList={filteredKpiList}
-            loading={loading}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            filterStatus={filterStatus}
-            setFilterStatus={setFilterStatus}
-            isManager={isManager}
-            isChairman={isChairman}
-            onOpenActionModal={openActionModal}
+        {/* Bộ chọn kỳ đánh giá động */}
+        <div className="w-full md:w-auto">
+          <KpiPeriodSelector
+            period={period}
+            setPeriod={setPeriod}
+            periodOptions={periodOptions}
+            className="w-full md:min-w-[260px]"
           />
         </div>
       </div>
 
-      {/* 4. Modal chấm điểm của Giám đốc BĐH hoặc Chủ tịch HĐQT */}
-      <KpiGradingModal
-        activeModalItem={activeModalItem}
-        onClose={() => setActiveModalItem(null)}
-        role={role}
-        modalScore={modalScore}
-        setModalScore={setModalScore}
-        modalNotes={modalNotes}
-        setModalNotes={setModalNotes}
-        onSaveScore={handleSaveModalScore}
-        isSubmitting={modalSubmitting}
+      {/* 2. Thanh Tabs Điều Hướng Phân Hệ (Desktop & Tablet) */}
+      <KpiModuleTabsNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isManager={isManager}
+        isChairman={isChairman}
+        isAdmin={isAdmin}
+        pendingCounts={pendingCounts}
+        className="hidden md:flex"
+      />
+
+      {/* 3. Nội Dung Phân Hệ Tương Ứng Với Tab Đang Chọn */}
+      <div className="min-h-[500px]">
+        {/* TAB 1: Tổng Quan Quản Trị HĐQT */}
+        {activeTab === 'OVERVIEW' && canAccessOverview && (
+          <KpiOverviewTab
+            kpiList={kpiList.filter((k) => !period || k.period === period)}
+            loading={loading}
+            period={period}
+            isChairman={isChairman}
+            isManager={isManager}
+            isAdmin={isAdmin}
+            onOpenPrintModal={handleOpenPrintModal}
+          />
+        )}
+
+        {/* TAB 2: Quy Trình Chấm Điểm 3 Cấp (Tự chấm, Thẩm định, Phê chuẩn, Khiếu nại) */}
+        {activeTab === 'SCORING' && (
+          <KpiScoringTab
+            period={period}
+            currentUser={currentUser}
+            isManager={isManager}
+            isChairman={isChairman}
+            isAdmin={isAdmin}
+            myCurrentKpi={myCurrentKpi}
+            criteriaList={criteriaList}
+            kpiList={kpiList.filter((k) => !period || k.period === period)}
+            onSubmitStep1={handleSubmitStep1}
+            onRefresh={() => {}}
+            isSubmitting={submittingStep1}
+          />
+        )}
+
+        {/* TAB 3: Xem Kết Quả Cá Nhân Trong Kỳ */}
+        {activeTab === 'MY_RESULTS' && (
+          <KpiMyResultsTab
+            myCurrentKpi={myCurrentKpi}
+            period={period}
+            currentUser={currentUser}
+            onGoToSelfScoring={() => setActiveTab('SCORING')}
+            onOpenPrintModal={handleOpenPrintModal}
+          />
+        )}
+
+        {/* TAB 4: Lịch Sử Đa Kỳ (Toàn Quỹ & Cá Nhân) */}
+        {activeTab === 'HISTORY' && (
+          <KpiHistoryTab
+            historyList={historyList.length > 0 ? historyList : kpiList}
+            personalHistory={personalHistory}
+            currentUser={currentUser}
+            isManager={isManager}
+            isChairman={isChairman}
+            isAdmin={isAdmin}
+            periodOptions={periodOptions}
+            onOpenPrintModal={handleOpenPrintModal}
+          />
+        )}
+
+        {/* TAB 5: Cấu Hình Tỷ Trọng & Danh Mục Tiêu Chí Động */}
+        {activeTab === 'SETTINGS' && canAccessSettings && (
+          <KpiSettingsTab
+            criteriaList={criteriaList}
+            departments={departments}
+            kpiSettings={kpiSettings}
+            thresholds={thresholds}
+            canManage={canAccessSettings}
+            onSaveConfig={handleSaveConfig}
+            onRefresh={() => {}}
+          />
+        )}
+      </div>
+
+      {/* 4. Bottom Navigation Cố Định Cho Thiết Bị Di Động */}
+      <KpiBottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isManager={isManager}
+        isChairman={isChairman}
+        isAdmin={isAdmin}
+        pendingCounts={pendingCounts}
+      />
+
+      {/* 5. Modal In & Xuất Chuẩn A4 (Hỗ trợ In trực tiếp, Excel, Word, PDF, PNG) */}
+      <KpiA4PrintModal
+        isOpen={printModalState.isOpen}
+        onClose={() => setPrintModalState((prev) => ({ ...prev, isOpen: false }))}
+        mode={printModalState.mode}
+        personalData={printModalState.personalData}
+        fundList={printModalState.fundList}
+        period={period}
+        criteriaList={criteriaList}
       />
     </div>
   );

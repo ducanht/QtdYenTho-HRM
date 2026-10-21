@@ -87,6 +87,20 @@ export const KPI_CRITERIA_GROUPS = [
  * @param {number} chairman - Điểm Chủ tịch HĐQT phê chuẩn
  * @param {Object} [weights] - Tỷ trọng tùy chọn (mặc định 40% - 30% - 30%)
  */
+export const getKpiClassification = (score, thresholds = { excellent: 90, good: 75, pass: 60 }) => {
+  const s = Number(score) || 0;
+  if (s >= (thresholds.excellent ?? 90)) {
+    return { label: 'Xuất sắc', color: 'emerald', key: 'EXCELLENT' };
+  }
+  if (s >= (thresholds.good ?? 75)) {
+    return { label: 'Tốt', color: 'teal', key: 'GOOD' };
+  }
+  if (s >= (thresholds.pass ?? 60)) {
+    return { label: 'Đạt yêu cầu', color: 'amber', key: 'PASS' };
+  }
+  return { label: 'Không đạt', color: 'rose', key: 'FAIL' };
+};
+
 export const calculateKpiFinal = (self, manager, chairman, weights = { self: 0.4, manager: 0.3, chairman: 0.3 }) => {
   const s = Number(self) || 0;
   const m = Number(manager) || 0;
@@ -97,11 +111,7 @@ export const calculateKpiFinal = (self, manager, chairman, weights = { self: 0.4
   const wC = typeof weights.chairman === 'number' ? weights.chairman : 0.3;
 
   const final = Number((s * wS + m * wM + c * wC).toFixed(1));
-
-  let classification = 'Không đạt';
-  if (final >= 90) classification = 'Xuất sắc';
-  else if (final >= 75) classification = 'Tốt';
-  else if (final >= 60) classification = 'Đạt yêu cầu';
+  const classification = getKpiClassification(final).label;
 
   return { finalScore: final, classification };
 };

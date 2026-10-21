@@ -77,8 +77,8 @@ test.describe('Cổng Quản Trị Nhân Sự (HRM) - Quỹ Tín Dụng Nhân D�
     // Đăng nhập an toàn qua helper
     await loginAsAdmin(page);
 
-    // Điều hướng sang phân hệ Nhân sự
-    await page.goto('/employees');
+    // Điều hướng sang phân hệ Nhân sự (Tab Danh bạ cán bộ)
+    await page.goto('/employees?tab=DIRECTORY');
     await expect(page).toHaveURL(/.*\/employees/, { timeout: 15000 });
     await expect(page.getByRole('heading', { name: /Phân hệ Quản trị Nhân sự|Phân hệ Hồ sơ Cán bộ/i })).toBeVisible({ timeout: 15000 });
 
