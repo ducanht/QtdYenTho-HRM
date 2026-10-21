@@ -12,7 +12,6 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   setDoc,
   addDoc,
   updateDoc,
@@ -25,6 +24,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { generateUUID } from '../../../lib/evaluationUtils';
+import { DEFAULT_KPI_CRITERIA_CATALOG } from '../../../lib/systemDefaults';
 
 /**
  * 4 Nhóm Tiêu chí KPI Chuẩn Mực Ngành Quỹ Tín Dụng Nhân Dân (Tổng 100 điểm)
@@ -107,6 +107,103 @@ export const calculateKpiFinal = (self, manager, chairman, weights = { self: 0.4
 };
 
 /**
+ * Lắng nghe danh mục tiêu chí đánh giá KPI động theo thời gian thực (kpi_criteria)
+ */
+export const subscribeKpiCriteria = (callback) => {
+  if (!db) {
+    callback(DEFAULT_KPI_CRITERIA_CATALOG);
+    return () => {};
+  }
+
+  try {
+    const q = query(collection(db, 'kpi_criteria'), orderBy('order', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (snapshot.empty) {
+          callback(DEFAULT_KPI_CRITERIA_CATALOG);
+        } else {
+          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          callback(list);
+        }
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot kpi_criteria từ Firestore:', error);
+        callback(DEFAULT_KPI_CRITERIA_CATALOG);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot kpi_criteria:', err);
+    callback(DEFAULT_KPI_CRITERIA_CATALOG);
+    return () => {};
+  }
+};
+
+/**
+ * Lưu hoặc cập nhật một tiêu chí đánh giá KPI (kpi_criteria)
+ */
+export const saveKpiCriteriaItem = async (itemData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const targetId = itemData.id || `crit_${generateUUID()}`;
+  const payload = {
+    ...itemData,
+    id: targetId,
+    maxScore: Number(itemData.maxScore) || 10,
+    weight: Number(itemData.weight) || Number(itemData.maxScore) || 10,
+    order: Number(itemData.order) || 1,
+    isActive: itemData.isActive !== false,
+    updatedAt: new Date().toISOString(),
+  };
+  await setDoc(doc(db, 'kpi_criteria', targetId), payload, { merge: true });
+  return { success: true, id: targetId };
+};
+
+/**
+ * Xóa một tiêu chí đánh giá KPI (Chỉ Admin / HĐQT)
+ */
+export const deleteKpiCriteriaItem = async (itemId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await deleteDoc(doc(db, 'kpi_criteria', itemId));
+  return { success: true };
+};
+
+/**
+ * Lọc danh mục tiêu chí áp dụng cho một phòng ban cụ thể
+ */
+export const filterKpiCriteriaByDepartment = (criteriaList = [], department = '') => {
+  if (!Array.isArray(criteriaList) || criteriaList.length === 0) {
+    return DEFAULT_KPI_CRITERIA_CATALOG;
+  }
+  const cleanDept = (department || '').trim().toLowerCase();
+
+  // 1. Kiểm tra xem có tiêu chí nghiệp vụ chuyên biệt cho phòng ban này không
+  const hasSpecificDeptCriteria = criteriaList.some((item) => {
+    if (item.isActive === false || !item.department || item.department === 'Tất cả' || item.department === 'Toàn đơn vị') {
+      return false;
+    }
+    const itemDept = item.department.trim().toLowerCase();
+    return itemDept === cleanDept || itemDept.includes(cleanDept) || cleanDept.includes(itemDept);
+  });
+
+  return criteriaList.filter((item) => {
+    if (item.isActive === false) return false;
+    const isCommon = !item.department || item.department === 'Tất cả' || item.department === 'Toàn đơn vị';
+    if (isCommon) return true;
+
+    const itemDept = item.department.trim().toLowerCase();
+    const isMatch = itemDept === cleanDept || itemDept.includes(cleanDept) || cleanDept.includes(itemDept);
+    if (isMatch) return true;
+
+    // Nếu phòng ban không có tiêu chí chuyên biệt riêng, mặc định dùng tiêu chí của Ban Điều hành
+    if (!hasSpecificDeptCriteria && itemDept.includes('điều hành')) {
+      return true;
+    }
+
+    return false;
+  });
+};
+
+/**
  * Lắng nghe danh sách phiếu đánh giá KPI trong thời gian thực (evaluations_kpi)
  */
 export const subscribeKpiEvaluations = (callback) => {
@@ -179,6 +276,7 @@ export const subscribeEmployeeKpiHistory = (employeeId = null, callback) => {
 /**
  * Bước 1: Cán bộ tự chấm điểm KPI (Trọng số 40%)
  * Cập nhật trạng thái phiếu chuyển sang 'pending_manager'
+ * Lưu bản sao snapshot tiêu chí (criteriaSnapshot) để bảo toàn lịch sử bất biến
  */
 export const saveKpiStep1Self = async (kpiData) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
@@ -195,14 +293,18 @@ export const saveKpiStep1Self = async (kpiData) => {
     position: kpiData.position || '',
     scoreSelf: Number(kpiData.scoreSelf) || 0,
     selfNotes: (kpiData.selfNotes || '').trim(),
-    criteriaScores: kpiData.criteriaScores || null,
-    status: 'pending_manager',
-    scoreManager: null,
-    managerNotes: '',
-    scoreChairman: null,
-    chairmanNotes: '',
-    finalScore: null,
-    classification: null,
+    selfCriteriaScores: kpiData.selfCriteriaScores || kpiData.criteriaScores || null,
+    criteriaScores: kpiData.criteriaScores || kpiData.selfCriteriaScores || null,
+    criteriaSnapshot: kpiData.criteriaSnapshot || null,
+    status: kpiData.status || 'pending_manager',
+    scoreManager: kpiData.scoreManager ?? null,
+    managerNotes: kpiData.managerNotes || '',
+    managerCriteriaScores: kpiData.managerCriteriaScores || null,
+    scoreChairman: kpiData.scoreChairman ?? null,
+    chairmanNotes: kpiData.chairmanNotes || '',
+    chairmanCriteriaScores: kpiData.chairmanCriteriaScores || null,
+    finalScore: kpiData.finalScore ?? null,
+    classification: kpiData.classification || null,
     updatedAt: nowIso,
     serverTime: serverTimestamp()
   };
@@ -232,11 +334,13 @@ export const updateKpiStep2Manager = async (kpiId, arg2, arg3) => {
   let scoreManager = 0;
   let managerNotes = '';
   let managerCriteriaScores = null;
+  let status = 'pending_chairman';
 
   if (typeof arg2 === 'object' && arg2 !== null) {
     scoreManager = arg2.scoreManager;
     managerNotes = arg2.managerNotes || '';
-    managerCriteriaScores = arg2.criteriaScores || null;
+    managerCriteriaScores = arg2.managerCriteriaScores || arg2.criteriaScores || null;
+    if (arg2.status) status = arg2.status;
   } else {
     scoreManager = arg2;
     managerNotes = arg3 || '';
@@ -245,7 +349,7 @@ export const updateKpiStep2Manager = async (kpiId, arg2, arg3) => {
   const updateFields = {
     scoreManager: Number(scoreManager),
     managerNotes: managerNotes.trim(),
-    status: 'pending_chairman',
+    status,
     updatedAt: new Date().toISOString(),
   };
 
@@ -286,7 +390,7 @@ export const updateKpiStep3Chairman = async (
     chairmanNotes = arg2.chairmanNotes || '';
     scoreSelf = arg2.scoreSelf;
     scoreManager = arg2.scoreManager;
-    chairmanCriteriaScores = arg2.criteriaScores || null;
+    chairmanCriteriaScores = arg2.chairmanCriteriaScores || arg2.criteriaScores || null;
   } else {
     scoreChairman = arg2;
     chairmanNotes = arg3 || '';
@@ -333,6 +437,13 @@ export const updateKpiStep3Chairman = async (
           scoreSelf: fullData.scoreSelf,
           scoreManager: fullData.scoreManager,
           scoreChairman: Number(scoreChairman),
+          selfCriteriaScores: fullData.selfCriteriaScores || fullData.criteriaScores || null,
+          managerCriteriaScores: fullData.managerCriteriaScores || null,
+          chairmanCriteriaScores: chairmanCriteriaScores || fullData.chairmanCriteriaScores || null,
+          criteriaSnapshot: fullData.criteriaSnapshot || null,
+          selfNotes: fullData.selfNotes || '',
+          managerNotes: fullData.managerNotes || '',
+          chairmanNotes: chairmanNotes || '',
           finalScore,
           classification,
           completedAt: nowIso,
@@ -350,6 +461,109 @@ export const updateKpiStep3Chairman = async (
     console.error('Lỗi updateDoc evaluations_kpi (Step 3):', error);
     throw error;
   }
+};
+
+/**
+ * Cán bộ gửi phản ánh / đề nghị xem xét lại điểm số (Appeal Engine)
+ * Chuyển trạng thái phiếu sang 'appealed'
+ */
+export const submitKpiAppeal = async (kpiId, appealData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
+  const nowIso = new Date().toISOString();
+  const updateFields = {
+    status: 'appealed',
+    appealReason: (appealData.appealReason || '').trim(),
+    appealRequestedScore: appealData.appealRequestedScore !== undefined && appealData.appealRequestedScore !== '' 
+      ? Number(appealData.appealRequestedScore) 
+      : null,
+    appealNotes: (appealData.appealNotes || '').trim(),
+    appealCriteriaId: appealData.appealCriteriaId || null,
+    appealDate: nowIso,
+    appealStatus: 'pending',
+    updatedAt: nowIso
+  };
+
+  await updateDoc(doc(db, 'evaluations_kpi', kpiId), updateFields);
+  return { success: true };
+};
+
+/**
+ * Quản lý / HĐQT xem xét giải quyết khiếu nại điểm số
+ * action: 'ACCEPT' (điều chỉnh điểm) | 'REJECT' (bảo lưu điểm cũ)
+ */
+export const resolveKpiAppeal = async (kpiId, resolutionData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
+  const nowIso = new Date().toISOString();
+  const { action, adjustedScore, note, resolvedBy, resolvedByRole } = resolutionData;
+
+  const snap = await getDoc(doc(db, 'evaluations_kpi', kpiId));
+  if (!snap.exists()) throw new Error('Không tìm thấy phiếu KPI');
+
+  const updateFields = {
+    status: 'completed',
+    appealStatus: action === 'ACCEPT' ? 'resolved' : 'rejected',
+    appealResolutionNote: (note || '').trim(),
+    appealResolvedAt: nowIso,
+    appealResolvedBy: resolvedBy || 'Hội đồng Quản trị',
+    appealResolvedByRole: resolvedByRole || 'HĐQT',
+    updatedAt: nowIso
+  };
+
+  if (action === 'ACCEPT' && typeof adjustedScore === 'number') {
+    const finalScore = Number(adjustedScore.toFixed(1));
+    let classification = 'Không đạt';
+    if (finalScore >= 90) classification = 'Xuất sắc';
+    else if (finalScore >= 75) classification = 'Tốt';
+    else if (finalScore >= 60) classification = 'Đạt yêu cầu';
+
+    updateFields.finalScore = finalScore;
+    updateFields.classification = classification;
+
+    // Cập nhật lại vào employee_kpi_history
+    try {
+      await updateDoc(doc(db, 'employee_kpi_history', `hist_${kpiId}`), {
+        finalScore,
+        classification,
+        appealResolutionNote: (note || '').trim(),
+        updatedAt: nowIso
+      });
+    } catch {
+      // bỏ qua nếu bản ghi lịch sử chưa tồn tại
+    }
+  }
+
+  await updateDoc(doc(db, 'evaluations_kpi', kpiId), updateFields);
+  return { success: true, action };
+};
+
+/**
+ * Phê duyệt hàng loạt các phiếu KPI đang chờ HĐQT (Bulk Approval)
+ */
+export const bulkApproveKpi = async (kpiList = [], approverInfo = {}) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  if (!Array.isArray(kpiList) || kpiList.length === 0) return { success: true, count: 0 };
+
+  let approvedCount = 0;
+  for (const item of kpiList) {
+    if (item.status === 'pending_chairman' || item.status === 'pending_manager') {
+      const scoreSelf = Number(item.scoreSelf) || 0;
+      const scoreManager = Number(item.scoreManager) || scoreSelf;
+      const scoreChairman = typeof item.scoreChairman === 'number' ? item.scoreChairman : scoreManager;
+      
+      await updateKpiStep3Chairman(item.id, {
+        scoreChairman,
+        chairmanNotes: item.chairmanNotes || approverInfo.notes || 'HĐQT đồng thuận phê chuẩn',
+        scoreSelf,
+        scoreManager,
+        criteriaScores: item.chairmanCriteriaScores || item.managerCriteriaScores || item.selfCriteriaScores
+      });
+      approvedCount++;
+    }
+  }
+
+  return { success: true, count: approvedCount };
 };
 
 /**
@@ -577,7 +791,7 @@ export const exportKpiSummaryToExcel = async (kpiList = [], periodName = 'Quý I
     ];
   });
 
-  const cleanPeriod = periodName.replace(/[\/\\]/g, '-').replace(/\s+/g, '_');
+  const cleanPeriod = periodName.replace(/[/\\s]+/g, '_');
   await exportToExcel({
     filename: `Ket_Qua_Danh_Gia_KPI_${cleanPeriod}.xlsx`,
     sheetName: 'Tong_Hop_KPI',

@@ -92,6 +92,7 @@ import {
   DEFAULT_EMPLOYEE_SOCIALS,
   DEFAULT_EMPLOYEE_CONTRACTS,
   DEFAULT_CONTRACT_ANNEXES,
+  DEFAULT_KPI_CRITERIA_CATALOG,
 } from './systemDefaults';
 import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
 
@@ -99,10 +100,10 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.21_v6.1_work_locations_and_credit_areas_tables';
+export const CURRENT_SCHEMA_VERSION = '2026.10.21_v6.2_dynamic_kpi_criteria_and_appeal_system';
 
 /**
- * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (24 Collections chuẩn hóa)
+ * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (25 Collections chuẩn hóa)
  */
 export const CORE_COLLECTIONS = [
   'accounts',
@@ -129,6 +130,7 @@ export const CORE_COLLECTIONS = [
   'employee_kpi_history',
   'work_locations',
   'credit_areas',
+  'kpi_criteria',
 ];
 
 /**
@@ -163,6 +165,7 @@ export const autoSyncDatabaseSchema = async (force = false) => {
         localStorage.setItem('qtd_hrm_system_settings', JSON.stringify(DEFAULT_SYSTEM_SETTINGS));
         localStorage.setItem('qtd_hrm_system_modules', JSON.stringify(SYSTEM_MODULES));
         localStorage.setItem('qtd_hrm_roles_permissions', JSON.stringify(ROLE_PERMISSIONS));
+        localStorage.setItem('qtd_hrm_kpi_criteria', JSON.stringify(DEFAULT_KPI_CRITERIA_CATALOG));
         localStorage.setItem('qtd_hrm_local_synced_version', CURRENT_SCHEMA_VERSION);
       }
     }
@@ -462,6 +465,17 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       }
     }
 
+    // 15d. Danh mục Tiêu chí đánh giá KPI động (kpi_criteria)
+    const kpiCritSnap = await getDocs(collection(db, 'kpi_criteria')).catch(() => null);
+    if (!kpiCritSnap || kpiCritSnap.empty || force) {
+      for (const crit of DEFAULT_KPI_CRITERIA_CATALOG) {
+        await setDoc(doc(db, 'kpi_criteria', crit.id), {
+          ...crit,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
     // 16. Ghi nhận metadata schema version hoàn tất
     await setDoc(metaDocRef, {
       version: CURRENT_SCHEMA_VERSION,
@@ -583,6 +597,9 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
     localStorage.setItem('qtd_hrm_system_settings', JSON.stringify(DEFAULT_SYSTEM_SETTINGS));
     localStorage.setItem('qtd_hrm_system_modules', JSON.stringify(SYSTEM_MODULES));
     localStorage.setItem('qtd_hrm_roles_permissions', JSON.stringify(ROLE_PERMISSIONS));
+    localStorage.setItem('qtd_hrm_work_locations', JSON.stringify(DEFAULT_WORK_LOCATIONS));
+    localStorage.setItem('qtd_hrm_credit_areas', JSON.stringify(DEFAULT_CREDIT_AREAS));
+    localStorage.setItem('qtd_hrm_kpi_criteria', JSON.stringify(DEFAULT_KPI_CRITERIA_CATALOG));
 
     const localCounts = {
       accounts: DEFAULT_ACCOUNTS.length,
@@ -602,6 +619,9 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       employee_socials: DEFAULT_EMPLOYEE_SOCIALS.length,
       employee_contracts: DEFAULT_EMPLOYEE_CONTRACTS.length,
       employee_contract_annexes: DEFAULT_CONTRACT_ANNEXES.length,
+      work_locations: DEFAULT_WORK_LOCATIONS.length,
+      credit_areas: DEFAULT_CREDIT_AREAS.length,
+      kpi_criteria: DEFAULT_KPI_CRITERIA_CATALOG.length,
       evaluations_trust: 0,
       evaluations_kpi: 0,
       evaluations_planning: 0,
@@ -796,9 +816,15 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 18/20: Xác nhận tính toàn vẹn các bảng phân hệ đánh giá...');
+    onProgress('Bước 18/20: Khởi tạo Danh mục Tiêu chí Đánh giá KPI động (kpi_criteria)...');
+    for (const crit of DEFAULT_KPI_CRITERIA_CATALOG) {
+      await setDoc(doc(db, 'kpi_criteria', crit.id), {
+        ...crit,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
 
-    onProgress('Bước 19/20: Thống kê và tổng hợp số liệu 24 bảng CSDL Firestore...');
+    onProgress('Bước 19/20: Thống kê và tổng hợp số liệu 25 bảng CSDL Firestore...');
     const details = {};
     for (const colName of CORE_COLLECTIONS) {
       try {
@@ -814,9 +840,9 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       sessionStorage.setItem('qtd_hrm_schema_synced_ver', CURRENT_SCHEMA_VERSION);
     }
 
-    onProgress('Bước 20/20: Hoàn tất 100%! Toàn bộ 24 bảng CSDL Firestore đã sẵn sàng vận hành.');
+    onProgress('Bước 20/20: Hoàn tất 100%! Toàn bộ 25 bảng CSDL Firestore đã sẵn sàng vận hành.');
     result.success = true;
-    result.message = 'Khởi tạo và đồng bộ 24 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
+    result.message = 'Khởi tạo và đồng bộ 25 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
     return result;
   } catch (error) {
     console.error('Lỗi tự động khởi tạo CSDL Firebase:', error);

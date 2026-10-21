@@ -161,11 +161,14 @@ service cloud.firestore {
 
     // ===============================================================
     // 6. Chấm điểm KPI 3 Cấp (evaluations_kpi)
+    // Cán bộ tự chấm Cấp 1, gửi khiếu nại; Trưởng phòng thẩm định Cấp 2;
+    // Ban Lãnh đạo / HĐQT phê duyệt Cấp 3 và xử lý khiếu nại.
     // ===============================================================
     match /evaluations_kpi/{kpiId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if isBoardOrAdmin() || (resource != null && resource.data.employeeId == request.auth.uid);
+      allow update: if isAuthenticated();
+      allow delete: if isBoardOrAdmin();
     }
 
     // ===============================================================
@@ -325,6 +328,16 @@ service cloud.firestore {
     // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
     // ===============================================================
     match /credit_areas/{areaId} {
+      allow read: if isAuthenticated();
+      allow write: if isBoardOrAdmin();
+    }
+
+    // ===============================================================
+    // 23. Danh mục Tiêu chí Đánh giá KPI Động (kpi_criteria)
+    // Cán bộ đăng nhập xem được danh mục tiêu chí đánh giá KPI của Quỹ;
+    // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
+    // ===============================================================
+    match /kpi_criteria/{criterionId} {
       allow read: if isAuthenticated();
       allow write: if isBoardOrAdmin();
     }

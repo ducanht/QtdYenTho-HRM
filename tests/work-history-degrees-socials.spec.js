@@ -330,7 +330,7 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     }
 
     // 5. Kiểm tra Schema Version mới v6.x & Dữ liệu mặc định 2 bảng mới
-    expect(CURRENT_SCHEMA_VERSION).toMatch(/v6\.(0|1)/);
+    expect(CURRENT_SCHEMA_VERSION).toMatch(/v6\./);
     expect(DEFAULT_WORK_LOCATIONS.length).toBeGreaterThanOrEqual(3);
     expect(DEFAULT_CREDIT_AREAS.length).toBeGreaterThanOrEqual(8);
 
