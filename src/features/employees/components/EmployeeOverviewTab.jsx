@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Users, 
   Award, 
@@ -12,11 +12,20 @@ import {
   Building2, 
   Sliders, 
   AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  MoreHorizontal,
+  FileSpreadsheet
 } from 'lucide-react';
 import { calculateAreaTenureAndDueDate, isCreditOfficerRole } from '../../../lib/evaluationUtils';
 import { formatDateVN } from '../../../lib/dateUtils';
 import Button from '../../../components/common/Button';
+import DropdownMenu from '../../../components/common/DropdownMenu';
+import { 
+  exportEmployeesDirectoryToExcel,
+  exportCreditRotationReportToExcel,
+  exportContractsReportToExcel,
+  exportEducationReportToExcel,
+} from '../../../lib/exportUtils';
 
 /**
  * EmployeeOverviewTab: Màn hình Tổng quan Nhân sự lao động của Quỹ (Tab OVERVIEW)
@@ -263,6 +272,58 @@ const EmployeeOverviewTab = ({
       .sort((a, b) => b.count - a.count);
   }, [employees, departments, totalEmployees]);
 
+  // Trạng thái đang xuất báo cáo
+  const [exportingReport, setExportingReport] = useState(false);
+
+  // Xử lý xuất các loại báo cáo quản trị cấp toàn Quỹ
+  const handleExportDirectory = async () => {
+    try {
+      setExportingReport(true);
+      await exportEmployeesDirectoryToExcel(employees);
+    } catch (err) {
+      console.error('Lỗi xuất danh bạ cán bộ:', err);
+      alert('Không thể xuất danh bạ cán bộ. Vui lòng thử lại!');
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
+  const handleExportCreditRotation = async () => {
+    try {
+      setExportingReport(true);
+      await exportCreditRotationReportToExcel(transferMonitoringList, hrConfig);
+    } catch (err) {
+      console.error('Lỗi xuất báo cáo giám sát CBTD:', err);
+      alert('Không thể xuất báo cáo giám sát CBTD. Vui lòng thử lại!');
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
+  const handleExportContracts = async () => {
+    try {
+      setExportingReport(true);
+      await exportContractsReportToExcel(employees, contracts);
+    } catch (err) {
+      console.error('Lỗi xuất báo cáo HĐLĐ:', err);
+      alert('Không thể xuất báo cáo hợp đồng. Vui lòng thử lại!');
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
+  const handleExportEducation = async () => {
+    try {
+      setExportingReport(true);
+      await exportEducationReportToExcel(employees, degrees);
+    } catch (err) {
+      console.error('Lỗi xuất báo cáo học vấn:', err);
+      alert('Không thể xuất báo cáo học vấn. Vui lòng thử lại!');
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
   // Kiểm tra cờ hiển thị (Mặc định bật toàn bộ nếu không khai báo)
   const showKpis = overviewDisplayConfig?.showKpis !== false;
   const showContractStructure = overviewDisplayConfig?.showContractStructure !== false;
@@ -272,7 +333,7 @@ const EmployeeOverviewTab = ({
 
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
-      {/* Header Tổng Quan & Nút Cấu Hình Hiển Thị */}
+      {/* Header Tổng Quan & Nút Cấu Hình Hiển Thị & Menu Tác Vụ Báo Cáo */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -284,15 +345,77 @@ const EmployeeOverviewTab = ({
           </p>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onOpenDisplayConfigModal}
-          icon={Sliders}
-          className="text-xs shrink-0 self-end sm:self-auto border-slate-200 hover:border-emerald-300"
-        >
-          Cấu hình hiển thị
-        </Button>
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          {/* Menu Dropdown Tác vụ Quản trị & Báo cáo */}
+          <DropdownMenu
+            align="right"
+            width="w-64"
+            trigger={({ isOpen }) => (
+              <button
+                type="button"
+                aria-label="Tác vụ báo cáo"
+                disabled={exportingReport}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-bold transition-all cursor-pointer select-none active:scale-95 disabled:opacity-50 ${
+                  isOpen
+                    ? 'bg-emerald-800 text-white border-emerald-800 shadow-xs'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs'
+                }`}
+                title="Tác vụ quản trị & xuất báo cáo"
+              >
+                <MoreHorizontal className="w-3.5 h-3.5 text-slate-500" />
+                <span>{exportingReport ? 'Đang xuất...' : 'Tác vụ'}</span>
+              </button>
+            )}
+            items={[
+              {
+                id: 'exp-directory',
+                label: 'Xuất danh bạ toàn Quỹ (Excel)',
+                description: 'Toàn bộ hồ sơ cán bộ nhân viên',
+                icon: FileSpreadsheet,
+                onClick: handleExportDirectory,
+              },
+              {
+                id: 'exp-credit-rotation',
+                label: 'Báo cáo giám sát địa bàn CBTD',
+                description: 'Chu kỳ luân chuyển & hạn đổi địa bàn',
+                icon: ShieldAlert,
+                onClick: handleExportCreditRotation,
+              },
+              {
+                id: 'exp-contracts',
+                label: 'Báo cáo cơ cấu HĐLĐ & Hạn tái ký',
+                description: 'Tình trạng thực hiện hợp đồng lao động',
+                icon: FileText,
+                onClick: handleExportContracts,
+              },
+              {
+                id: 'exp-education',
+                label: 'Báo cáo trình độ & văn bằng',
+                description: 'Thống kê học vấn, chuyên ngành đào tạo',
+                icon: GraduationCap,
+                onClick: handleExportEducation,
+              },
+              { divider: true },
+              {
+                id: 'cfg-display',
+                label: 'Cấu hình hiển thị Dashboard',
+                description: 'Bật/tắt các phân khu widget',
+                icon: Sliders,
+                onClick: onOpenDisplayConfigModal,
+              },
+            ]}
+          />
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onOpenDisplayConfigModal}
+            icon={Sliders}
+            className="text-xs border-slate-200 hover:border-emerald-300"
+          >
+            Cấu hình hiển thị
+          </Button>
+        </div>
       </div>
 
       {/* 1. KHỐI THẺ CHỈ SỐ NHÂN LỰC KPI */}

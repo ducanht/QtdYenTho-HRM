@@ -626,6 +626,194 @@ export const exportEmployeesDirectoryToExcel = async (employees = []) => {
 
 /**
  * ----------------------------------------------------------------------------
+ * 5b. XUẤT BÁO CÁO GIÁM SÁT CHU KỲ LUÂN CHUYỂN ĐỊA BÀN CÁN BỘ TÍN DỤNG (CBTD)
+ * ----------------------------------------------------------------------------
+ */
+export const exportCreditRotationReportToExcel = async (
+  transferMonitoringList = [],
+  hrConfig = {}
+) => {
+  const maxMonths = Number(
+    hrConfig?.creditRotationMonths || hrConfig?.transferMaxMonths || hrConfig?.transferCycleMonths || 36
+  );
+  const warningMonths = Number(
+    hrConfig?.creditWarningMonths || hrConfig?.transferWarningMonths || hrConfig?.warningMonths || 6
+  );
+
+  const headers = [
+    'STT',
+    'Mã CB',
+    'Họ và tên',
+    'Phòng ban',
+    'Chức danh',
+    'Địa bàn phụ trách',
+    'Ngày nhận địa bàn',
+    'Thời gian phụ trách',
+    'Hạn mức tối đa',
+    'Thời hạn đổi địa bàn',
+    'Tình trạng',
+  ];
+
+  const rows = transferMonitoringList.map((item, idx) => {
+    let statusText = 'Trong chu kỳ an toàn';
+    if (item.isDue) {
+      statusText = 'ĐẾN HẠN LUÂN CHUYỂN';
+    } else if (item.isNear) {
+      statusText = 'SẮP ĐẾN HẠN';
+    }
+
+    return [
+      idx + 1,
+      item.code || '',
+      item.name || '',
+      item.department || '',
+      item.position || '',
+      item.assignedArea || 'Chưa phân công địa bàn',
+      item.areaStartDate ? formatDateVN(item.areaStartDate) : '',
+      item.tenureText || '',
+      `${item.maxMonths || maxMonths} tháng`,
+      item.dueDateText || '',
+      statusText,
+    ];
+  });
+
+  return await exportToExcel({
+    filename: 'Bao_cao_giam_sat_luan_chuyen_dia_ban_CBTD.xlsx',
+    sheetName: 'Giám sát địa bàn CBTD',
+    title: 'BÁO CÁO GIÁM SÁT CHU KỲ LUÂN CHUYỂN ĐỊA BÀN CÁN BỘ TÍN DỤNG',
+    subtitle: `QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ • CHU KỲ TỐI ĐA: ${maxMonths} THÁNG (CẢNH BÁO: ${warningMonths} THÁNG)`,
+    headers,
+    rows,
+    colWidths: [6, 12, 24, 20, 22, 28, 18, 20, 16, 22, 22],
+  });
+};
+
+/**
+ * ----------------------------------------------------------------------------
+ * 5c. XUẤT BÁO CÁO CƠ CẤU VÀ TÌNH HÌNH HỢP ĐỒNG LAO ĐỘNG (HĐLĐ)
+ * ----------------------------------------------------------------------------
+ */
+export const exportContractsReportToExcel = async (
+  employees = [],
+  contracts = []
+) => {
+  const now = new Date();
+  const sixtyDaysLater = new Date();
+  sixtyDaysLater.setDate(sixtyDaysLater.getDate() + 60);
+
+  const headers = [
+    'STT',
+    'Mã CB',
+    'Họ và tên',
+    'Phòng ban',
+    'Chức danh',
+    'Số HĐLĐ',
+    'Loại hợp đồng',
+    'Ngày hiệu lực',
+    'Ngày hết hạn',
+    'Tình trạng thực hiện',
+  ];
+
+  const rows = employees.map((emp, idx) => {
+    const empContracts = contracts.filter((c) => c.employeeId === emp.id || c.employeeCode === emp.code);
+    const current = empContracts.find((c) => c.isCurrent) || empContracts[0];
+    const contractNum = current?.contractNumber || 'HĐLĐ';
+    const contractType = current?.contractType || emp.contractType || 'Không xác định thời hạn';
+    const signDate = current?.effectiveDate || current?.signDate || emp.contractStartDate || '';
+    const expDate = current?.expirationDate || emp.contractEndDate || '';
+
+    let statusText = 'Đang thực hiện';
+    if (expDate) {
+      const d = new Date(expDate);
+      if (!isNaN(d.getTime())) {
+        if (d < now) {
+          statusText = 'HẾT HẠN HỢP ĐỒNG';
+        } else if (d <= sixtyDaysLater) {
+          statusText = 'SẮP HẾT HẠN (CẦN TÁI KÝ)';
+        }
+      }
+    }
+
+    return [
+      idx + 1,
+      emp.code || '',
+      emp.name || '',
+      emp.department || '',
+      emp.position || '',
+      contractNum,
+      contractType,
+      signDate ? formatDateVN(signDate) : '',
+      expDate ? formatDateVN(expDate) : 'Không xác định',
+      statusText,
+    ];
+  });
+
+  return await exportToExcel({
+    filename: 'Bao_cao_tinh_hinh_hop_dong_lao_dong.xlsx',
+    sheetName: 'Hợp đồng lao động',
+    title: 'BÁO CÁO CƠ CẤU VÀ TÌNH HÌNH THỰC HIỆN HỢP ĐỒNG LAO ĐỘNG',
+    subtitle: 'QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ',
+    headers,
+    rows,
+    colWidths: [6, 12, 24, 20, 22, 18, 28, 16, 16, 24],
+  });
+};
+
+/**
+ * ----------------------------------------------------------------------------
+ * 5d. XUẤT BÁO CÁO CƠ CẤU TRÌNH ĐỘ HỌC VẤN VÀ VĂN BẰNG CHUYÊN MÔN
+ * ----------------------------------------------------------------------------
+ */
+export const exportEducationReportToExcel = async (
+  employees = [],
+  degrees = []
+) => {
+  const headers = [
+    'STT',
+    'Mã CB',
+    'Họ và tên',
+    'Phòng ban',
+    'Chức danh',
+    'Trình độ cao nhất',
+    'Trường / Đơn vị đào tạo',
+    'Chuyên ngành',
+    'Hình thức đào tạo',
+    'Năm tốt nghiệp',
+    'Xếp loại',
+  ];
+
+  const rows = employees.map((emp, idx) => {
+    const empDegs = degrees.filter((d) => d.employeeId === emp.id || d.employeeUuid === emp.id);
+    const highest = empDegs.find((d) => d.isHighest) || empDegs[0] || {};
+
+    return [
+      idx + 1,
+      emp.code || '',
+      emp.name || '',
+      emp.department || '',
+      emp.position || '',
+      highest.degreeLevel || emp.education || 'Chưa cập nhật',
+      highest.institution || '',
+      highest.major || '',
+      highest.trainingType || 'Chính quy',
+      highest.graduationYear ? String(highest.graduationYear) : '',
+      highest.classification || '',
+    ];
+  });
+
+  return await exportToExcel({
+    filename: 'Bao_cao_co_cau_trinh_do_hoc_van.xlsx',
+    sheetName: 'Trình độ & Văn bằng',
+    title: 'BÁO CÁO CƠ CẤU TRÌNH ĐỘ HỌC VẤN VÀ VĂN BẰNG CHUYÊN MÔN',
+    subtitle: 'QUỸ TÍN DỤNG NHÂN DÂN YÊN THỌ',
+    headers,
+    rows,
+    colWidths: [6, 12, 24, 20, 22, 18, 28, 24, 18, 16, 16],
+  });
+};
+
+/**
+ * ----------------------------------------------------------------------------
  * 6. XUẤT SƠ YẾU LÝ LỊCH TRÍCH NGANG CÁN BỘ SANG EXCEL (.xlsx) MẪU 2C/TCTD
  * ----------------------------------------------------------------------------
  */

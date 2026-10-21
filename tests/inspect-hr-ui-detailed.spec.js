@@ -68,6 +68,16 @@ test.describe('Kiểm tra Chi Tiết Giao Diện Phân Hệ Quản Trị Nhân S
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '01_desktop_tab_overview.png'), fullPage: true });
     await scanForbiddenWords(page, 'Màn hình Tổng quan');
 
+    // Kiểm tra Menu Tác vụ xuất báo cáo quản trị tổng quan
+    const reportTaskBtn = page.getByRole('button', { name: /Tác vụ/i }).first();
+    await expect(reportTaskBtn).toBeVisible();
+    await reportTaskBtn.click();
+    await expect(page.getByText(/Xuất danh bạ toàn Quỹ/i)).toBeVisible();
+    await expect(page.getByText(/Báo cáo giám sát địa bàn CBTD/i)).toBeVisible();
+    await expect(page.getByText(/Báo cáo cơ cấu HĐLĐ/i)).toBeVisible();
+    await expect(page.getByText(/Báo cáo trình độ & văn bằng/i)).toBeVisible();
+    await page.keyboard.press('Escape');
+
     // Mở Modal Cấu hình hiển thị
     const configBtn = page.getByRole('button', { name: /Cấu hình hiển thị/i });
     await expect(configBtn).toBeVisible();
@@ -89,8 +99,11 @@ test.describe('Kiểm tra Chi Tiết Giao Diện Phân Hệ Quản Trị Nhân S
     await page.waitForLoadState('domcontentloaded');
     await dismissReminders(page);
 
+    // Chờ hoàn tất tải dữ liệu từ Firestore
+    await expect(page.getByText(/Đang tải phân hệ/i)).toHaveCount(0, { timeout: 30000 }).catch(() => {});
+
     // Kiểm tra danh bạ sidebar
-    await expect(page.getByRole('heading', { name: /Danh Bạ Cán Bộ/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: /Danh Bạ Cán Bộ/i })).toBeVisible({ timeout: 25000 });
 
     // Chọn cán bộ
     const empBtn = page.getByText(/Trịnh Đức Anh|Nguyễn Thị Sinh|Vũ Thị Hiền/i).first();

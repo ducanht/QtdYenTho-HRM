@@ -492,17 +492,30 @@ const EmployeeProfileDetail = ({
             </div>
           </div>
 
-          {/* Hàng nút xuất bản & in ấn */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Hàng nút xuất bản & in ấn dạng biểu tượng (Icon Buttons) */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Tooltip content="In trích ngang sơ yếu lý lịch chuẩn khổ A4" position="top">
+              <button
+                type="button"
+                onClick={() => onOpenPrint?.(emp)}
+                aria-label="In trích ngang A4"
+                title="In trích ngang A4"
+                className="w-9 h-9 flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/90 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-slate-600" />
+              </button>
+            </Tooltip>
+
             <Tooltip content="Xuất sơ yếu lý lịch 2C/TCTD sang Word (.docx)" position="top">
               <button
                 type="button"
                 onClick={handleExportWord}
                 disabled={exportingWord}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+                aria-label="Xuất Word (2C/TCTD)"
+                title="Xuất Word (2C/TCTD)"
+                className="w-9 h-9 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
               >
-                <FileText className="w-3.5 h-3.5 text-blue-700" />
-                <span>{exportingWord ? 'Đang tạo...' : 'Xuất Word'}</span>
+                <FileText className="w-4 h-4 text-blue-700" />
               </button>
             </Tooltip>
 
@@ -511,98 +524,43 @@ const EmployeeProfileDetail = ({
                 type="button"
                 onClick={handleExportExcel}
                 disabled={exportingExcel}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+                aria-label="Xuất Excel"
+                title="Xuất Excel"
+                className="w-9 h-9 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                <span>{exportingExcel ? 'Đang tạo...' : 'Xuất Excel'}</span>
+                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
               </button>
             </Tooltip>
 
-            <Tooltip content="In trích ngang sơ yếu lý lịch chuẩn khổ A4" position="top">
-              <button
-                type="button"
-                onClick={() => onOpenPrint?.(emp)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-              >
-                <Printer className="w-3.5 h-3.5 text-slate-500" />
-                <span>In trích ngang A4</span>
-              </button>
-            </Tooltip>
+            {canManage && (
+              <>
+                <div className="w-px h-5 bg-slate-200 mx-0.5" />
 
-            {/* Menu tác vụ nhanh */}
-            <DropdownMenu
-              align="right"
-              trigger={({ isOpen }) => (
-                <button
-                  type="button"
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 border rounded-xl text-xs font-bold transition-all cursor-pointer select-none active:scale-95 ${
-                    isOpen
-                      ? 'bg-emerald-800 text-white border-emerald-800 shadow-xs'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 shadow-2xs'
-                  }`}
-                  title="Menu tác vụ"
-                >
-                  <MoreHorizontal className="w-3.5 h-3.5" />
-                  <span>Tác vụ</span>
-                </button>
-              )}
-              items={[
-                {
-                  id: 'quick-print',
-                  label: 'In trích ngang A4',
-                  description: 'Chuẩn thể thức văn bản hành chính',
-                  icon: Printer,
-                  onClick: () => onOpenPrint?.(emp),
-                },
-                {
-                  id: 'quick-word',
-                  label: 'Xuất file Word (2C/TCTD)',
-                  description: 'Sơ yếu lý lịch chuẩn NHNN',
-                  icon: FileText,
-                  onClick: handleExportWord,
-                },
-                {
-                  id: 'quick-excel',
-                  label: 'Xuất bảng tính Excel',
-                  description: 'Báo cáo tổng hợp số liệu cán bộ',
-                  icon: FileSpreadsheet,
-                  onClick: handleExportExcel,
-                },
-                ...(canManage
-                  ? [
-                      { divider: true },
-                      {
-                        id: 'toggle-edit',
-                        label: isEditing ? 'Hủy chỉnh sửa tab này' : 'Chỉnh sửa tab hiện tại',
-                        description: 'Cập nhật trực tiếp trên giao diện tab',
-                        icon: Edit3,
-                        onClick: () => {
-                          if (isEditing) {
-                            handleCancelEdit();
-                          } else {
-                            setIsEditing(true);
-                          }
-                        },
-                      },
-                      {
-                        id: 'open-form-modal',
-                        label: 'Mở cửa sổ chỉnh sửa đầy đủ',
-                        description: 'Chỉnh sửa qua form tổng hợp',
-                        icon: Edit2,
-                        onClick: () => onOpenEdit?.(emp),
-                      },
-                      {
-                        id: 'quick-delete',
-                        label: 'Xóa hồ sơ cán bộ',
-                        description: 'Xóa vĩnh viễn khỏi hệ thống Quỹ',
-                        icon: Trash2,
-                        danger: true,
-                        onClick: () => setIsDeleteModalOpen(true),
-                      },
-                    ]
-                  : []),
-              ]}
-            />
+                <Tooltip content="Mở form chỉnh sửa đầy đủ" position="top">
+                  <button
+                    type="button"
+                    onClick={() => onOpenEdit?.(emp)}
+                    aria-label="Mở cửa sổ chỉnh sửa đầy đủ"
+                    title="Mở form chỉnh sửa đầy đủ"
+                    className="w-9 h-9 flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+                  >
+                    <Edit2 className="w-4 h-4 text-amber-700" />
+                  </button>
+                </Tooltip>
+
+                <Tooltip content="Xóa hồ sơ cán bộ" position="top">
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    aria-label="Xóa hồ sơ cán bộ"
+                    title="Xóa hồ sơ cán bộ"
+                    className="w-9 h-9 flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                  </button>
+                </Tooltip>
+              </>
+            )}
           </div>
         </div>
       </div>
