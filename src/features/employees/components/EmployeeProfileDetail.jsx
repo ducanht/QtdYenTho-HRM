@@ -641,8 +641,8 @@ const EmployeeProfileDetail = ({
   // Danh mục cấu hình
   const deptList = departments?.length > 0 ? departments : DEFAULT_DEPARTMENTS;
   const posList = positions?.length > 0 ? positions : DEFAULT_POSITIONS;
-  const workLocList = DEFAULT_MODULE_HR_SETTINGS.workLocations;
-  const creditAreaList = DEFAULT_MODULE_HR_SETTINGS.creditAreas;
+  const workLocList = hrConfig?.workLocations?.length > 0 ? hrConfig.workLocations : DEFAULT_MODULE_HR_SETTINGS.workLocations;
+  const creditAreaList = hrConfig?.creditAreas?.length > 0 ? hrConfig.creditAreas : DEFAULT_MODULE_HR_SETTINGS.creditAreas;
 
   // Tính toán thâm niên
   const effectiveStart = emp.positionStartDate || emp.joinDate;

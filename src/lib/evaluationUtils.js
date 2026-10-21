@@ -592,5 +592,99 @@ export const isCreditOfficerRole = (position = '', department = '') => {
   );
 };
 
+/**
+ * Phân tích địa danh chuỗi thành cấu trúc Thôn & Xã
+ * @param {string} areaName - Tên địa bàn (VD: "Thôn Tân Lộc (xã Quý Lộc)")
+ * @returns {{ village: string, commune: string }}
+ */
+export const parseAreaName = (areaName = '') => {
+  if (!areaName) return { village: '', commune: '' };
+  const str = String(areaName).trim();
 
+  // Pattern 1: "... (xã ...)" hoặc "... (...)"
+  const parenMatch = str.match(/^(.*?)\s*\((?:xã\s*)?([^)]+)\)$/i);
+  if (parenMatch) {
+    const v = parenMatch[1].replace(/^(Thôn|Cụm|Bản)\s+/i, '').trim();
+    const c = parenMatch[2].replace(/^xã\s+/i, '').trim();
+    return { village: v, commune: c };
+  }
+
+  // Pattern 2: "..., xã ..."
+  const commaMatch = str.match(/^(.*?)\s*,\s*(?:xã\s*)?([^,]+)$/i);
+  if (commaMatch) {
+    const v = commaMatch[1].replace(/^(Thôn|Cụm|Bản)\s+/i, '').trim();
+    const c = commaMatch[2].replace(/^xã\s+/i, '').trim();
+    return { village: v, commune: c };
+  }
+
+  // Pattern 3: "Địa bàn xã ..." hoặc "xã ..."
+  const xaMatch = str.match(/^(?:Địa bàn\s+)?(?:xã\s+)?(Quý Lộc|Yên Thọ|Yên Lâm|Yên Trường)$/i);
+  if (xaMatch) {
+    return { village: 'Toàn xã', commune: xaMatch[1] };
+  }
+
+  return { village: str.replace(/^(Thôn|Cụm|Bản)\s+/i, ''), commune: '' };
+};
+
+/**
+ * Thống kê phân bổ Cán bộ Tín dụng theo Xã và Thôn (Hierarchical Area Aggregation)
+ * Phục vụ báo cáo cơ cấu địa bàn, thống kê số lượng CBTD theo từng Xã và từng Thôn
+ * @param {Array} employees - Danh sách cán bộ nhân viên
+ * @param {Array} creditAreas - Danh mục địa bàn tín dụng từ collection credit_areas
+ * @returns {Array<{ commune: string, count: number, areas: Array<{ name: string, village: string, count: number, officers: Array }> }>}
+ */
+export const groupOfficersByCommune = (employees = [], creditAreas = []) => {
+  const map = {};
+
+  (creditAreas || []).forEach((ca) => {
+    const cName = ca.commune || parseAreaName(ca.name).commune || 'Khu vực khác';
+    if (!map[cName]) {
+      map[cName] = { commune: cName, count: 0, areas: {} };
+    }
+    const aName = ca.name;
+    if (!map[cName].areas[aName]) {
+      map[cName].areas[aName] = {
+        name: aName,
+        village: ca.village || parseAreaName(aName).village || aName,
+        officers: [],
+      };
+    }
+  });
+
+  (employees || []).forEach((emp) => {
+    if (!isCreditOfficerRole(emp.position, emp.department) && !emp.assignedArea) return;
+    const aName = emp.assignedArea?.trim();
+    if (!aName) return;
+
+    const matched = (creditAreas || []).find(
+      (ca) => ca.name.toLowerCase() === aName.toLowerCase()
+    );
+    const cName = matched?.commune || emp.assignedCommune || parseAreaName(aName).commune || 'Khu vực khác';
+
+    if (!map[cName]) {
+      map[cName] = { commune: cName, count: 0, areas: {} };
+    }
+    if (!map[cName].areas[aName]) {
+      map[cName].areas[aName] = {
+        name: aName,
+        village: matched?.village || emp.assignedVillage || parseAreaName(aName).village || aName,
+        officers: [],
+      };
+    }
+
+    map[cName].areas[aName].officers.push(emp);
+    map[cName].count++;
+  });
+
+  return Object.values(map).map((c) => ({
+    commune: c.commune,
+    count: c.count,
+    areas: Object.values(c.areas).map((a) => ({
+      name: a.name,
+      village: a.village,
+      count: a.officers.length,
+      officers: a.officers,
+    })),
+  }));
+};
 

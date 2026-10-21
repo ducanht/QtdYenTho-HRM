@@ -75,7 +75,7 @@ export const DEFAULT_WORK_LOCATIONS = [
 // 2c. DANH MỤC ĐỊA BÀN QUẢN LÝ TÍN DỤNG (CBTD)
 // ============================================================================
 export const DEFAULT_CREDIT_AREAS = [
-  { id: 'area-001', code: 'DB_TAN_LOC', name: 'Thôn Tân Lộc (xã Yên Thọ)', village: 'Tân Lộc', commune: 'Yên Thọ', order: 1 },
+  { id: 'area-001', code: 'DB_TAN_LOC', name: 'Thôn Tân Lộc (xã Quý Lộc)', village: 'Tân Lộc', commune: 'Quý Lộc', order: 1 },
   { id: 'area-002', code: 'DB_TAN_HUNG', name: 'Thôn Tân Hưng (xã Yên Thọ)', village: 'Tân Hưng', commune: 'Yên Thọ', order: 2 },
   { id: 'area-003', code: 'DB_CUM_123', name: 'Cụm Thôn 1, 2, 3 (xã Yên Thọ)', village: 'Cụm 1, 2, 3', commune: 'Yên Thọ', order: 3 },
   { id: 'area-004', code: 'DB_CUM_456', name: 'Cụm Thôn 4, 5, 6 (xã Yên Thọ)', village: 'Cụm 4, 5, 6', commune: 'Yên Thọ', order: 4 },
@@ -283,7 +283,7 @@ export const DEFAULT_MODULE_HR_SETTINGS = {
   ],
   // 1. Danh mục Địa bàn Tín dụng (Chuyên biệt áp dụng cho Cán bộ Tín dụng)
   creditAreas: [
-    'Thôn Tân Lộc (xã Yên Thọ)',
+    'Thôn Tân Lộc (xã Quý Lộc)',
     'Thôn Tân Hưng (xã Yên Thọ)',
     'Cụm Thôn 1, 2, 3 (xã Yên Thọ)',
     'Cụm Thôn 4, 5, 6 (xã Yên Thọ)',

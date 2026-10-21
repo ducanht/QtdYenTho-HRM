@@ -15,7 +15,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
-import { generateUUID } from '../../../lib/evaluationUtils';
+import { generateUUID, parseAreaName } from '../../../lib/evaluationUtils';
 
 export const updateEmployeeProfile = async (employeeId, profileData) => {
   if (!db) throw new Error('Firestore chưa được kết nối');
@@ -27,6 +27,19 @@ export const updateEmployeeProfile = async (employeeId, profileData) => {
       cleanData[k] = profileData[k];
     }
   });
+
+  // Tự động phân tích và lưu đồng bộ Xã (assignedCommune) & Thôn (assignedVillage) phục vụ thống kê
+  if (cleanData.assignedArea !== undefined) {
+    const areaStr = (cleanData.assignedArea || '').trim();
+    if (areaStr) {
+      const parsed = parseAreaName(areaStr);
+      if (!cleanData.assignedCommune) cleanData.assignedCommune = parsed.commune;
+      if (!cleanData.assignedVillage) cleanData.assignedVillage = parsed.village;
+    } else {
+      cleanData.assignedCommune = '';
+      cleanData.assignedVillage = '';
+    }
+  }
 
   const payload = {
     ...cleanData,
@@ -63,6 +76,13 @@ export const createEmployeeProfile = async (employeeData) => {
       cleanData[k] = employeeData[k];
     }
   });
+
+  // Tự động phân tích và lưu đồng bộ Xã (assignedCommune) & Thôn (assignedVillage) phục vụ thống kê
+  if (cleanData.assignedArea) {
+    const parsed = parseAreaName(cleanData.assignedArea.trim());
+    if (!cleanData.assignedCommune) cleanData.assignedCommune = parsed.commune;
+    if (!cleanData.assignedVillage) cleanData.assignedVillage = parsed.village;
+  }
 
   const payload = {
     ...cleanData,
@@ -1106,13 +1126,22 @@ export const saveCreditArea = async (areaData, oldAreaName = null) => {
   const areaName = areaData.name.trim();
   const targetId = areaData.id || `area_${generateUUID()}`;
 
+  // Tự động phân tích Thôn và Xã nếu chưa nhập riêng
+  let village = (areaData.village || '').trim();
+  let commune = (areaData.commune || '').trim();
+  if (!village || !commune) {
+    const parsed = parseAreaName(areaName);
+    if (!village && parsed.village) village = parsed.village;
+    if (!commune && parsed.commune) commune = parsed.commune;
+  }
+
   const payload = {
     ...areaData,
     id: targetId,
     name: areaName,
     code: (areaData.code || '').trim() || `AREA_${Date.now().toString(36).toUpperCase()}`,
-    village: (areaData.village || '').trim(),
-    commune: (areaData.commune || '').trim(),
+    village,
+    commune,
     order: Number(areaData.order) || 99,
     updatedAt: new Date().toISOString(),
     serverTime: serverTimestamp(),
@@ -1156,8 +1185,16 @@ export const saveCreditArea = async (areaData, oldAreaName = null) => {
       empSnap.forEach((d) => {
         const data = d.data();
         if ((data.assignedArea || '').trim().toLowerCase() === oldLower) {
-          updates.push(updateDoc(doc(db, 'employees', d.id), { assignedArea: areaName }));
-          updates.push(updateDoc(doc(db, 'users', d.id), { assignedArea: areaName }).catch(() => {}));
+          updates.push(updateDoc(doc(db, 'employees', d.id), { 
+            assignedArea: areaName,
+            assignedCommune: commune,
+            assignedVillage: village,
+          }));
+          updates.push(updateDoc(doc(db, 'users', d.id), { 
+            assignedArea: areaName,
+            assignedCommune: commune,
+            assignedVillage: village,
+          }).catch(() => {}));
         }
       });
       await Promise.all(updates);

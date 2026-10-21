@@ -984,9 +984,21 @@ const EmployeeSettingsTab = ({
                           {idx + 1}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-slate-900 leading-snug break-words">
-                            {area}
-                          </p>
+                          {(() => {
+                            const meta = creditAreasList.find((a) => a.name === area);
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-slate-900 leading-snug break-words">
+                                  {area}
+                                </span>
+                                {meta?.commune && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100/90 text-teal-900">
+                                    Xã {meta.commune}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div className="flex items-center gap-1.5 mt-1">
                             {assignedOfficers.length > 0 ? (
                               <span 

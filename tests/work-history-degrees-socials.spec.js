@@ -10,7 +10,7 @@ import {
   DEFAULT_WORK_LOCATIONS,
   DEFAULT_CREDIT_AREAS,
 } from '../src/lib/systemDefaults';
-import { isCreditOfficerRole } from '../src/lib/evaluationUtils';
+import { isCreditOfficerRole, parseAreaName, groupOfficersByCommune } from '../src/lib/evaluationUtils';
 import { 
   CURRENT_SCHEMA_VERSION, 
   CORE_COLLECTIONS, 
@@ -351,6 +351,27 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     for (const officer of assignedCreditOfficers) {
       expect(officer.assignedArea).toBeTruthy();
     }
+
+    // 7. Kiểm tra hàm bóc tách phân cấp Thôn & Xã (parseAreaName)
+    const parsed1 = parseAreaName('Thôn Tân Lộc (xã Quý Lộc)');
+    expect(parsed1.village).toBe('Tân Lộc');
+    expect(parsed1.commune).toBe('Quý Lộc');
+
+    const parsed2 = parseAreaName('Thôn 2, xã Yên Thọ');
+    expect(parsed2.village).toBe('2');
+    expect(parsed2.commune).toBe('Yên Thọ');
+
+    const parsed3 = parseAreaName('Địa bàn xã Quý Lộc');
+    expect(parsed3.village).toBe('Toàn xã');
+    expect(parsed3.commune).toBe('Quý Lộc');
+
+    // 8. Kiểm tra hàm thống kê phân cấp CBTD theo Xã (groupOfficersByCommune)
+    const grouped = groupOfficersByCommune(OFFICIAL_STAFF_EMPLOYEES, DEFAULT_CREDIT_AREAS);
+    expect(Array.isArray(grouped)).toBe(true);
+    expect(grouped.length).toBeGreaterThan(0);
+    const quyLocGroup = grouped.find((g) => g.commune === 'Quý Lộc');
+    expect(quyLocGroup).toBeDefined();
+    expect(Array.isArray(quyLocGroup.areas)).toBe(true);
   });
 
   test('Kiểm tra Cấu hình Luân chuyển Địa bàn Cán bộ Tín dụng (CBTD) và Loại bỏ Bảng Chức danh thừa', async () => {
