@@ -209,6 +209,12 @@ test.describe('Kiểm tra Chi Tiết Giao Diện Phân Hệ Quản Trị Nhân S
     await expect(page.getByText(/Chu Kỳ Luân Chuyển Địa Bàn/i)).toBeVisible();
     await expect(page.getByText(/CẤU HÌNH HIỂN THỊ DASHBOARD TỔNG QUAN/i)).toBeVisible();
     await expect(page.getByText(/Nơi Làm Việc & Địa Bàn Tín Dụng Hoạt Động/i)).toBeVisible();
+    await expect(page.getByText(/Điểm Làm Việc & Trụ Sở Hoạt Động/i)).toBeVisible();
+    await expect(page.getByText(/Địa Bàn Quản Lý Tín Dụng \(CBTD\)/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Lưu danh mục/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Mặc định/i })).toBeVisible();
+    await expect(page.getByPlaceholder(/Thêm điểm làm việc/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/Thêm địa bàn tín dụng/i)).toBeVisible();
 
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '05_desktop_tab_settings.png'), fullPage: true });
     await scanForbiddenWords(page, 'Màn hình Cấu hình phân hệ');

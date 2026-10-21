@@ -470,6 +470,7 @@ const EmployeesContainer = () => {
           {/* TAB 4: CẤU HÌNH & PHÂN QUYỀN PHÂN HỆ */}
           {activeTab === 'SETTINGS' && canManage && (
             <EmployeeSettingsTab
+              employees={employees}
               departments={departments}
               positions={positions}
               hrConfig={hrConfig}

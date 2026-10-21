@@ -312,6 +312,24 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
 
     // 5. Kiểm tra Schema Version mới v6.0
     expect(CURRENT_SCHEMA_VERSION).toContain('v6.0');
+
+    // 6. Kiểm tra cấu trúc CSDL và liên kết quan hệ Nơi làm việc & Địa bàn tín dụng
+    const sampleWorkLocations = [...DEFAULT_MODULE_HR_SETTINGS.workLocations];
+    const sampleCreditAreas = [...DEFAULT_MODULE_HR_SETTINGS.creditAreas];
+    
+    sampleWorkLocations.push('Điểm giao dịch xã Quý Lộc');
+    sampleCreditAreas.push('Thôn Đồng Lạc');
+    expect(sampleWorkLocations).toContain('Điểm giao dịch xã Quý Lộc');
+    expect(sampleCreditAreas).toContain('Thôn Đồng Lạc');
+
+    // Kiểm tra liên kết quan hệ phân công CBTD phụ trách địa bàn tín dụng
+    const assignedCreditOfficers = OFFICIAL_STAFF_EMPLOYEES.filter(
+      (e) => isCreditOfficerRole(e.position, e.department) && Boolean(e.assignedArea)
+    );
+    expect(assignedCreditOfficers.length).toBeGreaterThan(0);
+    for (const officer of assignedCreditOfficers) {
+      expect(officer.assignedArea).toBeTruthy();
+    }
   });
 
   test('Kiểm tra Cấu hình Luân chuyển Địa bàn Cán bộ Tín dụng (CBTD) và Loại bỏ Bảng Chức danh thừa', async () => {
