@@ -40,6 +40,7 @@ import AddTrainingModal from './components/AddTrainingModal';
 import EmployeeA4PrintModal from './components/EmployeeA4PrintModal';
 import OverviewDisplayConfigModal, { DEFAULT_OVERVIEW_DISPLAY_CONFIG } from './components/OverviewDisplayConfigModal';
 import QuickSelectEmployeeModal from './components/QuickSelectEmployeeModal';
+import UnsavedChangesModal from './components/UnsavedChangesModal';
 import { ArrowLeft, Users, User } from 'lucide-react';
 
 /**
@@ -103,6 +104,11 @@ const EmployeesContainer = () => {
   // Modal đổi nhanh cán bộ trên Mobile
   const [isQuickSelectModalOpen, setIsQuickSelectModalOpen] = useState(false);
 
+  // Trạng thái thay đổi chưa lưu trên Hồ sơ cán bộ (EmployeeProfileDetail)
+  const [profileDirtyInfo, setProfileDirtyInfo] = useState(null);
+  const [pendingNavigation, setPendingNavigation] = useState(null); // { type: 'SELECT_EMP' | 'CHANGE_TAB', target: string }
+  const [isContainerUnsavedOpen, setIsContainerUnsavedOpen] = useState(false);
+
   // Cấu hình hiển thị màn hình Tổng quan
   const [isDisplayConfigModalOpen, setIsDisplayConfigModalOpen] = useState(false);
 
@@ -138,10 +144,97 @@ const EmployeesContainer = () => {
     }
   }, [canManage]);
 
+  // Điều hướng chọn cán bộ cho Profile an toàn
   const handleSelectEmployeeForProfile = useCallback((empId) => {
-    setSelectedEmpIdState(empId);
-    setActiveTabState('PROFILE');
-  }, []);
+    if (activeTab === 'PROFILE' && profileDirtyInfo?.isDirty && profileDirtyInfo?.empId !== empId) {
+      if (profileDirtyInfo.autoSaveEnabled) {
+        profileDirtyInfo.saveChanges?.();
+        setSelectedEmpIdState(empId);
+        setActiveTabState('PROFILE');
+      } else {
+        setPendingNavigation({ type: 'SELECT_EMP', target: empId });
+        setIsContainerUnsavedOpen(true);
+      }
+    } else {
+      setSelectedEmpIdState(empId);
+      setActiveTabState('PROFILE');
+    }
+  }, [activeTab, profileDirtyInfo]);
+
+  // Đổi cán bộ an toàn (Desktop Sidebar & QuickSelect)
+  const handleSelectEmployeeSafe = useCallback((empId) => {
+    if (empId === selectedEmpId) return;
+    if (activeTab === 'PROFILE' && profileDirtyInfo?.isDirty) {
+      if (profileDirtyInfo.autoSaveEnabled) {
+        profileDirtyInfo.saveChanges?.();
+        setSelectedEmpIdState(empId);
+      } else {
+        setPendingNavigation({ type: 'SELECT_EMP', target: empId });
+        setIsContainerUnsavedOpen(true);
+      }
+    } else {
+      setSelectedEmpIdState(empId);
+    }
+  }, [selectedEmpId, activeTab, profileDirtyInfo]);
+
+  // Đổi main tab an toàn (Menu Quản trị & Bottom Navigation)
+  const handleChangeTabSafe = useCallback((targetTab) => {
+    if (targetTab === activeTab) return;
+    if (activeTab === 'PROFILE' && profileDirtyInfo?.isDirty && targetTab !== 'PROFILE') {
+      if (profileDirtyInfo.autoSaveEnabled) {
+        profileDirtyInfo.saveChanges?.();
+        setActiveTabState(targetTab);
+      } else {
+        setPendingNavigation({ type: 'CHANGE_TAB', target: targetTab });
+        setIsContainerUnsavedOpen(true);
+      }
+    } else {
+      setActiveTabState(targetTab);
+    }
+  }, [activeTab, profileDirtyInfo]);
+
+  // Xử lý các lựa chọn trong modal cảnh báo thay đổi chưa lưu
+  const handleContainerSaveAndContinue = async () => {
+    if (profileDirtyInfo?.saveChanges) {
+      try {
+        await profileDirtyInfo.saveChanges();
+      } catch (err) {
+        console.error('Lỗi khi lưu thông tin trước khi chuyển:', err);
+      }
+    }
+    setIsContainerUnsavedOpen(false);
+    if (pendingNavigation) {
+      if (pendingNavigation.type === 'SELECT_EMP') {
+        setSelectedEmpIdState(pendingNavigation.target);
+        setActiveTabState('PROFILE');
+      } else if (pendingNavigation.type === 'CHANGE_TAB') {
+        setActiveTabState(pendingNavigation.target);
+      }
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleContainerDiscardAndContinue = () => {
+    if (profileDirtyInfo?.discardChanges) {
+      profileDirtyInfo.discardChanges();
+    }
+    setIsContainerUnsavedOpen(false);
+    if (pendingNavigation) {
+      if (pendingNavigation.type === 'SELECT_EMP') {
+        setSelectedEmpIdState(pendingNavigation.target);
+        setActiveTabState('PROFILE');
+      } else if (pendingNavigation.type === 'CHANGE_TAB') {
+        setActiveTabState(pendingNavigation.target);
+      }
+      setPendingNavigation(null);
+    }
+    toast?.showInfo?.('Đã hủy bỏ các thay đổi chưa lưu.');
+  };
+
+  const handleContainerCancel = () => {
+    setIsContainerUnsavedOpen(false);
+    setPendingNavigation(null);
+  };
 
   // Chặn truy cập tab SETTINGS nếu không có quyền
   useEffect(() => {
@@ -351,7 +444,7 @@ const EmployeesContainer = () => {
       {/* 1. Menu Quản Trị Cấp Toàn Quỹ trên Desktop / iPad */}
       <HRModuleTabsNav
         activeTab={activeTab}
-        onChangeTab={setActiveTabState}
+        onChangeTab={handleChangeTabSafe}
         canManage={canManage}
       />
 
@@ -398,7 +491,7 @@ const EmployeesContainer = () => {
                 <div className="bg-white rounded-2xl border border-slate-200/90 p-3 shadow-2xs flex items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={() => setActiveTabState('DIRECTORY')}
+                    onClick={() => handleChangeTabSafe('DIRECTORY')}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95"
                     title="Quay lại danh bạ cán bộ"
                   >
@@ -428,9 +521,7 @@ const EmployeesContainer = () => {
                   <EmployeeMasterSidebar
                     employees={viewableEmployees}
                     selectedEmployeeId={selectedEmpId}
-                    onSelectEmployee={(empId) => {
-                      setSelectedEmpIdState(empId);
-                    }}
+                    onSelectEmployee={handleSelectEmployeeSafe}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     hrConfig={hrConfig}
@@ -461,6 +552,7 @@ const EmployeesContainer = () => {
                     hrConfig={hrConfig}
                     departments={departments}
                     positions={positions}
+                    onDirtyChange={setProfileDirtyInfo}
                   />
                 </div>
               </div>
@@ -485,7 +577,7 @@ const EmployeesContainer = () => {
                 <EmployeeMasterSidebar
                   employees={viewableEmployees}
                   selectedEmployeeId={selectedEmpId}
-                  onSelectEmployee={(empId) => setSelectedEmpIdState(empId)}
+                  onSelectEmployee={handleSelectEmployeeSafe}
                   searchTerm={searchTerm}
                   setSearchTerm={setSearchTerm}
                   hrConfig={hrConfig}
@@ -514,7 +606,7 @@ const EmployeesContainer = () => {
                 <EmployeeMasterSidebar
                   employees={viewableEmployees}
                   selectedEmployeeId={selectedEmpId}
-                  onSelectEmployee={(empId) => setSelectedEmpIdState(empId)}
+                  onSelectEmployee={handleSelectEmployeeSafe}
                   searchTerm={searchTerm}
                   setSearchTerm={setSearchTerm}
                   hrConfig={hrConfig}
@@ -538,7 +630,7 @@ const EmployeesContainer = () => {
       {/* 4. Thanh Bottom Navigation cố định dưới đáy Mobile */}
       <HRBottomNav
         activeTab={activeTab}
-        onChangeTab={setActiveTabState}
+        onChangeTab={handleChangeTabSafe}
         canManage={canManage}
       />
 
@@ -550,8 +642,8 @@ const EmployeesContainer = () => {
           employees={viewableEmployees}
           selectedEmployeeId={selectedEmpId}
           onSelectEmployee={(empId) => {
-            setSelectedEmpIdState(empId);
-            setActiveTabState('PROFILE');
+            handleSelectEmployeeSafe(empId);
+            setIsQuickSelectModalOpen(false);
           }}
         />
       )}
@@ -625,6 +717,19 @@ const EmployeesContainer = () => {
           onClose={() => setIsDisplayConfigModalOpen(false)}
           config={overviewDisplayConfig}
           onSaveConfig={handleSaveDisplayConfig}
+        />
+      )}
+
+      {/* 7. Modal Cảnh Báo Thay Đổi Chưa Lưu Khi Đổi Cán Bộ Hoặc Chuyển Tab */}
+      {isContainerUnsavedOpen && (
+        <UnsavedChangesModal
+          isOpen={isContainerUnsavedOpen}
+          employeeName={profileDirtyInfo?.empName || currentEmp?.name}
+          currentSection={profileDirtyInfo?.currentTabLabel || 'Hồ sơ cán bộ'}
+          dirtyFields={profileDirtyInfo?.dirtyFields || []}
+          onSave={handleContainerSaveAndContinue}
+          onDiscard={handleContainerDiscardAndContinue}
+          onCancel={handleContainerCancel}
         />
       )}
     </div>

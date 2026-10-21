@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Camera, 
   Edit3, 
@@ -24,7 +24,9 @@ import {
   Calendar,
   Clock,
   Building2,
-  Shield
+  Shield,
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { 
   calculatePositionTenure, 
@@ -51,6 +53,7 @@ import AddDegreeModal, {
 } from './AddDegreeModal';
 import ManageSocialsModal, { SOCIAL_PLATFORMS } from './ManageSocialsModal';
 import WorkHistoryPeriodModal from './WorkHistoryPeriodModal';
+import UnsavedChangesModal from './UnsavedChangesModal';
 import { 
   DEFAULT_DEPARTMENTS, 
   DEFAULT_POSITIONS, 
@@ -128,6 +131,54 @@ const SUB_TABS = [
   },
 ];
 
+// Nhãn tiếng Việt định danh cho các trường dữ liệu
+const FIELD_LABELS = {
+  // Tab 1: Cá nhân & Liên hệ
+  name: 'Họ và tên cán bộ',
+  gender: 'Giới tính',
+  cccd: 'Số thẻ CCCD',
+  birthDate: 'Ngày sinh',
+  phone: 'Số điện thoại chính',
+  secondaryPhone: 'Số điện thoại phụ',
+  email: 'Hộp thư điện tử (Email)',
+  hometown: 'Quê quán',
+  permanentAddress: 'Nơi thường trú',
+
+  // Tab 2: Công tác & Thâm niên
+  department: 'Phòng ban công tác',
+  position: 'Chức danh hiện tại',
+  contractType: 'Loại hợp đồng lao động',
+  joinDate: 'Ngày vào Quỹ công tác',
+  positionStartDate: 'Ngày bổ nhiệm vị trí',
+  workLocation: 'Nơi làm việc',
+  assignedArea: 'Địa bàn quản lý (CBTD)',
+  areaStartDate: 'Ngày nhận bàn giao địa bàn',
+
+  // Tab 3: Chính trị & Đoàn thể
+  partyMember: 'Tư cách Đảng viên',
+  politicalRole: 'Chức vụ trong Chi bộ',
+  partyDate: 'Ngày vào Đảng dự bị',
+  partyOfficialDate: 'Ngày chính thức',
+  partyCell: 'Nơi sinh hoạt Đảng',
+  politicalTheory: 'Trình độ Lý luận chính trị',
+  unionRole: 'Công đoàn cơ sở',
+  youthUnionRole: 'Đoàn TNCS Hồ Chí Minh',
+
+  // Tab 4: Trình độ & Văn bằng
+  education: 'Chuyên môn đào tạo / Học vị',
+  itLevel: 'Trình độ Tin học',
+  foreignLanguage: 'Trình độ Ngoại ngữ',
+  stateManagement: 'Trình độ Quản lý Nhà nước',
+};
+
+// Bản đồ phân nhóm trường theo từng Sub-tab
+const TAB_FIELD_MAP = {
+  PERSONAL: ['name', 'gender', 'cccd', 'birthDate', 'phone', 'secondaryPhone', 'email', 'hometown', 'permanentAddress'],
+  WORK: ['department', 'position', 'contractType', 'joinDate', 'positionStartDate', 'workLocation', 'assignedArea', 'areaStartDate'],
+  POLITICS: ['partyMember', 'politicalRole', 'partyDate', 'partyOfficialDate', 'partyCell', 'politicalTheory', 'unionRole', 'youthUnionRole'],
+  EDUCATION: ['education', 'itLevel', 'foreignLanguage', 'stateManagement'],
+};
+
 /**
  * Trích xuất form data sạch từ đối tượng cán bộ
  */
@@ -171,6 +222,98 @@ const extractFormData = (e) => ({
 });
 
 /**
+ * Kiểm tra các trường bị thay đổi của Tab
+ */
+const getDirtyFieldsForTab = (tabKey, currentData, baseData) => {
+  const fields = TAB_FIELD_MAP[tabKey] || [];
+  const changed = [];
+  if (!currentData || !baseData) return changed;
+
+  for (const f of fields) {
+    const valCurr = currentData[f] === undefined ? '' : currentData[f];
+    const valBase = baseData[f] === undefined ? '' : baseData[f];
+    if (typeof valCurr === 'boolean') {
+      if (Boolean(valCurr) !== Boolean(valBase)) {
+        changed.push({
+          field: f,
+          label: FIELD_LABELS[f] || f,
+          from: valBase ? 'Có' : 'Không',
+          to: valCurr ? 'Có' : 'Không',
+        });
+      }
+    } else {
+      const sCurr = String(valCurr).trim();
+      const sBase = String(valBase).trim();
+      if (sCurr !== sBase) {
+        changed.push({
+          field: f,
+          label: FIELD_LABELS[f] || f,
+          from: sBase || '(Trống)',
+          to: sCurr || '(Trống)',
+        });
+      }
+    }
+  }
+  return changed;
+};
+
+/**
+ * Tạo payload chuẩn bị lưu vào CSDL Firestore
+ */
+const buildPayloadForTab = (tabKey, formData, currentEmp) => {
+  if (tabKey === 'PERSONAL') {
+    const cleanName = formData.name?.trim() || currentEmp.name;
+    return {
+      name: cleanName,
+      fullName: cleanName,
+      gender: formData.gender || 'Nam',
+      cccd: formData.cccd?.trim() || '',
+      birthDate: formData.birthDate || '',
+      dateOfBirth: formData.birthDate || '',
+      hometown: formData.hometown?.trim() || '',
+      permanentAddress: formData.permanentAddress?.trim() || '',
+      phone: formData.phone?.trim() || '',
+      secondaryPhone: formData.secondaryPhone?.trim() || '',
+      email: formData.email?.trim() || '',
+    };
+  }
+  if (tabKey === 'WORK') {
+    return {
+      department: formData.department || currentEmp.department,
+      position: formData.position || currentEmp.position,
+      joinDate: formData.joinDate || '',
+      positionStartDate: formData.positionStartDate || '',
+      workLocation: formData.workLocation || '',
+      contractType: formData.contractType || '',
+      assignedArea: formData.assignedArea || '',
+      areaStartDate: formData.areaStartDate || '',
+    };
+  }
+  if (tabKey === 'POLITICS') {
+    return {
+      partyMember: Boolean(formData.partyMember),
+      politicalRole: formData.partyMember ? (formData.politicalRole || 'Đảng viên') : '',
+      partyDate: formData.partyMember ? (formData.partyDate || '') : '',
+      partyOfficialDate: formData.partyMember ? (formData.partyOfficialDate || '') : '',
+      partyCell: formData.partyCell || '',
+      politicalTheory: formData.politicalTheory || 'Chưa qua đào tạo',
+      unionRole: formData.unionRole || '',
+      youthUnionRole: formData.youthUnionRole || '',
+    };
+  }
+  if (tabKey === 'EDUCATION') {
+    return {
+      education: formData.education || '',
+      qualification: formData.education || '',
+      itLevel: formData.itLevel || '',
+      foreignLanguage: formData.foreignLanguage || '',
+      stateManagement: formData.stateManagement || '',
+    };
+  }
+  return {};
+};
+
+/**
  * EmployeeProfileDetail: Màn Hình Hồ Sơ Cán Bộ Đa Tab & Chỉnh Sửa Trực Tiếp
  * - 4 Phân khu Tab chuyên biệt trên trang (Lý lịch, Công tác, Chính trị, Trình độ)
  * - Chỉnh sửa và lưu trực tiếp theo từng tab, không cần mở cửa sổ pop-up che khuất
@@ -190,14 +333,34 @@ const EmployeeProfileDetail = ({
   hrConfig = null,
   departments = [],
   positions = [],
+  onDirtyChange = null,
 }) => {
   const toast = useToast();
 
   // Tab hoạt động & Chế độ xem / sửa
   const [activeSubTab, setActiveSubTab] = useState('PERSONAL');
+  const currentTabObj = useMemo(() => {
+    return SUB_TABS.find((t) => t.id === activeSubTab) || SUB_TABS[0];
+  }, [activeSubTab]);
   const [isEditing, setIsEditing] = useState(false);
   const [tabFormData, setTabFormData] = useState(() => extractFormData(emp));
+  const [initialFormData, setInitialFormData] = useState(() => extractFormData(emp));
   const [saving, setSaving] = useState(false);
+
+  // Cơ chế Tự Động Lưu & Phát Hiện Thay Đổi
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('qtd_hrm_profile_autosave') !== 'false';
+    }
+    return true;
+  });
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle' | 'typing' | 'saving' | 'saved' | 'error'
+  const [lastSavedTime, setLastSavedTime] = useState('');
+  const autoSaveTimerRef = useRef(null);
+
+  // Modal cảnh báo thay đổi chưa lưu khi chuyển tab hoặc chuyển cán bộ
+  const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
+  const [pendingTabSwitch, setPendingTabSwitch] = useState(null);
 
   // Trạng thái các tác vụ phụ
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -217,10 +380,232 @@ const EmployeeProfileDetail = ({
   // Đồng bộ form khi emp thay đổi
   useEffect(() => {
     if (emp) {
-      setTabFormData(extractFormData(emp));
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      const initial = extractFormData(emp);
+      setTabFormData(initial);
+      setInitialFormData(initial);
       setIsEditing(false);
+      setAutoSaveStatus('idle');
     }
   }, [emp?.id]);
+
+  // Tính toán các trường bị thay đổi trong Tab hiện tại
+  const dirtyFields = useMemo(() => {
+    if (!isEditing) return [];
+    return getDirtyFieldsForTab(activeSubTab, tabFormData, initialFormData);
+  }, [isEditing, activeSubTab, tabFormData, initialFormData]);
+
+  const isDirty = dirtyFields.length > 0;
+
+  // Kiểm tra trường cụ thể có bị sửa không
+  const isFieldDirty = useCallback((fieldName) => {
+    return dirtyFields.some((f) => f.field === fieldName);
+  }, [dirtyFields]);
+
+  // Lưu chỉnh sửa trực tiếp trên tab (Thủ công)
+  const handleSaveTab = useCallback(async (tabKey) => {
+    if (!emp?.id) return;
+    try {
+      setSaving(true);
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+      const payload = buildPayloadForTab(tabKey, tabFormData, emp);
+      await updateEmployeeProfile(emp.id, payload);
+      Object.assign(emp, payload);
+      setInitialFormData((prev) => ({ ...prev, ...payload }));
+      toast?.showSuccess?.('Đã lưu thay đổi thông tin thành công!');
+      setAutoSaveStatus('saved');
+      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setLastSavedTime(nowStr);
+      setIsEditing(false);
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi lưu thông tin cán bộ');
+    } finally {
+      setSaving(false);
+    }
+  }, [emp, tabFormData, toast]);
+
+  // Thông báo trạng thái dirty cho Container cha
+  useEffect(() => {
+    if (onDirtyChange) {
+      onDirtyChange({
+        isDirty,
+        autoSaveEnabled,
+        empName: emp?.name,
+        empId: emp?.id,
+        dirtyFields,
+        currentTabLabel: currentTabObj.shortLabel,
+        saveChanges: async () => {
+          await handleSaveTab(activeSubTab);
+        },
+        discardChanges: () => {
+          if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+          setTabFormData(initialFormData);
+          setIsEditing(false);
+          setAutoSaveStatus('idle');
+        },
+      });
+    }
+  }, [isDirty, autoSaveEnabled, emp?.name, emp?.id, dirtyFields, currentTabObj.shortLabel, activeSubTab, initialFormData, onDirtyChange, handleSaveTab]);
+
+  // Cảnh báo trình duyệt nếu có thay đổi chưa lưu
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isEditing && isDirty && !autoSaveEnabled) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isEditing, isDirty, autoSaveEnabled]);
+
+  // Dọn dẹp timer khi unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, []);
+
+  // Bật/tắt chế độ tự động lưu
+  const handleToggleAutoSave = (checked) => {
+    setAutoSaveEnabled(checked);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('qtd_hrm_profile_autosave', checked ? 'true' : 'false');
+    }
+    if (checked) {
+      toast?.showSuccess?.('Đã bật chế độ tự động lưu khi chỉnh sửa hồ sơ.');
+    } else {
+      toast?.showInfo?.('Đã chuyển sang chế độ lưu thủ công (có cảnh báo thay đổi).');
+    }
+  };
+
+  // Tự động lưu ngầm Debounced
+  const handleAutoSaveDebounced = async (tabKey, currentWorkingData) => {
+    if (!emp?.id) return;
+    try {
+      setAutoSaveStatus('saving');
+      const payload = buildPayloadForTab(tabKey, currentWorkingData || tabFormData, emp);
+      await updateEmployeeProfile(emp.id, payload);
+      Object.assign(emp, payload);
+      setInitialFormData((prev) => ({ ...prev, ...payload }));
+      setAutoSaveStatus('saved');
+      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setLastSavedTime(nowStr);
+      setTimeout(() => {
+        setAutoSaveStatus((curr) => (curr === 'saved' ? 'idle' : curr));
+      }, 3500);
+    } catch (err) {
+      console.error('Lỗi tự động lưu:', err);
+      setAutoSaveStatus('error');
+      toast?.showError?.('Lỗi tự động lưu: ' + (err.message || 'Không thể cập nhật CSDL'));
+    }
+  };
+
+  // Xử lý thay đổi input
+  const handleInputChange = (field, value) => {
+    const nextData = { ...tabFormData, [field]: value };
+    setTabFormData(nextData);
+
+    if (autoSaveEnabled) {
+      setAutoSaveStatus('typing');
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      autoSaveTimerRef.current = setTimeout(() => {
+        handleAutoSaveDebounced(activeSubTab, nextData);
+      }, 1500);
+    }
+  };
+
+  // Hủy chỉnh sửa trên tab
+  const handleCancelEdit = () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (isDirty) {
+      if (window.confirm('Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn hủy bỏ các thay đổi này không?')) {
+        setTabFormData(initialFormData);
+        setIsEditing(false);
+        setAutoSaveStatus('idle');
+      }
+    } else {
+      setTabFormData(initialFormData);
+      setIsEditing(false);
+      setAutoSaveStatus('idle');
+    }
+  };
+
+
+  // Điều hướng chuyển Sub-tab kèm kiểm tra thay đổi chưa lưu
+  const handleSubTabClick = async (targetTabId) => {
+    if (activeSubTab === targetTabId) return;
+
+    if (isEditing && isDirty) {
+      if (autoSaveEnabled) {
+        // Tự động lưu ngầm tab hiện tại trước khi chuyển
+        try {
+          if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+          const payload = buildPayloadForTab(activeSubTab, tabFormData, emp);
+          await updateEmployeeProfile(emp.id, payload);
+          Object.assign(emp, payload);
+          setInitialFormData((prev) => ({ ...prev, ...payload }));
+          toast?.showSuccess?.(`Đã tự động lưu ${currentTabObj.shortLabel}`);
+          setActiveSubTab(targetTabId);
+          setIsEditing(false);
+        } catch (err) {
+          toast?.showError?.('Lỗi tự động lưu: ' + err.message);
+        }
+      } else {
+        // Mở Modal cảnh báo xác nhận
+        setPendingTabSwitch(targetTabId);
+        setIsUnsavedModalOpen(true);
+      }
+    } else {
+      setActiveSubTab(targetTabId);
+      setIsEditing(false);
+      setTabFormData(extractFormData(emp));
+      setInitialFormData(extractFormData(emp));
+    }
+  };
+
+  // Modal Xử lý Thay đổi Chưa Lưu
+  const handleModalSaveAndContinue = async () => {
+    if (!emp?.id) return;
+    try {
+      setSaving(true);
+      const payload = buildPayloadForTab(activeSubTab, tabFormData, emp);
+      await updateEmployeeProfile(emp.id, payload);
+      Object.assign(emp, payload);
+      setInitialFormData((prev) => ({ ...prev, ...payload }));
+      toast?.showSuccess?.(`Đã lưu thay đổi ${currentTabObj.shortLabel} thành công!`);
+      setIsUnsavedModalOpen(false);
+      if (pendingTabSwitch) {
+        setActiveSubTab(pendingTabSwitch);
+        setPendingTabSwitch(null);
+      }
+      setIsEditing(false);
+    } catch (err) {
+      toast?.showError?.(err.message || 'Lỗi khi lưu thông tin cán bộ');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleModalDiscardAndContinue = () => {
+    setTabFormData(initialFormData);
+    setIsUnsavedModalOpen(false);
+    if (pendingTabSwitch) {
+      setActiveSubTab(pendingTabSwitch);
+      setPendingTabSwitch(null);
+    }
+    setIsEditing(false);
+    toast?.showInfo?.('Đã hủy bỏ các thay đổi chưa lưu.');
+  };
+
+  const handleModalCancel = () => {
+    setIsUnsavedModalOpen(false);
+    setPendingTabSwitch(null);
+  };
 
   // Lọc dữ liệu liên kết của cán bộ
   const empDegrees = useMemo(() => {
@@ -268,82 +653,6 @@ const EmployeeProfileDetail = ({
   const cycleMonths = Number(hrConfig?.creditRotationMonths || hrConfig?.transferMaxMonths || hrConfig?.transferCycleMonths || 36);
   const warningMonths = Number(hrConfig?.creditWarningMonths || hrConfig?.transferWarningMonths || hrConfig?.warningMonths || 6);
   const areaInfo = isCreditOfficer ? calculateAreaTenureAndDueDate(emp.areaStartDate || effectiveStart, cycleMonths, warningMonths) : null;
-
-  // Xử lý thay đổi input
-  const handleInputChange = (field, value) => {
-    setTabFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Hủy chỉnh sửa trên tab
-  const handleCancelEdit = () => {
-    setTabFormData(extractFormData(emp));
-    setIsEditing(false);
-  };
-
-  // Lưu chỉnh sửa trực tiếp trên tab
-  const handleSaveTab = async (tabKey) => {
-    if (!emp?.id) return;
-    try {
-      setSaving(true);
-      let payload = {};
-
-      if (tabKey === 'PERSONAL') {
-        const cleanName = tabFormData.name?.trim() || emp.name;
-        payload = {
-          name: cleanName,
-          fullName: cleanName,
-          gender: tabFormData.gender || 'Nam',
-          cccd: tabFormData.cccd?.trim() || '',
-          birthDate: tabFormData.birthDate || '',
-          dateOfBirth: tabFormData.birthDate || '',
-          hometown: tabFormData.hometown?.trim() || '',
-          permanentAddress: tabFormData.permanentAddress?.trim() || '',
-          phone: tabFormData.phone?.trim() || '',
-          secondaryPhone: tabFormData.secondaryPhone?.trim() || '',
-          email: tabFormData.email?.trim() || '',
-        };
-      } else if (tabKey === 'WORK') {
-        payload = {
-          department: tabFormData.department || emp.department,
-          position: tabFormData.position || emp.position,
-          joinDate: tabFormData.joinDate || '',
-          positionStartDate: tabFormData.positionStartDate || '',
-          workLocation: tabFormData.workLocation || '',
-          contractType: tabFormData.contractType || '',
-          assignedArea: tabFormData.assignedArea || '',
-          areaStartDate: tabFormData.areaStartDate || '',
-        };
-      } else if (tabKey === 'POLITICS') {
-        payload = {
-          partyMember: Boolean(tabFormData.partyMember),
-          politicalRole: tabFormData.partyMember ? (tabFormData.politicalRole || 'Đảng viên') : '',
-          partyDate: tabFormData.partyMember ? (tabFormData.partyDate || '') : '',
-          partyOfficialDate: tabFormData.partyMember ? (tabFormData.partyOfficialDate || '') : '',
-          partyCell: tabFormData.partyCell || '',
-          politicalTheory: tabFormData.politicalTheory || 'Chưa qua đào tạo',
-          unionRole: tabFormData.unionRole || '',
-          youthUnionRole: tabFormData.youthUnionRole || '',
-        };
-      } else if (tabKey === 'EDUCATION') {
-        payload = {
-          education: tabFormData.education || '',
-          qualification: tabFormData.education || '',
-          itLevel: tabFormData.itLevel || '',
-          foreignLanguage: tabFormData.foreignLanguage || '',
-          stateManagement: tabFormData.stateManagement || '',
-        };
-      }
-
-      await updateEmployeeProfile(emp.id, payload);
-      Object.assign(emp, payload);
-      toast?.showSuccess?.('Đã lưu thay đổi thông tin thành công!');
-      setIsEditing(false);
-    } catch (err) {
-      toast?.showError?.(err.message || 'Lỗi khi lưu thông tin cán bộ');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Cập nhật ảnh đại diện
   const handleAvatarChange = async (e) => {
@@ -427,7 +736,6 @@ const EmployeeProfileDetail = ({
     }
   };
 
-  const currentTabObj = SUB_TABS.find((t) => t.id === activeSubTab) || SUB_TABS[0];
   const ActiveTabIcon = currentTabObj.icon;
 
   return (
@@ -571,18 +879,13 @@ const EmployeeProfileDetail = ({
           {SUB_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
+            const tabDirty = isEditing && activeSubTab === tab.id && isDirty;
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => {
-                  if (activeSubTab !== tab.id) {
-                    setActiveSubTab(tab.id);
-                    setIsEditing(false);
-                    setTabFormData(extractFormData(emp));
-                  }
-                }}
-                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[44px] ${
+                onClick={() => handleSubTabClick(tab.id)}
+                className={`relative flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[44px] ${
                   isActive
                     ? 'bg-emerald-800 text-white shadow-xs'
                     : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/70 hover:border-slate-300'
@@ -590,6 +893,9 @@ const EmployeeProfileDetail = ({
               >
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-200' : 'text-slate-500'}`} />
                 <span className="truncate">{tab.label}</span>
+                {tabDirty && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400 absolute top-2 right-2 animate-ping" />
+                )}
               </button>
             );
           })}
@@ -597,8 +903,8 @@ const EmployeeProfileDetail = ({
       </div>
 
       {/* 3. Khung Nội Dung Chi Tiết Tab Được Chọn */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-5">
-        {/* Header Tab: Tiêu đề phân khu & Nút Chỉnh sửa / Lưu trực tiếp */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
+        {/* Header Tab: Tiêu đề phân khu & Nút Chỉnh sửa / Lưu trực tiếp & Trạng thái Đồng bộ */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center shrink-0">
@@ -615,12 +921,48 @@ const EmployeeProfileDetail = ({
           </div>
 
           {canManage && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {isEditing ? (
                 <>
-                  <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md hidden sm:inline-block">
-                    Đang chỉnh sửa
-                  </span>
+                  {/* Trạng thái lưu & Dirty indicator */}
+                  {autoSaveStatus === 'saving' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold">
+                      <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                      <span>Đang tự động lưu...</span>
+                    </span>
+                  ) : autoSaveStatus === 'saved' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold animate-in fade-in duration-150">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Đã lưu lúc {lastSavedTime || 'vừa xong'}</span>
+                    </span>
+                  ) : isDirty ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-[11px] font-bold">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Có {dirtyFields.length} thay đổi</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 text-slate-500 border border-slate-200 text-[11px] font-medium hidden sm:inline-flex">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Đồng bộ CSDL</span>
+                    </span>
+                  )}
+
+                  {/* Nút bật/tắt Tự Động Lưu */}
+                  <label 
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/90 text-slate-700 text-[11px] font-bold cursor-pointer select-none transition-colors"
+                    title="Bật/Tắt chế độ tự động lưu thay đổi khi nhập"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={autoSaveEnabled}
+                      onChange={(e) => handleToggleAutoSave(e.target.checked)}
+                      className="w-3.5 h-3.5 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <Zap className={`w-3.5 h-3.5 ${autoSaveEnabled ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} />
+                    <span className="hidden md:inline">Tự động lưu</span>
+                  </label>
+
+                  {/* Nút Hủy & Lưu */}
                   <Button
                     type="button"
                     variant="outline"
@@ -636,10 +978,20 @@ const EmployeeProfileDetail = ({
                     size="sm"
                     onClick={() => handleSaveTab(activeSubTab)}
                     disabled={saving}
-                    className="inline-flex items-center gap-1.5"
+                    className={`inline-flex items-center gap-1.5 ${
+                      isDirty
+                        ? 'bg-emerald-800 hover:bg-emerald-900 ring-2 ring-emerald-500/50 shadow-xs font-black'
+                        : ''
+                    }`}
                   >
                     <Save className="w-3.5 h-3.5" />
-                    <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                    <span>
+                      {saving
+                        ? 'Đang lưu...'
+                        : isDirty
+                        ? `Lưu ${dirtyFields.length} thay đổi`
+                        : 'Lưu thay đổi'}
+                    </span>
                   </Button>
                 </>
               ) : (
@@ -656,6 +1008,39 @@ const EmployeeProfileDetail = ({
           )}
         </div>
 
+        {/* Thanh Cảnh Báo Phát Hiện Thay Đổi Chưa Lưu */}
+        {isEditing && isDirty && (
+          <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-xl bg-amber-50/90 border border-amber-200/90 text-xs text-amber-950 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                <strong>Phát hiện {dirtyFields.length} mục đã thay đổi:</strong>{' '}
+                <span className="text-amber-800 font-medium">
+                  {dirtyFields.map((f) => f.label).join(', ')}
+                </span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 text-[11px] font-medium">
+              <span className="text-amber-800 italic">
+                {autoSaveEnabled
+                  ? '⚡ Hệ thống đang tự động lưu sau khi dừng gõ...'
+                  : '⚠️ Hãy nhấn Lưu thay đổi hoặc bật Tự động lưu'}
+              </span>
+              {!autoSaveEnabled && (
+                <button
+                  type="button"
+                  onClick={() => handleSaveTab(activeSubTab)}
+                  disabled={saving}
+                  className="font-black text-emerald-900 hover:text-emerald-950 underline cursor-pointer"
+                >
+                  Lưu ngay
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* NỘI DUNG TAB 1: THÔNG TIN CÁ NHÂN & LIÊN HỆ */}
         {activeSubTab === 'PERSONAL' && (
           <div className="space-y-5">
@@ -664,22 +1049,40 @@ const EmployeeProfileDetail = ({
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Họ và tên cán bộ <span className="text-rose-500">*</span></label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Họ và tên cán bộ <span className="text-rose-500">*</span></span>
+                      {isFieldDirty('name') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       value={tabFormData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden transition-colors ${
+                        isFieldDirty('name') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="Nhập họ và tên..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Giới tính</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Giới tính</span>
+                      {isFieldDirty('gender') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.gender}
                       onChange={(e) => handleInputChange('gender', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('gender') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       <option value="Nam">Nam</option>
                       <option value="Nữ">Nữ</option>
@@ -687,78 +1090,141 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Số thẻ CCCD <span className="text-rose-500">*</span></label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Số thẻ CCCD <span className="text-rose-500">*</span></span>
+                      {isFieldDirty('cccd') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       maxLength={12}
                       value={tabFormData.cccd}
                       onChange={(e) => handleInputChange('cccd', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums transition-colors ${
+                        isFieldDirty('cccd') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="12 chữ số CCCD..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Ngày sinh</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Ngày sinh</span>
+                      {isFieldDirty('birthDate') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
                       value={tabFormData.birthDate}
                       onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums transition-colors ${
+                        isFieldDirty('birthDate') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Số điện thoại chính</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Số điện thoại chính</span>
+                      {isFieldDirty('phone') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="tel"
                       value={tabFormData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums transition-colors ${
+                        isFieldDirty('phone') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="0388..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Số điện thoại 2 (Phụ)</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Số điện thoại 2 (Phụ)</span>
+                      {isFieldDirty('secondaryPhone') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="tel"
                       value={tabFormData.secondaryPhone}
                       onChange={(e) => handleInputChange('secondaryPhone', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums transition-colors ${
+                        isFieldDirty('secondaryPhone') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="Số phụ nếu có..."
                     />
                   </div>
 
                   <div className="sm:col-span-2 md:col-span-3">
-                    <label className="block text-slate-700 font-bold mb-1">Hộp thư điện tử (Email)</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Hộp thư điện tử (Email)</span>
+                      {isFieldDirty('email') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="email"
                       value={tabFormData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden transition-colors ${
+                        isFieldDirty('email') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="canbo@qtdyentho.vn..."
                     />
                   </div>
 
                   <div className="sm:col-span-2 md:col-span-3">
-                    <label className="block text-slate-700 font-bold mb-1">Quê quán</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Quê quán</span>
+                      {isFieldDirty('hometown') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       value={tabFormData.hometown}
                       onChange={(e) => handleInputChange('hometown', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden transition-colors ${
+                        isFieldDirty('hometown') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="Xã, Huyện, Tỉnh..."
                     />
                   </div>
 
                   <div className="sm:col-span-2 md:col-span-3">
-                    <label className="block text-slate-700 font-bold mb-1">Nơi ở hiện nay / Thường trú</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Nơi ở hiện nay / Thường trú</span>
+                      {isFieldDirty('permanentAddress') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       value={tabFormData.permanentAddress}
                       onChange={(e) => handleInputChange('permanentAddress', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden transition-colors ${
+                        isFieldDirty('permanentAddress') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="Thôn, Xã, Tỉnh..."
                     />
                   </div>
@@ -769,9 +1235,23 @@ const EmployeeProfileDetail = ({
                   <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={saving}>
                     Hủy bỏ
                   </Button>
-                  <Button type="button" variant="primary" onClick={() => handleSaveTab('PERSONAL')} disabled={saving} className="inline-flex items-center gap-1.5">
+                  <Button 
+                    type="button" 
+                    variant="primary" 
+                    onClick={() => handleSaveTab('PERSONAL')} 
+                    disabled={saving} 
+                    className={`inline-flex items-center gap-1.5 ${
+                      isDirty ? 'bg-emerald-800 hover:bg-emerald-900 ring-2 ring-emerald-500/50 shadow-xs font-black' : ''
+                    }`}
+                  >
                     <Save className="w-4 h-4" />
-                    <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                    <span>
+                      {saving 
+                        ? 'Đang lưu...' 
+                        : isDirty 
+                        ? `Lưu ${dirtyFields.length} thay đổi` 
+                        : 'Lưu thay đổi'}
+                    </span>
                   </Button>
                 </div>
               </div>
@@ -898,11 +1378,20 @@ const EmployeeProfileDetail = ({
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Phòng ban công tác</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Phòng ban công tác</span>
+                      {isFieldDirty('department') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.department}
                       onChange={(e) => handleInputChange('department', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('department') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {deptList.map((d) => (
                         <option key={d} value={d}>{d}</option>
@@ -911,11 +1400,20 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Chức danh / Vị trí hiện tại</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Chức danh / Vị trí hiện tại</span>
+                      {isFieldDirty('position') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.position}
                       onChange={(e) => handleInputChange('position', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('position') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {posList.map((p) => (
                         <option key={p} value={p}>{p}</option>
@@ -924,11 +1422,20 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Loại hợp đồng lao động</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Loại hợp đồng lao động</span>
+                      {isFieldDirty('contractType') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.contractType}
                       onChange={(e) => handleInputChange('contractType', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('contractType') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {CONTRACT_TYPES.map((c) => (
                         <option key={c} value={c}>{c}</option>
@@ -937,31 +1444,58 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Ngày vào Quỹ công tác</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Ngày vào Quỹ công tác</span>
+                      {isFieldDirty('joinDate') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
                       value={tabFormData.joinDate}
                       onChange={(e) => handleInputChange('joinDate', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums transition-colors ${
+                        isFieldDirty('joinDate') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Ngày bổ nhiệm vị trí hiện tại</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Ngày bổ nhiệm vị trí hiện tại</span>
+                      {isFieldDirty('positionStartDate') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
                       value={tabFormData.positionStartDate}
                       onChange={(e) => handleInputChange('positionStartDate', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums transition-colors ${
+                        isFieldDirty('positionStartDate') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Nơi làm việc</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Nơi làm việc</span>
+                      {isFieldDirty('workLocation') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.workLocation}
                       onChange={(e) => handleInputChange('workLocation', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('workLocation') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {workLocList.map((w) => (
                         <option key={w} value={w}>{w}</option>
@@ -970,11 +1504,20 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Địa bàn quản lý (CBTD)</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Địa bàn quản lý (CBTD)</span>
+                      {isFieldDirty('assignedArea') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.assignedArea}
                       onChange={(e) => handleInputChange('assignedArea', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('assignedArea') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       <option value="">-- Không phân công địa bàn --</option>
                       {creditAreaList.map((area) => (
@@ -984,12 +1527,21 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Ngày nhận bàn giao địa bàn</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Ngày nhận bàn giao địa bàn</span>
+                      {isFieldDirty('areaStartDate') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
                       value={tabFormData.areaStartDate}
                       onChange={(e) => handleInputChange('areaStartDate', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums transition-colors ${
+                        isFieldDirty('areaStartDate') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     />
                   </div>
                 </div>
@@ -998,9 +1550,23 @@ const EmployeeProfileDetail = ({
                   <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={saving}>
                     Hủy bỏ
                   </Button>
-                  <Button type="button" variant="primary" onClick={() => handleSaveTab('WORK')} disabled={saving} className="inline-flex items-center gap-1.5">
+                  <Button 
+                    type="button" 
+                    variant="primary" 
+                    onClick={() => handleSaveTab('WORK')} 
+                    disabled={saving} 
+                    className={`inline-flex items-center gap-1.5 ${
+                      isDirty ? 'bg-emerald-800 hover:bg-emerald-900 ring-2 ring-emerald-500/50 shadow-xs font-black' : ''
+                    }`}
+                  >
                     <Save className="w-4 h-4" />
-                    <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                    <span>
+                      {saving 
+                        ? 'Đang lưu...' 
+                        : isDirty 
+                        ? `Lưu ${dirtyFields.length} thay đổi` 
+                        : 'Lưu thay đổi'}
+                    </span>
                   </Button>
                 </div>
               </div>
@@ -1225,27 +1791,43 @@ const EmployeeProfileDetail = ({
               /* CHẾ ĐỘ CHỈNH SỬA TRỰC TIẾP TAB 3 */
               <div className="space-y-4">
                 <div className="p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-xl space-y-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="tab-party-member"
-                      checked={tabFormData.partyMember}
-                      onChange={(e) => handleInputChange('partyMember', e.target.checked)}
-                      className="w-4 h-4 text-emerald-800 rounded-md border-slate-300 focus:ring-emerald-500"
-                    />
-                    <label htmlFor="tab-party-member" className="font-bold text-slate-900 cursor-pointer">
-                      Là Đảng viên Đảng Cộng sản Việt Nam
-                    </label>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="tab-party-member"
+                        checked={tabFormData.partyMember}
+                        onChange={(e) => handleInputChange('partyMember', e.target.checked)}
+                        className="w-4 h-4 text-emerald-800 rounded-md border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <label htmlFor="tab-party-member" className="font-bold text-slate-900 cursor-pointer">
+                        Là Đảng viên Đảng Cộng sản Việt Nam
+                      </label>
+                    </div>
+                    {isFieldDirty('partyMember') && (
+                      <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                        Đã sửa
+                      </span>
+                    )}
                   </div>
 
                   {tabFormData.partyMember && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 border-t border-amber-200/60">
                       <div>
-                        <label className="block text-slate-700 font-semibold mb-1">Chức vụ trong Chi bộ</label>
+                        <label className="flex items-center justify-between text-slate-700 font-semibold mb-1">
+                          <span>Chức vụ trong Chi bộ</span>
+                          {isFieldDirty('politicalRole') && (
+                            <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                              Đã sửa
+                            </span>
+                          )}
+                        </label>
                         <select
                           value={tabFormData.politicalRole}
                           onChange={(e) => handleInputChange('politicalRole', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white text-xs"
+                          className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white text-xs transition-colors ${
+                            isFieldDirty('politicalRole') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                          }`}
                         >
                           <option value="Đảng viên">Đảng viên</option>
                           <option value="Bí thư Chi bộ">Bí thư Chi bộ</option>
@@ -1255,32 +1837,59 @@ const EmployeeProfileDetail = ({
                       </div>
 
                       <div>
-                        <label className="block text-slate-700 font-semibold mb-1">Ngày vào Đảng dự bị</label>
+                        <label className="flex items-center justify-between text-slate-700 font-semibold mb-1">
+                          <span>Ngày vào Đảng dự bị</span>
+                          {isFieldDirty('partyDate') && (
+                            <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                              Đã sửa
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="date"
                           value={tabFormData.partyDate}
                           onChange={(e) => handleInputChange('partyDate', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums text-xs"
+                          className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums text-xs transition-colors ${
+                            isFieldDirty('partyDate') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                          }`}
                         />
                       </div>
 
                       <div>
-                        <label className="block text-slate-700 font-semibold mb-1">Ngày chính thức</label>
+                        <label className="flex items-center justify-between text-slate-700 font-semibold mb-1">
+                          <span>Ngày chính thức</span>
+                          {isFieldDirty('partyOfficialDate') && (
+                            <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                              Đã sửa
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="date"
                           value={tabFormData.partyOfficialDate}
                           onChange={(e) => handleInputChange('partyOfficialDate', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums text-xs"
+                          className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden tabular-nums text-xs transition-colors ${
+                            isFieldDirty('partyOfficialDate') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                          }`}
                         />
                       </div>
 
                       <div className="sm:col-span-2 md:col-span-3">
-                        <label className="block text-slate-700 font-semibold mb-1">Nơi sinh hoạt Đảng hiện nay</label>
+                        <label className="flex items-center justify-between text-slate-700 font-semibold mb-1">
+                          <span>Nơi sinh hoạt Đảng hiện nay</span>
+                          {isFieldDirty('partyCell') && (
+                            <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                              Đã sửa
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="text"
                           value={tabFormData.partyCell}
                           onChange={(e) => handleInputChange('partyCell', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden text-xs"
+                          className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden text-xs transition-colors ${
+                            isFieldDirty('partyCell') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                          }`}
                           placeholder="Chi bộ Quỹ TDND Yên Thọ..."
                         />
                       </div>
@@ -1290,11 +1899,20 @@ const EmployeeProfileDetail = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Trình độ Lý luận chính trị</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Trình độ Lý luận chính trị</span>
+                      {isFieldDirty('politicalTheory') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.politicalTheory}
                       onChange={(e) => handleInputChange('politicalTheory', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('politicalTheory') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {POLITICAL_THEORY_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -1303,11 +1921,20 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Công đoàn cơ sở</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Công đoàn cơ sở</span>
+                      {isFieldDirty('unionRole') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.unionRole}
                       onChange={(e) => handleInputChange('unionRole', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('unionRole') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       <option value="Đoàn viên">Đoàn viên công đoàn</option>
                       <option value="Chủ tịch CĐCS">Chủ tịch CĐCS</option>
@@ -1318,11 +1945,20 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Đoàn TNCS Hồ Chí Minh</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Đoàn TNCS Hồ Chí Minh</span>
+                      {isFieldDirty('youthUnionRole') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.youthUnionRole}
                       onChange={(e) => handleInputChange('youthUnionRole', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('youthUnionRole') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       <option value="Đoàn viên">Đoàn viên thanh niên</option>
                       <option value="Bí thư Chi đoàn">Bí thư Chi đoàn</option>
@@ -1337,9 +1973,23 @@ const EmployeeProfileDetail = ({
                   <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={saving}>
                     Hủy bỏ
                   </Button>
-                  <Button type="button" variant="primary" onClick={() => handleSaveTab('POLITICS')} disabled={saving} className="inline-flex items-center gap-1.5">
+                  <Button 
+                    type="button" 
+                    variant="primary" 
+                    onClick={() => handleSaveTab('POLITICS')} 
+                    disabled={saving} 
+                    className={`inline-flex items-center gap-1.5 ${
+                      isDirty ? 'bg-emerald-800 hover:bg-emerald-900 ring-2 ring-emerald-500/50 shadow-xs font-black' : ''
+                    }`}
+                  >
                     <Save className="w-4 h-4" />
-                    <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                    <span>
+                      {saving 
+                        ? 'Đang lưu...' 
+                        : isDirty 
+                        ? `Lưu ${dirtyFields.length} thay đổi` 
+                        : 'Lưu thay đổi'}
+                    </span>
                   </Button>
                 </div>
               </div>
@@ -1399,22 +2049,40 @@ const EmployeeProfileDetail = ({
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Chuyên môn đào tạo / Học vị (Tóm tắt)</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Chuyên môn đào tạo / Học vị</span>
+                      {isFieldDirty('education') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       value={tabFormData.education}
                       onChange={(e) => handleInputChange('education', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden transition-colors ${
+                        isFieldDirty('education') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                       placeholder="Cử nhân Tài chính - Ngân hàng..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Trình độ Tin học</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Trình độ Tin học</span>
+                      {isFieldDirty('itLevel') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.itLevel}
                       onChange={(e) => handleInputChange('itLevel', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('itLevel') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {IT_LEVEL_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -1423,11 +2091,20 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Trình độ Ngoại ngữ</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Trình độ Ngoại ngữ</span>
+                      {isFieldDirty('foreignLanguage') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.foreignLanguage}
                       onChange={(e) => handleInputChange('foreignLanguage', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('foreignLanguage') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {FOREIGN_LANGUAGE_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -1436,11 +2113,20 @@ const EmployeeProfileDetail = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Trình độ Quản lý Nhà nước</label>
+                    <label className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                      <span>Trình độ Quản lý Nhà nước</span>
+                      {isFieldDirty('stateManagement') && (
+                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.2 rounded">
+                          Đã sửa
+                        </span>
+                      )}
+                    </label>
                     <select
                       value={tabFormData.stateManagement}
                       onChange={(e) => handleInputChange('stateManagement', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl focus:border-emerald-600 focus:outline-hidden bg-white transition-colors ${
+                        isFieldDirty('stateManagement') ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-slate-300'
+                      }`}
                     >
                       {STATE_MGMT_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -1453,9 +2139,23 @@ const EmployeeProfileDetail = ({
                   <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={saving}>
                     Hủy bỏ
                   </Button>
-                  <Button type="button" variant="primary" onClick={() => handleSaveTab('EDUCATION')} disabled={saving} className="inline-flex items-center gap-1.5">
+                  <Button 
+                    type="button" 
+                    variant="primary" 
+                    onClick={() => handleSaveTab('EDUCATION')} 
+                    disabled={saving} 
+                    className={`inline-flex items-center gap-1.5 ${
+                      isDirty ? 'bg-emerald-800 hover:bg-emerald-900 ring-2 ring-emerald-500/50 shadow-xs font-black' : ''
+                    }`}
+                  >
                     <Save className="w-4 h-4" />
-                    <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                    <span>
+                      {saving 
+                        ? 'Đang lưu...' 
+                        : isDirty 
+                        ? `Lưu ${dirtyFields.length} thay đổi` 
+                        : 'Lưu thay đổi'}
+                    </span>
                   </Button>
                 </div>
               </div>
@@ -1654,6 +2354,19 @@ const EmployeeProfileDetail = ({
           </div>
         </Modal>
       )}
+
+      {/* Modal Cảnh Báo Thay Đổi Chưa Lưu Khi Chuyển Tab */}
+      <UnsavedChangesModal
+        isOpen={isUnsavedModalOpen}
+        employeeName={emp?.name}
+        currentSection={currentTabObj.label}
+        targetSection={SUB_TABS.find((t) => t.id === pendingTabSwitch)?.label || ''}
+        dirtyFields={dirtyFields}
+        onSave={handleModalSaveAndContinue}
+        onDiscard={handleModalDiscardAndContinue}
+        onCancel={handleModalCancel}
+        isSaving={saving}
+      />
 
       {/* Modal Thêm / Chỉnh Sửa Văn Bằng Chuyên Môn */}
       {isAddDegreeModalOpen && (

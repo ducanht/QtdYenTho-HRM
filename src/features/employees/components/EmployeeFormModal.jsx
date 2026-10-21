@@ -44,6 +44,7 @@ import {
 import { useToast } from '../../../context/ToastContext';
 import AddDegreeModal from './AddDegreeModal';
 import WorkHistoryPeriodModal from './WorkHistoryPeriodModal';
+import UnsavedChangesModal from './UnsavedChangesModal';
 
 // Danh mục nền tảng mạng xã hội chuẩn mực
 export const SOCIAL_PLATFORMS = [
@@ -101,6 +102,10 @@ const EmployeeFormModal = ({
   const isEdit = Boolean(initialData?.id);
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('PERSONAL');
+
+  // Trạng thái phát hiện thay đổi chưa lưu
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isUnsavedConfirmOpen, setIsUnsavedConfirmOpen] = useState(false);
 
   // Form Fields - Tab 1: Cá Nhân & Liên Hệ
   const [uuid, setUuid] = useState('');
@@ -190,57 +195,143 @@ const EmployeeFormModal = ({
 
   // Khởi tạo và đồng bộ state khi mở Modal
   useEffect(() => {
+    if (!isOpen) return;
+
     if (initialData) {
-      setUuid(initialData.uuid || generateUUID());
-      setCode(initialData.code || '');
-      setName(initialData.name || '');
-      setGender(initialData.gender || 'Nam');
-      setBirthDate(initialData.birthDate || '');
-      setCccd(initialData.cccd || '');
-      setHometown(initialData.hometown || initialData.nativePlace || '');
-      setAddress(initialData.address || initialData.currentAddress || '');
-      setPhone(initialData.phone || '');
-      setSecondaryPhone(initialData.secondaryPhone || initialData.phone2 || '');
-      setEmail(initialData.email || '');
-      setAvatar(initialData.avatar || '');
+      const snap = {
+        uuid: initialData.uuid || generateUUID(),
+        code: initialData.code || '',
+        name: initialData.name || '',
+        gender: initialData.gender || 'Nam',
+        birthDate: initialData.birthDate || '',
+        cccd: initialData.cccd || '',
+        hometown: initialData.hometown || initialData.nativePlace || '',
+        address: initialData.address || initialData.currentAddress || '',
+        phone: initialData.phone || '',
+        secondaryPhone: initialData.secondaryPhone || initialData.phone2 || '',
+        email: initialData.email || '',
+        avatar: initialData.avatar || '',
 
-      setDepartment(initialData.department || 'Phòng Tín dụng');
-      setPosition(initialData.position || 'Cán bộ tín dụng');
-      setPositionStartDate(initialData.positionStartDate || initialData.joinDate || '');
-      setJoinDate(initialData.joinDate || '');
-      setContractType(initialData.contractType || 'Không xác định thời hạn');
-      setWorkLocation(initialData.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)');
-      setAssignedArea(initialData.assignedArea || '');
-      setAreaStartDate(initialData.areaStartDate || '');
+        department: initialData.department || 'Phòng Tín dụng',
+        position: initialData.position || 'Cán bộ tín dụng',
+        positionStartDate: initialData.positionStartDate || initialData.joinDate || '',
+        joinDate: initialData.joinDate || '',
+        contractType: initialData.contractType || 'Không xác định thời hạn',
+        workLocation: initialData.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+        assignedArea: initialData.assignedArea || '',
+        areaStartDate: initialData.areaStartDate || '',
 
-      setPartyMember(Boolean(initialData.partyMember));
-      setPartyDate(initialData.partyDate || '');
-      setPartyOfficialDate(initialData.partyOfficialDate || '');
-      setPoliticalRole(initialData.politicalRole || 'Đảng viên');
-      setPartyCell(initialData.partyCell || 'Chi bộ Quỹ Tín Dụng Nhân Dân Yên Thọ');
-      setPoliticalTheory(initialData.politicalTheory || 'Chưa qua đào tạo');
-      setYouthUnionMember(Boolean(initialData.youthUnionMember));
-      setYouthUnionRole(initialData.youthUnionRole || '');
-      setTradeUnionMember(initialData.tradeUnionMember !== undefined ? Boolean(initialData.tradeUnionMember) : true);
-      setTradeUnionRole(initialData.tradeUnionRole || 'Đoàn viên công đoàn');
+        partyMember: Boolean(initialData.partyMember),
+        partyDate: initialData.partyDate || '',
+        partyOfficialDate: initialData.partyOfficialDate || '',
+        politicalRole: initialData.politicalRole || 'Đảng viên',
+        partyCell: initialData.partyCell || 'Chi bộ Quỹ Tín Dụng Nhân Dân Yên Thọ',
+        politicalTheory: initialData.politicalTheory || 'Chưa qua đào tạo',
+        youthUnionMember: Boolean(initialData.youthUnionMember),
+        youthUnionRole: initialData.youthUnionRole || '',
+        tradeUnionMember: initialData.tradeUnionMember !== undefined ? Boolean(initialData.tradeUnionMember) : true,
+        tradeUnionRole: initialData.tradeUnionRole || 'Đoàn viên công đoàn',
 
-      setEducation(initialData.education || '');
-      setItLevel(initialData.itLevel || 'Ứng dụng CNTT cơ bản');
-      setForeignLanguage(initialData.foreignLanguage || 'Tiếng Anh');
-      setStateManagementLevel(initialData.stateManagementLevel || '');
-      setRole(initialData.role || 'staff');
+        education: initialData.education || '',
+        itLevel: initialData.itLevel || 'Ứng dụng CNTT cơ bản',
+        foreignLanguage: initialData.foreignLanguage || 'Tiếng Anh',
+        stateManagementLevel: initialData.stateManagementLevel || '',
+        role: initialData.role || 'staff',
+      };
+
+      setInitialSnapshot(snap);
+      setUuid(snap.uuid);
+      setCode(snap.code);
+      setName(snap.name);
+      setGender(snap.gender);
+      setBirthDate(snap.birthDate);
+      setCccd(snap.cccd);
+      setHometown(snap.hometown);
+      setAddress(snap.address);
+      setPhone(snap.phone);
+      setSecondaryPhone(snap.secondaryPhone);
+      setEmail(snap.email);
+      setAvatar(snap.avatar);
+
+      setDepartment(snap.department);
+      setPosition(snap.position);
+      setPositionStartDate(snap.positionStartDate);
+      setJoinDate(snap.joinDate);
+      setContractType(snap.contractType);
+      setWorkLocation(snap.workLocation);
+      setAssignedArea(snap.assignedArea);
+      setAreaStartDate(snap.areaStartDate);
+
+      setPartyMember(snap.partyMember);
+      setPartyDate(snap.partyDate);
+      setPartyOfficialDate(snap.partyOfficialDate);
+      setPoliticalRole(snap.politicalRole);
+      setPartyCell(snap.partyCell);
+      setPoliticalTheory(snap.politicalTheory);
+      setYouthUnionMember(snap.youthUnionMember);
+      setYouthUnionRole(snap.youthUnionRole);
+      setTradeUnionMember(snap.tradeUnionMember);
+      setTradeUnionRole(snap.tradeUnionRole);
+
+      setEducation(snap.education);
+      setItLevel(snap.itLevel);
+      setForeignLanguage(snap.foreignLanguage);
+      setStateManagementLevel(snap.stateManagementLevel);
+      setRole(snap.role);
     } else {
       const newUuid = generateUUID();
-      setUuid(newUuid);
-
-      // Gợi ý mã CB tự động
       const maxCodeNum = existingEmployees.reduce((max, e) => {
         const match = (e.code || '').match(/CB(\d+)/i);
         return match ? Math.max(max, parseInt(match[1], 10)) : max;
       }, 0);
       const nextCode = `CB${String(maxCodeNum + 1).padStart(2, '0')}`;
-      setCode(nextCode);
+      const today = new Date().toISOString().slice(0, 10);
+      const defaultDept = departments[0] || 'Phòng Tín dụng';
 
+      const snap = {
+        uuid: newUuid,
+        code: nextCode,
+        name: '',
+        gender: 'Nam',
+        birthDate: '',
+        cccd: '',
+        hometown: '',
+        address: '',
+        phone: '',
+        secondaryPhone: '',
+        email: '',
+        avatar: '',
+
+        department: defaultDept,
+        position: 'Cán bộ tín dụng',
+        positionStartDate: today,
+        joinDate: today,
+        contractType: 'Không xác định thời hạn',
+        workLocation: 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
+        assignedArea: '',
+        areaStartDate: today,
+
+        partyMember: false,
+        partyDate: '',
+        partyOfficialDate: '',
+        politicalRole: 'Đảng viên',
+        partyCell: 'Chi bộ Quỹ Tín Dụng Nhân Dân Yên Thọ',
+        politicalTheory: 'Chưa qua đào tạo',
+        youthUnionMember: false,
+        youthUnionRole: '',
+        tradeUnionMember: true,
+        tradeUnionRole: 'Đoàn viên công đoàn',
+
+        education: 'Đại học chuyên ngành',
+        itLevel: 'Ứng dụng CNTT cơ bản',
+        foreignLanguage: 'Tiếng Anh',
+        stateManagementLevel: '',
+        role: 'staff',
+      };
+
+      setInitialSnapshot(snap);
+      setUuid(newUuid);
+      setCode(nextCode);
       setName('');
       setGender('Nam');
       setBirthDate('');
@@ -252,9 +343,8 @@ const EmployeeFormModal = ({
       setEmail('');
       setAvatar('');
 
-      setDepartment(departments[0] || 'Phòng Tín dụng');
+      setDepartment(defaultDept);
       setPosition('Cán bộ tín dụng');
-      const today = new Date().toISOString().slice(0, 10);
       setPositionStartDate(today);
       setJoinDate(today);
       setContractType('Không xác định thời hạn');
@@ -279,10 +369,130 @@ const EmployeeFormModal = ({
       setStateManagementLevel('');
       setRole('staff');
     }
+    setIsUnsavedConfirmOpen(false);
   }, [initialData, isOpen, departments, existingEmployees]);
 
   // Cán bộ tín dụng & Giám sát luân chuyển địa bàn
   const isCreditOfficer = isCreditOfficerRole(position, department);
+
+  // Tính toán danh sách các trường bị thay đổi so với bản gốc
+  const dirtyFields = useMemo(() => {
+    if (!initialSnapshot) return [];
+    const changed = [];
+
+    const checkField = (key, label, currentVal, baseVal, isBool = false) => {
+      if (isBool) {
+        if (Boolean(currentVal) !== Boolean(baseVal)) {
+          changed.push({
+            field: key,
+            label,
+            from: baseVal ? 'Có' : 'Không',
+            to: currentVal ? 'Có' : 'Không',
+          });
+        }
+      } else {
+        const cStr = String(currentVal ?? '').trim();
+        const bStr = String(baseVal ?? '').trim();
+        if (cStr !== bStr) {
+          changed.push({
+            field: key,
+            label,
+            from: bStr || '(Trống)',
+            to: cStr || '(Trống)',
+          });
+        }
+      }
+    };
+
+    checkField('name', 'Họ và tên cán bộ', name, initialSnapshot.name);
+    checkField('gender', 'Giới tính', gender, initialSnapshot.gender);
+    checkField('birthDate', 'Ngày sinh', birthDate, initialSnapshot.birthDate);
+    checkField('cccd', 'Số Thẻ CCCD', cccd, initialSnapshot.cccd);
+    checkField('hometown', 'Quê quán', hometown, initialSnapshot.hometown);
+    checkField('address', 'Địa chỉ thường trú', address, initialSnapshot.address);
+    checkField('phone', 'Số điện thoại chính', phone, initialSnapshot.phone);
+    checkField('secondaryPhone', 'Số điện thoại phụ', secondaryPhone, initialSnapshot.secondaryPhone);
+    checkField('email', 'Email', email, initialSnapshot.email);
+    checkField('avatar', 'Ảnh đại diện', avatar ? '(Đã chọn ảnh)' : '', initialSnapshot.avatar ? '(Đã có ảnh)' : '');
+
+    checkField('department', 'Phòng ban công tác', department, initialSnapshot.department);
+    checkField('position', 'Chức vụ hiện tại', position, initialSnapshot.position);
+    checkField('positionStartDate', 'Ngày bổ nhiệm vị trí', positionStartDate, initialSnapshot.positionStartDate);
+    checkField('joinDate', 'Ngày vào Quỹ', joinDate, initialSnapshot.joinDate);
+    checkField('contractType', 'Loại hợp đồng', contractType, initialSnapshot.contractType);
+    checkField('workLocation', 'Nơi làm việc', workLocation, initialSnapshot.workLocation);
+    if (isCreditOfficer) {
+      checkField('assignedArea', 'Địa bàn tín dụng', assignedArea, initialSnapshot.assignedArea);
+      checkField('areaStartDate', 'Ngày nhận địa bàn', areaStartDate, initialSnapshot.areaStartDate);
+    }
+
+    checkField('partyMember', 'Tư cách Đảng viên', partyMember, initialSnapshot.partyMember, true);
+    if (partyMember) {
+      checkField('partyDate', 'Ngày vào Đảng', partyDate, initialSnapshot.partyDate);
+      checkField('partyOfficialDate', 'Ngày chính thức', partyOfficialDate, initialSnapshot.partyOfficialDate);
+      checkField('politicalRole', 'Chức vụ Chi bộ', politicalRole, initialSnapshot.politicalRole);
+      checkField('partyCell', 'Nơi sinh hoạt Chi bộ', partyCell, initialSnapshot.partyCell);
+    }
+    checkField('politicalTheory', 'Lý luận chính trị', politicalTheory, initialSnapshot.politicalTheory);
+    checkField('youthUnionMember', 'Đoàn viên TNCS', youthUnionMember, initialSnapshot.youthUnionMember, true);
+    if (youthUnionMember) {
+      checkField('youthUnionRole', 'Chức vụ Đoàn TN', youthUnionRole, initialSnapshot.youthUnionRole);
+    }
+    checkField('tradeUnionMember', 'Đoàn viên Công đoàn', tradeUnionMember, initialSnapshot.tradeUnionMember, true);
+    if (tradeUnionMember) {
+      checkField('tradeUnionRole', 'Chức vụ Công đoàn', tradeUnionRole, initialSnapshot.tradeUnionRole);
+    }
+
+    checkField('education', 'Trình độ đào tạo', education, initialSnapshot.education);
+    checkField('itLevel', 'Trình độ Tin học', itLevel, initialSnapshot.itLevel);
+    checkField('foreignLanguage', 'Trình độ Ngoại ngữ', foreignLanguage, initialSnapshot.foreignLanguage);
+    checkField('stateManagementLevel', 'Quản lý Nhà nước', stateManagementLevel, initialSnapshot.stateManagementLevel);
+    checkField('role', 'Quyền hạn hệ thống', role, initialSnapshot.role);
+
+    return changed;
+  }, [
+    initialSnapshot,
+    name, gender, birthDate, cccd, hometown, address, phone, secondaryPhone, email, avatar,
+    department, position, positionStartDate, joinDate, contractType, workLocation, isCreditOfficer, assignedArea, areaStartDate,
+    partyMember, partyDate, partyOfficialDate, politicalRole, partyCell, politicalTheory,
+    youthUnionMember, youthUnionRole, tradeUnionMember, tradeUnionRole,
+    education, itLevel, foreignLanguage, stateManagementLevel, role
+  ]);
+
+  const isFieldDirty = useCallback((fieldKey) => {
+    return dirtyFields.some((f) => f.field === fieldKey);
+  }, [dirtyFields]);
+
+  const isTabDirty = useCallback((tabId) => {
+    if (tabId === 'PERSONAL') {
+      return dirtyFields.some((f) => ['name', 'gender', 'birthDate', 'cccd', 'hometown', 'address', 'phone', 'secondaryPhone', 'email', 'avatar'].includes(f.field));
+    }
+    if (tabId === 'WORK') {
+      return dirtyFields.some((f) => ['department', 'position', 'positionStartDate', 'joinDate', 'contractType', 'workLocation', 'assignedArea', 'areaStartDate'].includes(f.field));
+    }
+    if (tabId === 'POLITICS') {
+      return dirtyFields.some((f) => ['partyMember', 'partyDate', 'partyOfficialDate', 'politicalRole', 'partyCell', 'politicalTheory', 'youthUnionMember', 'youthUnionRole', 'tradeUnionMember', 'tradeUnionRole'].includes(f.field));
+    }
+    if (tabId === 'EDUCATION') {
+      return dirtyFields.some((f) => ['education', 'itLevel', 'foreignLanguage', 'stateManagementLevel', 'role'].includes(f.field));
+    }
+    return false;
+  }, [dirtyFields]);
+
+  const inputBorderClass = useCallback((fieldKey) => {
+    return isFieldDirty(fieldKey)
+      ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300'
+      : 'border-slate-200';
+  }, [isFieldDirty]);
+
+  const handleAttemptClose = useCallback(() => {
+    if (submitting) return;
+    if (dirtyFields.length > 0) {
+      setIsUnsavedConfirmOpen(true);
+    } else {
+      onClose();
+    }
+  }, [submitting, dirtyFields.length, onClose]);
   const cycleMonths = Number(hrConfig?.creditRotationMonths || hrConfig?.transferMaxMonths || hrConfig?.transferCycleMonths || 36);
   const warningMonths = Number(hrConfig?.creditWarningMonths || hrConfig?.transferWarningMonths || hrConfig?.warningMonths || 6);
 
@@ -491,8 +701,17 @@ const EmployeeFormModal = ({
     <>
       <Modal
         isOpen={isOpen}
-        onClose={onClose}
-        title={isEdit ? 'Chỉnh Sửa Hồ Sơ Cán Bộ' : 'Thêm Mới Cán Bộ Nhân Viên'}
+        onClose={handleAttemptClose}
+        title={
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>{isEdit ? 'Chỉnh Sửa Hồ Sơ Cán Bộ' : 'Thêm Mới Cán Bộ Nhân Viên'}</span>
+            {dirtyFields.length > 0 && (
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                Có {dirtyFields.length} thay đổi chưa lưu
+              </span>
+            )}
+          </div>
+        }
         subtitle={`Quỹ Tín Dụng Nhân Dân Yên Thọ • ${isEdit ? `Mã CB: ${code} — ${name}` : 'Thiết lập đầy đủ hồ sơ lý lịch'}`}
         maxWidth="max-w-4xl"
         zIndex="z-50"
@@ -503,6 +722,7 @@ const EmployeeFormModal = ({
             {tabsList.map((t) => {
               const IconComponent = t.icon;
               const isActive = activeTab === t.id;
+              const hasDirtyInTab = isTabDirty(t.id);
               return (
                 <button
                   key={t.id}
@@ -518,17 +738,22 @@ const EmployeeFormModal = ({
                     <IconComponent className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-lime-300' : 'text-emerald-700'}`} />
                     <span className="truncate">{t.label}</span>
                   </span>
-                  {t.badge && (
-                    <span
-                      className={`text-[10px] font-black px-1.5 py-0.2 rounded-md shrink-0 ${
-                        isActive
-                          ? 'bg-emerald-950/50 text-lime-300'
-                          : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      }`}
-                    >
-                      {t.badge}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {hasDirtyInTab && (
+                      <span className="w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white" title="Có dữ liệu đã sửa chưa lưu" />
+                    )}
+                    {t.badge && (
+                      <span
+                        className={`text-[10px] font-black px-1.5 py-0.2 rounded-md shrink-0 ${
+                          isActive
+                            ? 'bg-emerald-950/50 text-lime-300'
+                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        }`}
+                      >
+                        {t.badge}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -585,7 +810,7 @@ const EmployeeFormModal = ({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('name')}`}
                       />
                     </div>
                     <div>
@@ -593,7 +818,7 @@ const EmployeeFormModal = ({
                       <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('gender')}`}
                       >
                         <option value="Nam">Nam</option>
                         <option value="Nữ">Nữ</option>
@@ -606,7 +831,7 @@ const EmployeeFormModal = ({
                         placeholder="0380..."
                         value={cccd}
                         onChange={(e) => setCccd(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('cccd')}`}
                       />
                     </div>
                     <div>
@@ -615,7 +840,7 @@ const EmployeeFormModal = ({
                         type="date"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('birthDate')}`}
                       />
                     </div>
                     <div>
@@ -625,7 +850,7 @@ const EmployeeFormModal = ({
                         placeholder="VD: Xã Quý Lộc, Yên Định"
                         value={hometown}
                         onChange={(e) => setHometown(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('hometown')}`}
                       />
                     </div>
                   </div>
@@ -640,7 +865,7 @@ const EmployeeFormModal = ({
                       placeholder="0988..."
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums font-bold text-emerald-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums font-bold text-emerald-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('phone')}`}
                     />
                   </div>
                   <div>
@@ -650,7 +875,7 @@ const EmployeeFormModal = ({
                       placeholder="0912... (Tùy chọn)"
                       value={secondaryPhone}
                       onChange={(e) => setSecondaryPhone(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('secondaryPhone')}`}
                     />
                   </div>
                   <div>
@@ -660,7 +885,7 @@ const EmployeeFormModal = ({
                       placeholder="ducanht@gmail.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('email')}`}
                     />
                   </div>
                   <div className="sm:col-span-3">
@@ -670,7 +895,7 @@ const EmployeeFormModal = ({
                       placeholder="VD: Thôn Tân Lộc, xã Quý Lộc, tỉnh Thanh Hóa"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('address')}`}
                     />
                   </div>
                 </div>
@@ -834,7 +1059,7 @@ const EmployeeFormModal = ({
                     <select
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('department')}`}
                     >
                       {departments.map((d) => (
                         <option key={d} value={d}>
@@ -852,7 +1077,7 @@ const EmployeeFormModal = ({
                       placeholder="VD: Cán bộ tín dụng / Kế toán trưởng"
                       required
                       list="modal-positions-list"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('position')}`}
                     />
                     <datalist id="modal-positions-list">
                       {positions.map((p) => (
@@ -865,7 +1090,7 @@ const EmployeeFormModal = ({
                     <select
                       value={contractType}
                       onChange={(e) => setContractType(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('contractType')}`}
                     >
                       <option value="Không xác định thời hạn">Không xác định thời hạn</option>
                       <option value="Theo nhiệm kỳ">Theo nhiệm kỳ bầu cử</option>
@@ -879,7 +1104,7 @@ const EmployeeFormModal = ({
                       type="date"
                       value={positionStartDate}
                       onChange={(e) => setPositionStartDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('positionStartDate')}`}
                     />
                   </div>
                   <div>
@@ -888,7 +1113,7 @@ const EmployeeFormModal = ({
                       type="date"
                       value={joinDate}
                       onChange={(e) => setJoinDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('joinDate')}`}
                     />
                   </div>
                   <div className="flex items-center">
@@ -913,7 +1138,7 @@ const EmployeeFormModal = ({
                       value={workLocation}
                       onChange={(e) => setWorkLocation(e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('workLocation')}`}
                     />
                     <datalist id="modal-work-locations-list">
                       {(hrConfig?.workLocations || DEFAULT_MODULE_HR_SETTINGS.workLocations || []).map((loc) => (
@@ -947,7 +1172,7 @@ const EmployeeFormModal = ({
                           placeholder="VD: Phụ trách thành viên vay vốn xã Quý Lộc"
                           value={assignedArea}
                           onChange={(e) => setAssignedArea(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                          className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('assignedArea')}`}
                         />
                         <datalist id="modal-credit-areas-list">
                           {(hrConfig?.creditAreas || DEFAULT_MODULE_HR_SETTINGS.creditAreas || []).map((area) => (
@@ -961,7 +1186,7 @@ const EmployeeFormModal = ({
                           type="date"
                           value={areaStartDate}
                           onChange={(e) => setAreaStartDate(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                          className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('areaStartDate')}`}
                         />
                       </div>
                     </div>
@@ -1123,7 +1348,7 @@ const EmployeeFormModal = ({
                           type="date"
                           value={partyDate}
                           onChange={(e) => setPartyDate(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                          className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('partyDate')}`}
                         />
                       </div>
                       <div>
@@ -1132,7 +1357,7 @@ const EmployeeFormModal = ({
                           type="date"
                           value={partyOfficialDate}
                           onChange={(e) => setPartyOfficialDate(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                          className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 tabular-nums focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('partyOfficialDate')}`}
                         />
                       </div>
                       <div>
@@ -1142,7 +1367,7 @@ const EmployeeFormModal = ({
                           placeholder="VD: Bí thư Chi bộ / Đảng viên"
                           value={politicalRole}
                           onChange={(e) => setPoliticalRole(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                          className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('politicalRole')}`}
                         />
                       </div>
                       <div>
@@ -1152,7 +1377,7 @@ const EmployeeFormModal = ({
                           placeholder="VD: Chi bộ Quỹ TDND Yên Thọ"
                           value={partyCell}
                           onChange={(e) => setPartyCell(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                          className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('partyCell')}`}
                         />
                       </div>
                     </div>
@@ -1170,7 +1395,7 @@ const EmployeeFormModal = ({
                       <select
                         value={politicalTheory}
                         onChange={(e) => setPoliticalTheory(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('politicalTheory')}`}
                       >
                         <option value="Chưa qua đào tạo">Chưa qua đào tạo</option>
                         <option value="Sơ cấp lý luận chính trị">Sơ cấp lý luận chính trị</option>
@@ -1186,7 +1411,7 @@ const EmployeeFormModal = ({
                         placeholder="VD: Chuyên viên / Chuyên viên chính (nếu có)"
                         value={stateManagementLevel}
                         onChange={(e) => setStateManagementLevel(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('stateManagementLevel')}`}
                       />
                     </div>
                   </div>
@@ -1217,7 +1442,7 @@ const EmployeeFormModal = ({
                             placeholder="VD: Bí thư Chi đoàn / Đoàn viên"
                             value={youthUnionRole}
                             onChange={(e) => setYouthUnionRole(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                            className={`w-full px-2.5 py-1.5 bg-slate-50 border rounded-lg text-xs text-slate-800 transition-colors ${inputBorderClass('youthUnionRole')}`}
                           />
                         </div>
                       )}
@@ -1242,7 +1467,7 @@ const EmployeeFormModal = ({
                             placeholder="VD: Chủ tịch Công đoàn / Đoàn viên"
                             value={tradeUnionRole}
                             onChange={(e) => setTradeUnionRole(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                            className={`w-full px-2.5 py-1.5 bg-slate-50 border rounded-lg text-xs text-slate-800 transition-colors ${inputBorderClass('tradeUnionRole')}`}
                           />
                         </div>
                       )}
@@ -1397,7 +1622,7 @@ const EmployeeFormModal = ({
                       placeholder="VD: Đại học chuyên ngành Tài chính - Ngân hàng"
                       value={education}
                       onChange={(e) => setEducation(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                      className={`w-full px-3 py-2 bg-white border rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('education')}`}
                     />
                   </div>
 
@@ -1410,7 +1635,7 @@ const EmployeeFormModal = ({
                         list="modal-it-levels-list"
                         value={itLevel}
                         onChange={(e) => setItLevel(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('itLevel')}`}
                       />
                       <datalist id="modal-it-levels-list">
                         <option value="Ứng dụng CNTT cơ bản" />
@@ -1427,7 +1652,7 @@ const EmployeeFormModal = ({
                         list="modal-languages-list"
                         value={foreignLanguage}
                         onChange={(e) => setForeignLanguage(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden"
+                        className={`w-full px-3 py-2 bg-white border rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-700/20 focus:outline-hidden transition-colors ${inputBorderClass('foreignLanguage')}`}
                       />
                       <datalist id="modal-languages-list">
                         <option value="Tiếng Anh" />
@@ -1479,11 +1704,11 @@ const EmployeeFormModal = ({
 
             {/* Nút Hủy & Lưu chính thức */}
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <Button variant="outline" type="button" onClick={onClose} disabled={submitting}>
+              <Button variant="outline" type="button" onClick={handleAttemptClose} disabled={submitting}>
                 Hủy bỏ
               </Button>
               <Button variant="primary" type="submit" disabled={submitting} icon={Save}>
-                {submitting ? 'Đang lưu hồ sơ...' : isEdit ? 'Cập nhật hồ sơ' : 'Thêm cán bộ'}
+                {submitting ? 'Đang lưu hồ sơ...' : isEdit ? (dirtyFields.length > 0 ? `Cập nhật hồ sơ (${dirtyFields.length})` : 'Cập nhật hồ sơ') : 'Thêm cán bộ'}
               </Button>
             </div>
           </div>
@@ -1549,6 +1774,23 @@ const EmployeeFormModal = ({
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* SUB-MODAL 4: CẢNH BÁO THAY ĐỔI CHƯA LƯU */}
+      {isUnsavedConfirmOpen && (
+        <UnsavedChangesModal
+          isOpen={isUnsavedConfirmOpen}
+          employeeName={name || (isEdit ? initialData?.name : 'Cán bộ mới')}
+          currentSection={isEdit ? 'Chỉnh sửa hồ sơ' : 'Thêm mới cán bộ'}
+          dirtyFields={dirtyFields}
+          onSave={handleSubmit}
+          onDiscard={() => {
+            setIsUnsavedConfirmOpen(false);
+            onClose();
+          }}
+          onCancel={() => setIsUnsavedConfirmOpen(false)}
+          isSaving={submitting}
+        />
       )}
     </>
   );

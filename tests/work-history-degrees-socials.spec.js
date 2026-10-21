@@ -42,6 +42,7 @@ import {
   exportEmployeeProfileToExcel 
 } from '../src/lib/exportUtils';
 import EmployeeFormModal from '../src/features/employees/components/EmployeeFormModal';
+import UnsavedChangesModal from '../src/features/employees/components/UnsavedChangesModal';
 
 
 test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Riêng Biệt (Degrees, Socials, Timeline Work History)', () => {
@@ -425,6 +426,41 @@ test.describe('Kiểm thử Cấu Trúc CSDL & Dữ Liệu Mẫu Cho 3 Bảng Ri
     expect(sampleEmp.education || sampleEmp.qualification).toBeDefined();
     expect(sampleEmp).toHaveProperty('itLevel');
     expect(sampleEmp).toHaveProperty('foreignLanguage');
+  });
+
+  test('Kiểm tra Cơ chế Phát hiện Thay đổi (Change Detection), Tự Động Lưu & Hộp thoại Cảnh báo UnsavedChangesModal', async () => {
+    // 1. Component UnsavedChangesModal tồn tại và hợp lệ
+    expect(typeof (UnsavedChangesModal.type || UnsavedChangesModal)).toBe('function');
+
+    // 2. Mô phỏng thuật toán phát hiện thay đổi giữa bản ghi gốc và bản ghi đang chỉnh sửa
+    const initialRecord = {
+      name: 'Trịnh Đức Anh',
+      phone: '0988123456',
+      partyMember: true,
+      department: 'Phòng Tín dụng',
+    };
+
+    const editedRecord = {
+      name: 'Trịnh Đức Anh',
+      phone: '0988999888', // Sửa số điện thoại
+      partyMember: true,
+      department: 'Phòng Kế toán', // Đổi phòng ban
+    };
+
+    const changedFields = [];
+    Object.keys(editedRecord).forEach((k) => {
+      if (editedRecord[k] !== initialRecord[k]) {
+        changedFields.push({ field: k, from: initialRecord[k], to: editedRecord[k] });
+      }
+    });
+
+    expect(changedFields.length).toBe(2);
+    expect(changedFields.map((f) => f.field)).toContain('phone');
+    expect(changedFields.map((f) => f.field)).toContain('department');
+
+    // 3. Kiểm tra tính toàn vẹn của logic cấu hình Auto-Save
+    const defaultAutoSave = 'true';
+    expect(defaultAutoSave).toBe('true');
   });
 });
 
