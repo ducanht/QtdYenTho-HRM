@@ -24,14 +24,13 @@ import Spinner from '../../components/common/Spinner';
 import HRModuleTabsNav from './components/HRModuleTabsNav';
 import HRBottomNav from './components/HRBottomNav';
 import EmployeeMasterSidebar from './components/EmployeeMasterSidebar';
+import EmployeeDirectoryTab from './components/EmployeeDirectoryTab';
 
 // Tab Detail Views
 import EmployeeProfileDetail from './components/EmployeeProfileDetail';
 import EmployeeOverviewTab from './components/EmployeeOverviewTab';
 import EmployeeContractHistoryTab from './components/EmployeeContractHistoryTab';
-import EmployeeTransferHistory from './components/EmployeeTransferHistory';
 import EmployeeTrainingTab from './components/EmployeeTrainingTab';
-import EmployeeAnalyticsTab from './components/EmployeeAnalyticsTab';
 import EmployeeSettingsTab from './components/EmployeeSettingsTab';
 
 // Modals
@@ -40,13 +39,14 @@ import TransferDecisionModal from './components/TransferDecisionModal';
 import AddTrainingModal from './components/AddTrainingModal';
 import EmployeeA4PrintModal from './components/EmployeeA4PrintModal';
 import OverviewDisplayConfigModal, { DEFAULT_OVERVIEW_DISPLAY_CONFIG } from './components/OverviewDisplayConfigModal';
+import QuickSelectEmployeeModal from './components/QuickSelectEmployeeModal';
+import { ArrowLeft, Users, User } from 'lucide-react';
 
 /**
  * EmployeesContainer: Bộ điều phối chính Phân hệ Quản trị Nhân sự
- * - Bố cục Master - Detail iPad 2 phần (Cột trái 4/12, Cột phải 8/12)
- * - Tích hợp phân quyền & cấu hình phạm vi xem danh bạ (Toàn Quỹ vs Cá nhân)
- * - Không mock data, 100% thời gian thực từ Cloud Firestore
- * - Không dùng font-mono, không dùng từ ngữ mang tính AI
+ * - Phân tầng rõ ràng: Menu Trên (Cấp Quản Trị Toàn Quỹ) vs Menu Dưới (Hồ Sơ Cán Bộ Chi Tiết)
+ * - Tách biệt Master - Detail trên Mobile: Không để danh sách 20-30 cán bộ đè lên trên hồ sơ
+ * - 100% thời gian thực từ Cloud Firestore, tuân thủ nghiêm ngặt chuẩn Quỹ TDND Yên Thọ
  */
 const EmployeesContainer = () => {
   const { currentUser, role } = useAuth();
@@ -93,12 +93,15 @@ const EmployeesContainer = () => {
   // Bộ lọc tìm kiếm Cán bộ Sidebar
   const [searchTerm, setSearchTerm] = useState('');
 
-  // URL State Sync: Mặc định OVERVIEW (nếu chưa chọn cán bộ) hoặc PROFILE (nếu đã truyền empId)
+  // URL State Sync
   const urlTab = searchParams.get('tab') || (searchParams.get('empId') ? 'PROFILE' : 'OVERVIEW');
   const urlEmpId = searchParams.get('empId') || '';
 
   const [activeTab, setActiveTabState] = useState(urlTab);
   const [selectedEmpId, setSelectedEmpIdState] = useState(urlEmpId);
+
+  // Modal đổi nhanh cán bộ trên Mobile
+  const [isQuickSelectModalOpen, setIsQuickSelectModalOpen] = useState(false);
 
   // Cấu hình hiển thị màn hình Tổng quan
   const [isDisplayConfigModalOpen, setIsDisplayConfigModalOpen] = useState(false);
@@ -170,7 +173,6 @@ const EmployeesContainer = () => {
     if (canManage || hrConfig?.allowStaffViewDirectory !== false) {
       return officialEmployees;
     }
-    // Nếu ở chế độ bảo mật cá nhân: Cán bộ chỉ thấy hồ sơ của mình
     const me = officialEmployees.find(
       (e) => e.id === currentUser?.uid || e.email === currentUser?.email
     );
@@ -181,7 +183,6 @@ const EmployeesContainer = () => {
   useEffect(() => {
     if (viewableEmployees.length > 0) {
       if (!selectedEmpId || !viewableEmployees.some((e) => e.id === selectedEmpId)) {
-        // Ưu tiên chọn tài khoản chính mình nếu thuộc danh bạ
         const me = viewableEmployees.find(
           (e) => e.id === currentUser?.uid || e.email === currentUser?.email
         );
@@ -208,9 +209,9 @@ const EmployeesContainer = () => {
           } else {
             next.delete('tab');
           }
-          if (selectedEmpId && activeTab !== 'OVERVIEW') {
+          if (selectedEmpId && activeTab === 'PROFILE') {
             next.set('empId', selectedEmpId);
-          } else if (activeTab === 'OVERVIEW') {
+          } else {
             next.delete('empId');
           }
           return next;
@@ -267,7 +268,7 @@ const EmployeesContainer = () => {
     };
   }, []);
 
-  // Cán bộ đang được chọn xem chi tiết (được tính toán trước để phục vụ On-Demand Subscription)
+  // Cán bộ đang được chọn xem chi tiết
   const currentEmp = useMemo(() => {
     return viewableEmployees.find((e) => e.id === selectedEmpId) || viewableEmployees[0] || null;
   }, [viewableEmployees, selectedEmpId]);
@@ -345,14 +346,9 @@ const EmployeesContainer = () => {
     setIsPrintModalOpen(true);
   }, []);
 
-  const handleSelectEmployeeForTransfer = useCallback((empId) => {
-    setSelectedEmpIdState(empId);
-    setActiveTabState('TRANSFERS');
-  }, []);
-
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-200">
-      {/* 1. Thanh Tab ngang chuyển nhanh trên Desktop/iPad */}
+      {/* 1. Menu Quản Trị Cấp Toàn Quỹ trên Desktop / iPad */}
       <HRModuleTabsNav
         activeTab={activeTab}
         onChangeTab={setActiveTabState}
@@ -365,139 +361,176 @@ const EmployeesContainer = () => {
           <Spinner text="Đang đồng bộ hồ sơ cán bộ từ cơ sở dữ liệu Cloud Firestore..." />
         </div>
       ) : (
-        /* 3. Bố cục Master - Detail iPad 2 phần */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* CỘT TRÁI (MASTER): Danh sách Cán bộ & Bộ lọc nhanh (Ẩn trên mobile khi ở tab OVERVIEW) */}
-          <div 
-            id="employee-master-sidebar"
-            className={`lg:col-span-4 xl:col-span-4 ${activeTab === 'OVERVIEW' ? 'hidden lg:block' : ''}`}
-          >
-            <EmployeeMasterSidebar
+        /* 3. Phân Phối Giao Diện Theo Từng Mục Quản Trị */
+        <div>
+          {/* TAB 1: TỔNG QUAN NHÂN SỰ TOÀN QUỸ */}
+          {activeTab === 'OVERVIEW' && (
+            <EmployeeOverviewTab
               employees={viewableEmployees}
-              selectedEmployeeId={selectedEmpId}
-              onSelectEmployee={(empId) => {
-                setSelectedEmpIdState(empId);
-                if (activeTab === 'OVERVIEW') {
-                  setActiveTabState('PROFILE');
-                }
-                if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                  setTimeout(() => {
-                    const el = document.getElementById('employee-detail-panel');
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 100);
-                }
-              }}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
+              departments={departments}
+              degrees={degrees}
+              contracts={contracts}
               hrConfig={hrConfig}
+              overviewDisplayConfig={overviewDisplayConfig}
+              onOpenDisplayConfigModal={() => setIsDisplayConfigModalOpen(true)}
+              onSelectEmployeeForProfile={handleSelectEmployeeForProfile}
+            />
+          )}
+
+          {/* TAB 2: DANH BẠ CÁN BỘ TOÀN QUỸ */}
+          {activeTab === 'DIRECTORY' && (
+            <EmployeeDirectoryTab
+              employees={viewableEmployees}
+              departments={departments}
+              selectedEmployeeId={selectedEmpId}
+              onSelectEmployee={handleSelectEmployeeForProfile}
               onOpenAddModal={handleOpenAdd}
               canManage={canManage}
+              hrConfig={hrConfig}
             />
-          </div>
+          )}
 
-          {/* CỘT PHẢI (DETAIL): Nội dung chi tiết theo từng Tab */}
-          <div id="employee-detail-panel" className="lg:col-span-8 xl:col-span-8">
-            {/* Thanh điều hướng mini trên Mobile khi xem chi tiết cá nhân */}
-            {activeTab !== 'OVERVIEW' && activeTab !== 'SETTINGS' && currentEmp && (
-              <div className="block lg:hidden bg-white rounded-2xl border border-slate-200/90 p-3 mb-3.5 shadow-2xs">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 border border-emerald-200 overflow-hidden">
-                      {currentEmp.avatar ? (
-                        <img src={currentEmp.avatar} alt={currentEmp.name} className="w-full h-full object-cover" />
-                      ) : (
-                        currentEmp.name?.charAt(0) || 'C'
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-black text-slate-900 truncate">
-                        {currentEmp.name}
-                      </div>
-                      <div className="text-[10px] text-slate-500 truncate">
-                        {currentEmp.position} • {currentEmp.department}
-                      </div>
-                    </div>
-                  </div>
+          {/* TAB 3: HỒ SƠ CÁN BỘ CHI TIẾT (Decoupled Master-Detail) */}
+          {activeTab === 'PROFILE' && (
+            <div>
+              {/* TRÊN MOBILE: Ẩn hoàn toàn danh sách 20-30 cán bộ đè lên trên hồ sơ */}
+              <div className="block lg:hidden space-y-3 mb-3.5">
+                <div className="bg-white rounded-2xl border border-slate-200/90 p-3 shadow-2xs flex items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      const el = document.getElementById('employee-master-sidebar');
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }}
-                    className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 shrink-0 cursor-pointer active:scale-95 transition-all"
+                    onClick={() => setActiveTabState('DIRECTORY')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95"
+                    title="Quay lại danh bạ cán bộ"
                   >
-                    Đổi cán bộ ↑
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Danh bạ cán bộ</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickSelectModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95"
+                    title="Đổi nhanh sang cán bộ khác"
+                  >
+                    <Users className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Đổi cán bộ</span>
                   </button>
                 </div>
               </div>
-            )}
 
-            {activeTab === 'OVERVIEW' && (
-              <EmployeeOverviewTab
-                employees={viewableEmployees}
-                departments={departments}
-                degrees={degrees}
-                contracts={contracts}
-                hrConfig={hrConfig}
-                overviewDisplayConfig={overviewDisplayConfig}
-                onOpenDisplayConfigModal={() => setIsDisplayConfigModalOpen(true)}
-                onSelectEmployeeForProfile={handleSelectEmployeeForProfile}
-              />
-            )}
+              {/* BỐ CỤC MASTER - DETAIL TRÊN DESKTOP */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                {/* CỘT TRÁI (MASTER): Danh sách Cán bộ (Chỉ hiển thị trên màn hình lớn Desktop) */}
+                <div 
+                  id="employee-master-sidebar"
+                  className="hidden lg:block lg:col-span-4 xl:col-span-4"
+                >
+                  <EmployeeMasterSidebar
+                    employees={viewableEmployees}
+                    selectedEmployeeId={selectedEmpId}
+                    onSelectEmployee={(empId) => {
+                      setSelectedEmpIdState(empId);
+                    }}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    hrConfig={hrConfig}
+                    onOpenAddModal={handleOpenAdd}
+                    canManage={canManage}
+                  />
+                </div>
 
-            {activeTab === 'PROFILE' && (
-              <EmployeeProfileDetail
-                emp={currentEmp}
-                onOpenEdit={handleOpenEdit}
-                onOpenPrint={handleOpenPrint}
-                onDeleteSuccess={(deletedId) => {
-                  const remaining = viewableEmployees.filter((e) => e.id !== deletedId);
-                  if (remaining.length > 0) {
-                    setSelectedEmpIdState(remaining[0].id);
-                  }
-                }}
-                workHistory={workHistory}
-                trainings={trainings}
-                degrees={degrees}
-                socials={socials}
-                canManage={canManage}
-                hrConfig={hrConfig}
-                departments={departments}
-                positions={positions}
-              />
-            )}
+                {/* CỘT PHẢI (DETAIL): Hồ Sơ Chi Tiết 4 Tab Của Cán Bộ Được Chọn */}
+                <div id="employee-detail-panel" className="lg:col-span-8 xl:col-span-8">
+                  <EmployeeProfileDetail
+                    emp={currentEmp}
+                    onOpenEdit={handleOpenEdit}
+                    onOpenPrint={handleOpenPrint}
+                    onDeleteSuccess={(deletedId) => {
+                      const remaining = viewableEmployees.filter((e) => e.id !== deletedId);
+                      if (remaining.length > 0) {
+                        setSelectedEmpIdState(remaining[0].id);
+                      } else {
+                        setActiveTabState('DIRECTORY');
+                      }
+                    }}
+                    workHistory={workHistory}
+                    trainings={trainings}
+                    degrees={degrees}
+                    socials={socials}
+                    canManage={canManage}
+                    hrConfig={hrConfig}
+                    departments={departments}
+                    positions={positions}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
-            {(activeTab === 'CONTRACTS' || activeTab === 'TRANSFERS') && (
-              <EmployeeContractHistoryTab
-                emp={currentEmp}
-                contracts={contracts}
-                contractAnnexes={contractAnnexes}
-                workHistory={workHistory}
-                hrConfig={hrConfig}
-                departments={departments}
-                positions={positions}
-                canManage={canManage}
-              />
-            )}
+          {/* TAB 4: CẤU HÌNH & PHÂN QUYỀN PHÂN HỆ */}
+          {activeTab === 'SETTINGS' && canManage && (
+            <EmployeeSettingsTab
+              departments={departments}
+              positions={positions}
+              hrConfig={hrConfig}
+              canManage={canManage}
+            />
+          )}
 
-            {activeTab === 'TRAINING' && (
-              <EmployeeTrainingTab
-                emp={currentEmp}
-                trainings={trainings}
-                onOpenAddTraining={handleOpenAddTraining}
-                canManage={canManage}
-              />
-            )}
+          {/* CÁC TAB TƯƠNG THÍCH NGƯỢC (CONTRACTS, TRAINING) NẾU ĐƯỢC GỌI TỪ URL CŨ */}
+          {(activeTab === 'CONTRACTS' || activeTab === 'TRANSFERS') && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4">
+                <EmployeeMasterSidebar
+                  employees={viewableEmployees}
+                  selectedEmployeeId={selectedEmpId}
+                  onSelectEmployee={(empId) => setSelectedEmpIdState(empId)}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  hrConfig={hrConfig}
+                  onOpenAddModal={handleOpenAdd}
+                  canManage={canManage}
+                />
+              </div>
+              <div className="lg:col-span-8">
+                <EmployeeContractHistoryTab
+                  emp={currentEmp}
+                  contracts={contracts}
+                  contractAnnexes={contractAnnexes}
+                  workHistory={workHistory}
+                  hrConfig={hrConfig}
+                  departments={departments}
+                  positions={positions}
+                  canManage={canManage}
+                />
+              </div>
+            </div>
+          )}
 
-            {activeTab === 'SETTINGS' && canManage && (
-              <EmployeeSettingsTab
-                departments={departments}
-                positions={positions}
-                hrConfig={hrConfig}
-                canManage={canManage}
-              />
-            )}
-          </div>
+          {activeTab === 'TRAINING' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4">
+                <EmployeeMasterSidebar
+                  employees={viewableEmployees}
+                  selectedEmployeeId={selectedEmpId}
+                  onSelectEmployee={(empId) => setSelectedEmpIdState(empId)}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  hrConfig={hrConfig}
+                  onOpenAddModal={handleOpenAdd}
+                  canManage={canManage}
+                />
+              </div>
+              <div className="lg:col-span-8">
+                <EmployeeTrainingTab
+                  emp={currentEmp}
+                  trainings={trainings}
+                  onOpenAddTraining={handleOpenAddTraining}
+                  canManage={canManage}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -508,7 +541,21 @@ const EmployeesContainer = () => {
         canManage={canManage}
       />
 
-      {/* 5. Các Modal Nghiệp Vụ */}
+      {/* 5. Modal Đổi Nhanh Cán Bộ (Mobile & Tablet) */}
+      {isQuickSelectModalOpen && (
+        <QuickSelectEmployeeModal
+          isOpen={isQuickSelectModalOpen}
+          onClose={() => setIsQuickSelectModalOpen(false)}
+          employees={viewableEmployees}
+          selectedEmployeeId={selectedEmpId}
+          onSelectEmployee={(empId) => {
+            setSelectedEmpIdState(empId);
+            setActiveTabState('PROFILE');
+          }}
+        />
+      )}
+
+      {/* 6. Các Modal Nghiệp Vụ */}
       {isFormModalOpen && (
         <EmployeeFormModal
           isOpen={isFormModalOpen}

@@ -1,15 +1,14 @@
 import React from 'react';
 import { 
   Building2,
+  Users,
   UserCheck, 
-  FileText, 
-  GraduationCap, 
   Sliders 
 } from 'lucide-react';
 
 /**
- * HRModuleTabsNav: Thanh Menu Tab chuyển nhanh phân hệ Quản trị Nhân sự trên Desktop / iPad
- * Chuẩn hóa 5 phân khu chức năng mạch lạc theo nghiệp vụ Quỹ tín dụng nhân dân
+ * HRModuleTabsNav: Thanh Menu Tab cấp Quản Trị Phân Hệ trên Desktop / iPad
+ * Tách biệt rõ ràng Menu Quản Trị Cấp Toàn Quỹ với Menu Hồ Sơ Chi Tiết Cán Bộ
  */
 const HRModuleTabsNav = ({
   activeTab,
@@ -18,17 +17,25 @@ const HRModuleTabsNav = ({
 }) => {
   const tabs = [
     { id: 'OVERVIEW', label: 'Tổng quan nhân sự', icon: Building2, show: true },
-    { id: 'PROFILE', label: 'Thông tin nhân sự', icon: UserCheck, show: true },
-    { id: 'CONTRACTS', label: 'Hợp đồng & Luân chuyển', icon: FileText, show: true },
-    { id: 'TRAINING', label: 'Đào tạo & Chứng chỉ', icon: GraduationCap, show: true },
+    { id: 'DIRECTORY', label: 'Danh bạ cán bộ', icon: Users, show: true },
+    { id: 'PROFILE', label: 'Hồ sơ cán bộ', icon: UserCheck, show: true },
     { id: 'SETTINGS', label: 'Cấu hình & Phân quyền', icon: Sliders, show: canManage },
   ].filter((t) => t.show);
+
+  // Xử lý active tab bao gồm cả các alias tương thích ngược (CONTRACTS, TRAINING -> PROFILE)
+  const isTabActive = (tabId) => {
+    if (activeTab === tabId) return true;
+    if (tabId === 'PROFILE' && (activeTab === 'CONTRACTS' || activeTab === 'TRAINING' || activeTab === 'TRANSFERS')) {
+      return true;
+    }
+    return false;
+  };
 
   return (
     <div className="hidden md:flex flex-wrap items-center gap-2 pb-1">
       {tabs.map((tab) => {
         const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
+        const isActive = isTabActive(tab.id);
         return (
           <button
             key={tab.id}

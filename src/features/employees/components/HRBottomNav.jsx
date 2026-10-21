@@ -1,15 +1,14 @@
 import React from 'react';
 import { 
   Building2,
+  Users,
   UserCheck, 
-  FileText, 
-  GraduationCap, 
   Sliders 
 } from 'lucide-react';
 
 /**
- * HRBottomNav: Thanh điều hướng cố định dưới đáy màn hình trên Di động
- * Tối ưu thao tác 1 chạm bằng ngón tay cái, tự động ẩn trên Desktop/iPad
+ * HRBottomNav: Thanh điều hướng cấp Quản trị cố định dưới đáy màn hình trên Di động
+ * Tối ưu thao tác 1 chạm ngón tay cái, khử hoàn toàn trùng lặp với menu chi tiết hồ sơ
  */
 const HRBottomNav = ({
   activeTab = 'OVERVIEW',
@@ -18,11 +17,18 @@ const HRBottomNav = ({
 }) => {
   const navItems = [
     { id: 'OVERVIEW', label: 'Tổng quan', icon: Building2, visible: true },
+    { id: 'DIRECTORY', label: 'Danh bạ', icon: Users, visible: true },
     { id: 'PROFILE', label: 'Hồ sơ', icon: UserCheck, visible: true },
-    { id: 'CONTRACTS', label: 'Hợp đồng', icon: FileText, visible: true },
-    { id: 'TRAINING', label: 'Đào tạo', icon: GraduationCap, visible: true },
     { id: 'SETTINGS', label: 'Cấu hình', icon: Sliders, visible: canManage },
   ].filter((item) => item.visible);
+
+  const isItemActive = (id) => {
+    if (activeTab === id) return true;
+    if (id === 'PROFILE' && (activeTab === 'CONTRACTS' || activeTab === 'TRAINING' || activeTab === 'TRANSFERS')) {
+      return true;
+    }
+    return false;
+  };
 
   return (
     <div 
@@ -31,7 +37,7 @@ const HRBottomNav = ({
     >
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {navItems.map((item) => {
-          const isActive = activeTab === item.id;
+          const isActive = isItemActive(item.id);
           const Icon = item.icon;
 
           return (

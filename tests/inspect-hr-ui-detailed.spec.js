@@ -239,4 +239,58 @@ test.describe('Kiểm tra Chi Tiết Giao Diện Phân Hệ Quản Trị Nhân S
 
     await scanForbiddenWords(page, 'Giao diện Mobile');
   });
+
+  test('07. Kiểm tra Màn hình Danh Bạ Cán Bộ & Điều Hướng Master-Detail Trực Quan', async ({ page }) => {
+    await loginAsAdmin(page);
+
+    // 1. Kiểm tra màn hình Danh bạ Cán bộ trên Desktop
+    await page.goto('/employees?tab=DIRECTORY');
+    await page.waitForLoadState('domcontentloaded');
+    await dismissReminders(page);
+
+    await expect(page.getByRole('heading', { name: /Danh Bạ Cán Bộ Nhân Viên/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByPlaceholder(/Tìm theo họ tên, chức danh, phòng ban/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Tất cả \(\d+\)/i })).toBeVisible();
+
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '10_desktop_tab_directory.png'), fullPage: true });
+
+    // 2. Chạm chọn một thẻ cán bộ bất kỳ để chuyển thẳng sang Hồ sơ chi tiết
+    const firstEmpCard = page.locator('div[class*="cursor-pointer"]').filter({ hasText: /Xem hồ sơ chi tiết/i }).first();
+    await expect(firstEmpCard).toBeVisible();
+    await firstEmpCard.click();
+    await page.waitForTimeout(500);
+
+    // Xác nhận đã chuyển sang màn hình Hồ sơ cá nhân với 4 sub-tabs
+    await expect(page.getByText(/1\. THÔNG TIN CÁ NHÂN & LIÊN HỆ/i)).toBeVisible({ timeout: 10000 });
+
+    // 3. Kiểm tra trên Mobile: Đảm bảo Danh sách 30 người không che khuất Hồ sơ chi tiết
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/employees?tab=PROFILE');
+    await page.waitForLoadState('domcontentloaded');
+    await dismissReminders(page);
+
+    // Nút "Danh bạ cán bộ" và "Đổi cán bộ" trên Mobile phải hiển thị rõ ràng
+    const backBtn = page.getByRole('button', { name: /Danh bạ cán bộ/i });
+    await expect(backBtn).toBeVisible({ timeout: 10000 });
+    const quickSelectBtn = page.getByRole('button', { name: /Đổi cán bộ/i });
+    await expect(quickSelectBtn).toBeVisible();
+
+    // Mở Modal Đổi nhanh cán bộ trên mobile
+    await quickSelectBtn.click();
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('heading', { name: /Chọn Cán Bộ Nhân Viên/i })).toBeVisible();
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '11_mobile_modal_quick_select.png') });
+
+    // Đóng Modal đổi cán bộ
+    await page.getByRole('button', { name: /Đóng cửa sổ/i }).first().click();
+    await page.waitForTimeout(300);
+
+    // Bấm nút "Danh bạ cán bộ" để quay lại danh bạ toàn Quỹ
+    await backBtn.click();
+    await page.waitForTimeout(400);
+    await expect(page.getByRole('heading', { name: /Danh Bạ Cán Bộ Nhân Viên/i })).toBeVisible({ timeout: 10000 });
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '12_mobile_tab_directory.png'), fullPage: true });
+
+    await scanForbiddenWords(page, 'Màn hình Danh bạ cán bộ');
+  });
 });
