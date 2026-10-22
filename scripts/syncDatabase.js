@@ -31,6 +31,11 @@ import {
   DEFAULT_EMPLOYEE_SOCIALS,
   DEFAULT_EMPLOYEE_CONTRACTS,
   DEFAULT_CONTRACT_ANNEXES,
+  DEFAULT_WORK_LOCATIONS,
+  DEFAULT_CREDIT_AREAS,
+  DEFAULT_KPI_CRITERIA_CATALOG,
+  DEFAULT_KPI_CRITERIA_GROUPS,
+  DEFAULT_KPI_PERIODS,
 } from '../src/lib/systemDefaults.js';
 import { SYSTEM_MODULES, ROLE_PERMISSIONS } from '../src/lib/permissions.js';
 
@@ -38,7 +43,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const CURRENT_SCHEMA_VERSION = '2026.10.16_v6.0_modular_services_and_contract_management';
+const CURRENT_SCHEMA_VERSION = '2026.10.22_v6.3_dynamic_criteria_groups_and_kpi_periods';
 
 const CORE_COLLECTIONS = [
   'accounts',
@@ -63,11 +68,16 @@ const CORE_COLLECTIONS = [
   'evaluations_planning',
   'employee_training',
   'employee_kpi_history',
+  'work_locations',
+  'credit_areas',
+  'kpi_criteria',
+  'kpi_criteria_groups',
+  'kpi_periods',
 ];
 
 async function runAutoSync() {
   console.log('\n=============================================================');
-  console.log('🔄 ĐANG TỰ ĐỒNG BỘ CSDL FIRESTORE LÊN PHIÊN BẢN V6.0...');
+  console.log(`🔄 ĐANG TỰ ĐỒNG BỘ CSDL FIRESTORE LÊN PHIÊN BẢN ${CURRENT_SCHEMA_VERSION}...`);
   console.log('=============================================================\n');
 
   // Đăng nhập tài khoản Quản trị viên
@@ -262,8 +272,58 @@ async function runAutoSync() {
     syncStats.success++;
   }
 
-  // 16. system_metadata
-  console.log('16. Ghi nhận Schema Version hoàn tất vào system_metadata...');
+  // 16. work_locations
+  console.log('16. Đồng bộ Điểm làm việc & Trụ sở hoạt động (work_locations)...');
+  let locSuccess = 0;
+  for (const loc of DEFAULT_WORK_LOCATIONS) {
+    const res = await safeSet('work_locations', loc.id, loc);
+    if (res === true) locSuccess++;
+  }
+  console.log(`  ✓ Đã nạp ${locSuccess} điểm làm việc & trụ sở hoạt động.`);
+  syncStats.success++;
+
+  // 17. credit_areas
+  console.log('17. Đồng bộ Địa bàn quản lý tín dụng CBTD (credit_areas)...');
+  let areaSuccess = 0;
+  for (const area of DEFAULT_CREDIT_AREAS) {
+    const res = await safeSet('credit_areas', area.id, area);
+    if (res === true) areaSuccess++;
+  }
+  console.log(`  ✓ Đã nạp ${areaSuccess} địa bàn quản lý tín dụng.`);
+  syncStats.success++;
+
+  // 18. kpi_criteria
+  console.log('18. Đồng bộ Danh mục Tiêu chí Đánh giá KPI động (kpi_criteria)...');
+  let kpiSuccess = 0;
+  for (const crit of DEFAULT_KPI_CRITERIA_CATALOG) {
+    const res = await safeSet('kpi_criteria', crit.id, crit);
+    if (res === true) kpiSuccess++;
+  }
+  console.log(`  ✓ Đã nạp ${kpiSuccess} tiêu chí đánh giá KPI động.`);
+  syncStats.success++;
+
+  // 18b. kpi_criteria_groups
+  console.log('18b. Đồng bộ Danh mục Nhóm Tiêu chí KPI động (kpi_criteria_groups)...');
+  let grpSuccess = 0;
+  for (const grp of DEFAULT_KPI_CRITERIA_GROUPS) {
+    const res = await safeSet('kpi_criteria_groups', grp.id, grp);
+    if (res === true) grpSuccess++;
+  }
+  console.log(`  ✓ Đã nạp ${grpSuccess} nhóm tiêu chí KPI động.`);
+  syncStats.success++;
+
+  // 18c. kpi_periods
+  console.log('18c. Đồng bộ Danh mục Kỳ chấm điểm KPI (kpi_periods)...');
+  let perSuccess = 0;
+  for (const per of DEFAULT_KPI_PERIODS) {
+    const res = await safeSet('kpi_periods', per.id, per);
+    if (res === true) perSuccess++;
+  }
+  console.log(`  ✓ Đã nạp ${perSuccess} kỳ chấm điểm KPI (tháng & quý).`);
+  syncStats.success++;
+
+  // 19. system_metadata
+  console.log('19. Ghi nhận Schema Version hoàn tất vào system_metadata...');
   await safeSet('system_metadata', 'schema', {
     version: CURRENT_SCHEMA_VERSION,
     status: 'HEALTHY',

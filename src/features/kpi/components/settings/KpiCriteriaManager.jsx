@@ -17,6 +17,7 @@ import { useToast } from '../../../../context/ToastContext';
  */
 const KpiCriteriaManager = ({
   criteriaList = [],
+  groups = [],
   departments = [],
   canManage = false,
   onRefresh
@@ -45,13 +46,18 @@ const KpiCriteriaManager = ({
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Danh mục nhóm tiêu chí chuẩn
-  const CATEGORIES = [
-    'Kinh doanh & Nghiệp vụ',
-    'Quản trị Rủi ro & An toàn',
-    'Kỷ luật & Văn hóa',
-    'Sáng kiến & Đóng góp'
-  ];
+  // Danh mục nhóm tiêu chí động (lấy từ kpi_criteria_groups)
+  const CATEGORIES = useMemo(() => {
+    if (groups && groups.length > 0) {
+      return groups.filter((g) => g.isActive !== false).map((g) => g.name || g);
+    }
+    return [
+      'Kinh doanh & Nghiệp vụ',
+      'Quản trị Rủi ro & An toàn',
+      'Kỷ luật & Văn hóa',
+      'Sáng kiến & Đóng góp'
+    ];
+  }, [groups]);
 
   const deptOptions = useMemo(() => {
     const list = departments.length > 0 
@@ -74,7 +80,7 @@ const KpiCriteriaManager = ({
     setEditingItem(null);
     setCode(`TC_${String(criteriaList.length + 1).padStart(2, '0')}`);
     setName('');
-    setCategory('Kinh doanh & Nghiệp vụ');
+    setCategory(CATEGORIES[0] || 'Kinh doanh & Nghiệp vụ');
     setDepartment('Tất cả');
     setMaxScore(15);
     setWeight(15);

@@ -2154,3 +2154,154 @@ export const DEFAULT_KPI_CRITERIA_CATALOG = [
     isActive: true,
   },
 ];
+
+// ============================================================================
+// 13. DANH MỤC NHÓM TIÊU CHÍ KPI ĐỘNG (kpi_criteria_groups)
+// ============================================================================
+// Mỗi nhóm tiêu chí là một tập hợp các tiêu chí cùng lĩnh vực đánh giá.
+// Người dùng có thể thêm mới, sửa đổi hoặc xóa nhóm từ giao diện.
+// Tổng trọng số tất cả các nhóm nên bằng 100 điểm.
+// ============================================================================
+export const DEFAULT_KPI_CRITERIA_GROUPS = [
+  {
+    id: 'grp-kd-nv',
+    code: 'GR01',
+    name: 'Kinh doanh & Nghiệp vụ',
+    maxScore: 40,
+    order: 1,
+    isActive: true,
+    description: 'Mức độ hoàn thành kế hoạch dư nợ, huy động vốn, phát triển thành viên, xử lý hồ sơ vay vốn và an toàn kho quỹ.',
+    applyTo: 'Tất cả',
+    color: 'emerald',
+  },
+  {
+    id: 'grp-rr-at',
+    code: 'GR02',
+    name: 'Quản trị Rủi ro & An toàn',
+    maxScore: 30,
+    order: 2,
+    isActive: true,
+    description: 'Kiểm soát nợ xấu, nợ quá hạn, đảm bảo an toàn tuyệt đối tiền mặt và kho quỹ, chấp hành quy trình kiểm tra sau vay.',
+    applyTo: 'Tất cả',
+    color: 'blue',
+  },
+  {
+    id: 'grp-kl-vh',
+    code: 'GR03',
+    name: 'Kỷ luật & Văn hóa',
+    maxScore: 15,
+    order: 3,
+    isActive: true,
+    description: 'Chấp hành nghiêm giờ giấc làm việc, đồng phục, văn hóa giao tiếp thành viên và tinh thần đoàn kết nội bộ.',
+    applyTo: 'Tất cả',
+    color: 'amber',
+  },
+  {
+    id: 'grp-sk-dg',
+    code: 'GR04',
+    name: 'Sáng kiến & Đóng góp',
+    maxScore: 15,
+    order: 4,
+    isActive: true,
+    description: 'Tích cực học tập nâng cao nghiệp vụ, có sáng kiến cải tiến quy trình công tác và tham gia đoàn thể.',
+    applyTo: 'Tất cả',
+    color: 'violet',
+  },
+];
+
+// ============================================================================
+// 14. DANH MỤC KỲ CHẤM ĐIỂM KPI (kpi_periods)
+// ============================================================================
+// Kỳ KPI độc lập với evaluation_periods (dùng cho tín nhiệm).
+// Mỗi kỳ tháng có thể liên kết với kỳ quý để tổng hợp.
+// type: 'MONTHLY' (kỳ tháng - primary unit) | 'QUARTERLY' (kỳ quý - tổng hợp)
+// status: 'UPCOMING' | 'ACTIVE' | 'CLOSED'
+// ============================================================================
+export const DEFAULT_KPI_PERIODS = [
+  // --- Kỳ Tháng 10/2026 ---
+  {
+    id: 'kpi-2026-10',
+    name: 'Tháng 10 / 2026',
+    type: 'MONTHLY',
+    month: 10,
+    quarter: 4,
+    year: 2026,
+    status: 'ACTIVE',
+    startDate: '2026-10-01',
+    endDate: '2026-10-31',
+    selfDeadline: '2026-11-05',
+    managerDeadline: '2026-11-08',
+    chairmanDeadline: '2026-11-10',
+    participantScope: 'ALL',
+    participantIds: [],
+    quarterSummaryPeriodId: 'kpi-2026-q4',
+    notes: 'Kỳ chấm điểm KPI tháng 10 năm 2026',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  },
+  // --- Kỳ Tháng 9/2026 ---
+  {
+    id: 'kpi-2026-09',
+    name: 'Tháng 9 / 2026',
+    type: 'MONTHLY',
+    month: 9,
+    quarter: 3,
+    year: 2026,
+    status: 'CLOSED',
+    startDate: '2026-09-01',
+    endDate: '2026-09-30',
+    selfDeadline: '2026-10-05',
+    managerDeadline: '2026-10-08',
+    chairmanDeadline: '2026-10-10',
+    participantScope: 'ALL',
+    participantIds: [],
+    quarterSummaryPeriodId: 'kpi-2026-q3',
+    notes: 'Kỳ chấm điểm KPI tháng 9 năm 2026',
+    createdAt: '2026-09-01T00:00:00.000Z',
+    updatedAt: '2026-10-10T00:00:00.000Z',
+  },
+  // --- Kỳ Quý III / 2026 (Tổng hợp Q3: T7, T8, T9) ---
+  {
+    id: 'kpi-2026-q3',
+    name: 'Quý III / 2026',
+    type: 'QUARTERLY',
+    month: null,
+    quarter: 3,
+    year: 2026,
+    status: 'CLOSED',
+    startDate: '2026-07-01',
+    endDate: '2026-09-30',
+    selfDeadline: '2026-10-12',
+    managerDeadline: '2026-10-15',
+    chairmanDeadline: '2026-10-20',
+    participantScope: 'ALL',
+    participantIds: [],
+    quarterSummaryPeriodId: null,
+    monthlyPeriodIds: ['kpi-2026-07', 'kpi-2026-08', 'kpi-2026-09'],
+    notes: 'Tổng hợp điểm KPI Quý III năm 2026 (Tháng 7, 8, 9)',
+    createdAt: '2026-07-01T00:00:00.000Z',
+    updatedAt: '2026-10-20T00:00:00.000Z',
+  },
+  // --- Kỳ Quý IV / 2026 (Tổng hợp Q4: T10, T11, T12) ---
+  {
+    id: 'kpi-2026-q4',
+    name: 'Quý IV / 2026',
+    type: 'QUARTERLY',
+    month: null,
+    quarter: 4,
+    year: 2026,
+    status: 'UPCOMING',
+    startDate: '2026-10-01',
+    endDate: '2026-12-31',
+    selfDeadline: '2027-01-07',
+    managerDeadline: '2027-01-10',
+    chairmanDeadline: '2027-01-15',
+    participantScope: 'ALL',
+    participantIds: [],
+    quarterSummaryPeriodId: null,
+    monthlyPeriodIds: ['kpi-2026-10', 'kpi-2026-11', 'kpi-2026-12'],
+    notes: 'Tổng hợp điểm KPI Quý IV năm 2026 (Tháng 10, 11, 12)',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  },
+];

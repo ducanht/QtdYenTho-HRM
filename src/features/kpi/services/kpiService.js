@@ -25,6 +25,7 @@ import {
 import { db } from '../../../lib/firebase';
 import { generateUUID } from '../../../lib/evaluationUtils';
 import { DEFAULT_KPI_CRITERIA_CATALOG } from '../../../lib/systemDefaults';
+import { DEFAULT_KPI_CRITERIA_GROUPS, DEFAULT_KPI_PERIODS } from '../../../lib/systemDefaults';
 
 /**
  * 4 Nhóm Tiêu chí KPI Chuẩn Mực Ngành Quỹ Tín Dụng Nhân Dân (Tổng 100 điểm)
@@ -750,6 +751,285 @@ export const getKpiSummaryStats = (kpiList = []) => {
     leaderboard,
     gapAnalysis
   };
+};
+
+// ============================================================================
+// NHÓM TIÊU CHÍ KPI ĐỘNG (kpi_criteria_groups)
+// ============================================================================
+
+/**
+ * Lắng nghe danh mục Nhóm Tiêu chí KPI động theo thời gian thực (kpi_criteria_groups)
+ */
+export const subscribeKpiCriteriaGroups = (callback) => {
+  if (!db) {
+    callback(DEFAULT_KPI_CRITERIA_GROUPS);
+    return () => {};
+  }
+
+  try {
+    const q = query(collection(db, 'kpi_criteria_groups'), orderBy('order', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (snapshot.empty) {
+          callback(DEFAULT_KPI_CRITERIA_GROUPS);
+        } else {
+          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          callback(list);
+        }
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot kpi_criteria_groups:', error);
+        callback(DEFAULT_KPI_CRITERIA_GROUPS);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot kpi_criteria_groups:', err);
+    callback(DEFAULT_KPI_CRITERIA_GROUPS);
+    return () => {};
+  }
+};
+
+/**
+ * Lưu hoặc cập nhật một Nhóm Tiêu chí KPI (kpi_criteria_groups)
+ */
+export const saveKpiCriteriaGroup = async (groupData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const targetId = groupData.id || `grp_${generateUUID()}`;
+  const payload = {
+    ...groupData,
+    id: targetId,
+    maxScore: Number(groupData.maxScore) || 10,
+    order: Number(groupData.order) || 1,
+    isActive: groupData.isActive !== false,
+    updatedAt: new Date().toISOString(),
+  };
+  await setDoc(doc(db, 'kpi_criteria_groups', targetId), payload, { merge: true });
+  return { success: true, id: targetId };
+};
+
+/**
+ * Xóa một Nhóm Tiêu chí KPI (Chỉ Admin / HĐQT)
+ */
+export const deleteKpiCriteriaGroup = async (groupId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await deleteDoc(doc(db, 'kpi_criteria_groups', groupId));
+  return { success: true };
+};
+
+// ============================================================================
+// KỲ CHẤM ĐIỂM KPI (kpi_periods)
+// ============================================================================
+
+/**
+ * Lắng nghe danh mục Kỳ chấm điểm KPI theo thời gian thực (kpi_periods)
+ * @param {Function} callback
+ * @param {'MONTHLY'|'QUARTERLY'|null} typeFilter - Lọc theo loại kỳ (null = tất cả)
+ */
+export const subscribeKpiPeriods = (callback, typeFilter = null) => {
+  if (!db) {
+    const fallback = typeFilter
+      ? DEFAULT_KPI_PERIODS.filter((p) => p.type === typeFilter)
+      : DEFAULT_KPI_PERIODS;
+    callback(fallback);
+    return () => {};
+  }
+
+  try {
+    let q;
+    if (typeFilter) {
+      q = query(
+        collection(db, 'kpi_periods'),
+        where('type', '==', typeFilter),
+        orderBy('year', 'desc'),
+        orderBy('month', 'desc')
+      );
+    } else {
+      q = query(collection(db, 'kpi_periods'), orderBy('year', 'desc'));
+    }
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (snapshot.empty) {
+          const fallback = typeFilter
+            ? DEFAULT_KPI_PERIODS.filter((p) => p.type === typeFilter)
+            : DEFAULT_KPI_PERIODS;
+          callback(fallback);
+        } else {
+          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          callback(list);
+        }
+      },
+      (error) => {
+        console.error('Lỗi onSnapshot kpi_periods:', error);
+        callback(typeFilter ? DEFAULT_KPI_PERIODS.filter((p) => p.type === typeFilter) : DEFAULT_KPI_PERIODS);
+      }
+    );
+  } catch (err) {
+    console.error('Lỗi thiết lập onSnapshot kpi_periods:', err);
+    callback(typeFilter ? DEFAULT_KPI_PERIODS.filter((p) => p.type === typeFilter) : DEFAULT_KPI_PERIODS);
+    return () => {};
+  }
+};
+
+/**
+ * Lưu hoặc cập nhật một Kỳ chấm điểm KPI (kpi_periods)
+ */
+export const saveKpiPeriod = async (periodData) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+
+  const type = periodData.type || 'MONTHLY';
+  // Sinh ID tự động dựa theo năm/tháng/quý nếu chưa có
+  let targetId = periodData.id;
+  if (!targetId) {
+    if (type === 'MONTHLY') {
+      const m = String(periodData.month || 1).padStart(2, '0');
+      targetId = `kpi-${periodData.year || new Date().getFullYear()}-${m}`;
+    } else {
+      targetId = `kpi-${periodData.year || new Date().getFullYear()}-q${periodData.quarter || 1}`;
+    }
+  }
+
+  const payload = {
+    ...periodData,
+    id: targetId,
+    type,
+    year: Number(periodData.year) || new Date().getFullYear(),
+    month: periodData.month ? Number(periodData.month) : null,
+    quarter: periodData.quarter ? Number(periodData.quarter) : null,
+    status: periodData.status || 'UPCOMING',
+    participantScope: periodData.participantScope || 'ALL',
+    participantIds: periodData.participantIds || [],
+    updatedAt: new Date().toISOString(),
+  };
+
+  await setDoc(doc(db, 'kpi_periods', targetId), payload, { merge: true });
+  return { success: true, id: targetId };
+};
+
+/**
+ * Xóa một Kỳ chấm điểm KPI (Chỉ Admin / HĐQT)
+ */
+export const deleteKpiPeriod = async (periodId) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  await deleteDoc(doc(db, 'kpi_periods', periodId));
+  return { success: true };
+};
+
+/**
+ * Cập nhật trạng thái Kỳ chấm điểm KPI (UPCOMING → ACTIVE → CLOSED)
+ */
+export const updateKpiPeriodStatus = async (periodId, newStatus) => {
+  if (!db) throw new Error('Firestore chưa được kết nối');
+  const validStatuses = ['UPCOMING', 'ACTIVE', 'CLOSED'];
+  if (!validStatuses.includes(newStatus)) {
+    throw new Error(`Trạng thái không hợp lệ: ${newStatus}. Chấp nhận: ${validStatuses.join(', ')}`);
+  }
+  await updateDoc(doc(db, 'kpi_periods', periodId), {
+    status: newStatus,
+    updatedAt: new Date().toISOString(),
+  });
+  return { success: true };
+};
+
+/**
+ * Tổng hợp điểm KPI hàng tháng thành kỳ Quý
+ * Tính điểm trung bình từ các tháng trong quý đã hoàn tất
+ * @param {string} quarterPeriodId - ID của kỳ quý tổng hợp
+ * @param {Array} monthlyKpiList - Danh sách phiếu KPI của các tháng trong quý
+ */
+export const getKpiMonthlyToQuarterlySummary = (quarterPeriodId, monthlyKpiList = []) => {
+  if (!Array.isArray(monthlyKpiList) || monthlyKpiList.length === 0) {
+    return { quarterPeriodId, summary: [], employeeMap: {} };
+  }
+
+  // Nhóm theo employeeId để tính điểm trung bình quý
+  const employeeMap = {};
+  for (const kpi of monthlyKpiList) {
+    const empId = kpi.employeeId || kpi.employeeCode || kpi.employeeName;
+    if (!empId) continue;
+
+    if (!employeeMap[empId]) {
+      employeeMap[empId] = {
+        employeeId: kpi.employeeId,
+        employeeCode: kpi.employeeCode || '',
+        employeeName: kpi.employeeName || '',
+        department: kpi.department || '',
+        position: kpi.position || '',
+        monthlyScores: [],
+        monthlyFinalScores: [],
+        count: 0,
+      };
+    }
+
+    const entry = employeeMap[empId];
+    entry.count++;
+
+    if (typeof kpi.scoreSelf === 'number') {
+      entry.monthlyScores.push(kpi.scoreSelf);
+    }
+    if (typeof kpi.finalScore === 'number') {
+      entry.monthlyFinalScores.push(kpi.finalScore);
+    }
+  }
+
+  // Tính điểm trung bình quý
+  const summary = Object.values(employeeMap).map((emp) => {
+    const avgSelf = emp.monthlyScores.length > 0
+      ? Number((emp.monthlyScores.reduce((a, b) => a + b, 0) / emp.monthlyScores.length).toFixed(1))
+      : null;
+    const avgFinal = emp.monthlyFinalScores.length > 0
+      ? Number((emp.monthlyFinalScores.reduce((a, b) => a + b, 0) / emp.monthlyFinalScores.length).toFixed(1))
+      : null;
+
+    let classification = null;
+    if (avgFinal !== null) {
+      if (avgFinal >= 90) classification = 'Xuất sắc';
+      else if (avgFinal >= 75) classification = 'Tốt';
+      else if (avgFinal >= 60) classification = 'Đạt yêu cầu';
+      else classification = 'Không đạt';
+    }
+
+    return {
+      ...emp,
+      quarterPeriodId,
+      avgSelfScore: avgSelf,
+      avgFinalScore: avgFinal,
+      classification,
+      monthCount: emp.count,
+    };
+  });
+
+  return { quarterPeriodId, summary, employeeMap };
+};
+
+/**
+ * Lấy kỳ KPI đang hoạt động (status === 'ACTIVE') đầu tiên
+ * Ưu tiên kỳ MONTHLY, nếu không có thì QUARTERLY
+ */
+export const getActiveKpiPeriod = async () => {
+  if (!db) {
+    return DEFAULT_KPI_PERIODS.find((p) => p.status === 'ACTIVE') || DEFAULT_KPI_PERIODS[0] || null;
+  }
+
+  try {
+    const q = query(
+      collection(db, 'kpi_periods'),
+      where('status', '==', 'ACTIVE'),
+      orderBy('year', 'desc')
+    );
+    const snap = await import('firebase/firestore').then(({ getDocs }) => getDocs(q));
+    if (snap.empty) {
+      return DEFAULT_KPI_PERIODS.find((p) => p.status === 'ACTIVE') || null;
+    }
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Ưu tiên MONTHLY trước
+    return list.find((p) => p.type === 'MONTHLY') || list[0];
+  } catch (err) {
+    console.error('Lỗi getActiveKpiPeriod:', err);
+    return DEFAULT_KPI_PERIODS.find((p) => p.status === 'ACTIVE') || null;
+  }
 };
 
 /**

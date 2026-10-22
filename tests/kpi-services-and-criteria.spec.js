@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { 
   DEFAULT_KPI_CRITERIA_CATALOG,
-  DEFAULT_MODULE_KPI_SETTINGS 
+  DEFAULT_MODULE_KPI_SETTINGS,
+  DEFAULT_KPI_CRITERIA_GROUPS,
+  DEFAULT_KPI_PERIODS,
 } from '../src/lib/systemDefaults';
 import { 
   CURRENT_SCHEMA_VERSION, 
@@ -21,16 +23,26 @@ import {
   resolveKpiAppeal,
   bulkApproveKpi,
   exportKpiSummaryToExcel,
+  subscribeKpiCriteriaGroups,
+  saveKpiCriteriaGroup,
+  deleteKpiCriteriaGroup,
+  subscribeKpiPeriods,
+  saveKpiPeriod,
+  deleteKpiPeriod,
+  updateKpiPeriodStatus,
+  getKpiMonthlyToQuarterlySummary,
 } from '../src/features/kpi/services/kpiService';
 
 test.describe('Phân Hệ KPI 3 Cấp - Kiểm Thử Cấu Trúc CSDL & Dịch Vụ Nghiệp Vụ (Phase 1)', () => {
 
-  test('1. Kiểm tra Schema Version và Danh mục 25 Bảng CSDL QTDND Yên Thọ', async () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe('2026.10.21_v6.2_dynamic_kpi_criteria_and_appeal_system');
+  test('1. Kiểm tra Schema Version và Danh mục 27 Bảng CSDL QTDND Yên Thọ', async () => {
+    expect(CURRENT_SCHEMA_VERSION).toBe('2026.10.22_v6.3_dynamic_criteria_groups_and_kpi_periods');
     expect(CORE_COLLECTIONS).toContain('kpi_criteria');
+    expect(CORE_COLLECTIONS).toContain('kpi_criteria_groups');
+    expect(CORE_COLLECTIONS).toContain('kpi_periods');
     expect(CORE_COLLECTIONS).toContain('evaluations_kpi');
     expect(CORE_COLLECTIONS).toContain('employee_kpi_history');
-    expect(CORE_COLLECTIONS.length).toBe(25);
+    expect(CORE_COLLECTIONS.length).toBe(27);
   });
 
   test('2. Kiểm tra Danh mục Tiêu chí Đánh giá KPI Động Chuẩn Mực (kpi_criteria)', async () => {
@@ -184,5 +196,71 @@ test.describe('Phân Hệ KPI 3 Cấp - Kiểm Thử Cấu Trúc CSDL & Dịch V
     expect(DEFAULT_MODULE_KPI_SETTINGS.excellentThreshold).toBe(90);
     expect(DEFAULT_MODULE_KPI_SETTINGS.goodThreshold).toBe(75);
     expect(DEFAULT_MODULE_KPI_SETTINGS.passThreshold).toBe(60);
+  });
+
+  test('8. Kiểm tra Danh mục Nhóm Tiêu chí KPI Động (kpi_criteria_groups)', async () => {
+    expect(Array.isArray(DEFAULT_KPI_CRITERIA_GROUPS)).toBe(true);
+    expect(DEFAULT_KPI_CRITERIA_GROUPS.length).toBe(4);
+
+    const totalWeight = DEFAULT_KPI_CRITERIA_GROUPS.reduce((s, g) => s + g.maxScore, 0);
+    expect(totalWeight).toBe(100);
+
+    expect(typeof subscribeKpiCriteriaGroups).toBe('function');
+    expect(typeof saveKpiCriteriaGroup).toBe('function');
+    expect(typeof deleteKpiCriteriaGroup).toBe('function');
+  });
+
+  test('9. Kiểm tra Quản trị Kỳ Chấm Điểm KPI & Tổng hợp Tháng thành Quý (kpi_periods)', async () => {
+    expect(Array.isArray(DEFAULT_KPI_PERIODS)).toBe(true);
+    expect(DEFAULT_KPI_PERIODS.length).toBeGreaterThanOrEqual(3);
+
+    // Kiểm tra có cả kỳ MONTHLY và QUARTERLY
+    const types = new Set(DEFAULT_KPI_PERIODS.map((p) => p.type));
+    expect(types.has('MONTHLY')).toBe(true);
+    expect(types.has('QUARTERLY')).toBe(true);
+
+    expect(typeof subscribeKpiPeriods).toBe('function');
+    expect(typeof saveKpiPeriod).toBe('function');
+    expect(typeof deleteKpiPeriod).toBe('function');
+    expect(typeof updateKpiPeriodStatus).toBe('function');
+
+    // Kiểm tra hàm tổng hợp điểm tháng thành quý (getKpiMonthlyToQuarterlySummary)
+    const mockMonthlyKpis = [
+      {
+        employeeId: 'emp-01',
+        employeeCode: 'CB01',
+        employeeName: 'Nguyễn Văn A',
+        department: 'Phòng Tín dụng',
+        scoreSelf: 90,
+        finalScore: 92,
+      },
+      {
+        employeeId: 'emp-01',
+        employeeCode: 'CB01',
+        employeeName: 'Nguyễn Văn A',
+        department: 'Phòng Tín dụng',
+        scoreSelf: 86,
+        finalScore: 88,
+      },
+      {
+        employeeId: 'emp-02',
+        employeeCode: 'CB02',
+        employeeName: 'Trần Thị B',
+        department: 'Phòng Kế toán',
+        scoreSelf: 78,
+        finalScore: 80,
+      },
+    ];
+
+    const result = getKpiMonthlyToQuarterlySummary('kpi-2026-q3', mockMonthlyKpis);
+    expect(result.quarterPeriodId).toBe('kpi-2026-q3');
+    expect(result.summary.length).toBe(2);
+
+    const empA = result.summary.find((e) => e.employeeId === 'emp-01');
+    expect(empA).toBeTruthy();
+    expect(empA.monthCount).toBe(2);
+    expect(empA.avgSelfScore).toBe(88); // (90 + 86) / 2
+    expect(empA.avgFinalScore).toBe(90); // (92 + 88) / 2
+    expect(empA.classification).toBe('Xuất sắc');
   });
 });

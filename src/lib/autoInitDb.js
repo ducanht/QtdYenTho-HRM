@@ -93,6 +93,8 @@ import {
   DEFAULT_EMPLOYEE_CONTRACTS,
   DEFAULT_CONTRACT_ANNEXES,
   DEFAULT_KPI_CRITERIA_CATALOG,
+  DEFAULT_KPI_CRITERIA_GROUPS,
+  DEFAULT_KPI_PERIODS,
 } from './systemDefaults';
 import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
 
@@ -100,10 +102,10 @@ import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
  * Phiên bản cấu trúc CSDL hiện tại của dự án
  * Mỗi khi có cập nhật bảng/tiêu chí/module mới, version sẽ được kích hoạt để tự động đồng bộ
  */
-export const CURRENT_SCHEMA_VERSION = '2026.10.21_v6.2_dynamic_kpi_criteria_and_appeal_system';
+export const CURRENT_SCHEMA_VERSION = '2026.10.22_v6.3_dynamic_criteria_groups_and_kpi_periods';
 
 /**
- * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (25 Collections chuẩn hóa)
+ * Danh sách các Collections nòng cốt của CSDL QTDND Yên Thọ (27 Collections chuẩn hóa)
  */
 export const CORE_COLLECTIONS = [
   'accounts',
@@ -131,6 +133,8 @@ export const CORE_COLLECTIONS = [
   'work_locations',
   'credit_areas',
   'kpi_criteria',
+  'kpi_criteria_groups',
+  'kpi_periods',
 ];
 
 /**
@@ -471,6 +475,28 @@ export const autoSyncDatabaseSchema = async (force = false) => {
       for (const crit of DEFAULT_KPI_CRITERIA_CATALOG) {
         await setDoc(doc(db, 'kpi_criteria', crit.id), {
           ...crit,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
+    // 15e. Nhóm Tiêu chí Đánh giá KPI động (kpi_criteria_groups)
+    const kpiGroupsSnap = await getDocs(collection(db, 'kpi_criteria_groups')).catch(() => null);
+    if (!kpiGroupsSnap || kpiGroupsSnap.empty || force) {
+      for (const grp of DEFAULT_KPI_CRITERIA_GROUPS) {
+        await setDoc(doc(db, 'kpi_criteria_groups', grp.id), {
+          ...grp,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
+    // 15f. Kỳ chấm điểm KPI (kpi_periods)
+    const kpiPeriodsSnap = await getDocs(collection(db, 'kpi_periods')).catch(() => null);
+    if (!kpiPeriodsSnap || kpiPeriodsSnap.empty || force) {
+      for (const period of DEFAULT_KPI_PERIODS) {
+        await setDoc(doc(db, 'kpi_periods', period.id), {
+          ...period,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -824,7 +850,23 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       }, { merge: true });
     }
 
-    onProgress('Bước 19/20: Thống kê và tổng hợp số liệu 25 bảng CSDL Firestore...');
+    onProgress('Bước 18b/20: Khởi tạo Nhóm Tiêu chí KPI động (kpi_criteria_groups)...');
+    for (const grp of DEFAULT_KPI_CRITERIA_GROUPS) {
+      await setDoc(doc(db, 'kpi_criteria_groups', grp.id), {
+        ...grp,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 18c/20: Khởi tạo Danh mục Kỳ chấm điểm KPI (kpi_periods)...');
+    for (const period of DEFAULT_KPI_PERIODS) {
+      await setDoc(doc(db, 'kpi_periods', period.id), {
+        ...period,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    onProgress('Bước 19/20: Thống kê và tổng hợp số liệu 27 bảng CSDL Firestore...');
     const details = {};
     for (const colName of CORE_COLLECTIONS) {
       try {
@@ -840,9 +882,9 @@ export const autoInitializeFirebaseDatabase = async (onProgress = () => {}) => {
       sessionStorage.setItem('qtd_hrm_schema_synced_ver', CURRENT_SCHEMA_VERSION);
     }
 
-    onProgress('Bước 20/20: Hoàn tất 100%! Toàn bộ 25 bảng CSDL Firestore đã sẵn sàng vận hành.');
+    onProgress('Bước 20/20: Hoàn tất 100%! Toàn bộ 27 bảng CSDL Firestore đã sẵn sàng vận hành.');
     result.success = true;
-    result.message = 'Khởi tạo và đồng bộ 25 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
+    result.message = 'Khởi tạo và đồng bộ 27 bảng dữ liệu Firestore thành công (100% Zero-Mock Data)!';
     return result;
   } catch (error) {
     console.error('Lỗi tự động khởi tạo CSDL Firebase:', error);

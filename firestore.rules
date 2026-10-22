@@ -341,6 +341,26 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isBoardOrAdmin();
     }
+
+    // ===============================================================
+    // 24. Danh mục Nhóm Tiêu chí Đánh giá KPI Động (kpi_criteria_groups)
+    // Cán bộ đăng nhập xem được danh mục nhóm tiêu chí KPI của Quỹ;
+    // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
+    // ===============================================================
+    match /kpi_criteria_groups/{groupId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isBoardOrAdmin();
+    }
+
+    // ===============================================================
+    // 25. Danh mục Kỳ Chấm Điểm KPI (kpi_periods)
+    // Kỳ tháng và kỳ quý tổng hợp — Cán bộ đăng nhập xem được;
+    // Chỉ Ban Lãnh đạo hoặc Admin (isBoardOrAdmin) có quyền thêm, sửa, xoá.
+    // ===============================================================
+    match /kpi_periods/{periodId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isBoardOrAdmin();
+    }
   }
 }
 

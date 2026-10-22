@@ -11,6 +11,8 @@ import {
   subscribeKpiCriteria,
   subscribeEmployeeKpiHistory,
   saveKpiStep1Self,
+  subscribeKpiPeriods,
+  subscribeKpiCriteriaGroups,
 } from './services/kpiService';
 import { ROLES } from '../../lib/constants';
 
@@ -45,14 +47,16 @@ const KpiEvaluationContainer = () => {
   // Danh mục dữ liệu chính từ Firestore
   const [kpiList, setKpiList] = useState([]);
   const [criteriaList, setCriteriaList] = useState([]);
+  const [criteriaGroups, setCriteriaGroups] = useState([]);
   const [historyList, setHistoryList] = useState([]);
-  const [, setEmployees] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [periods, setPeriods] = useState([]);
+  const [kpiPeriods, setKpiPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Kỳ đánh giá được chọn
-  const [period, setPeriod] = useState('Quý III / 2026');
+  const [period, setPeriod] = useState('Tháng 10 / 2026');
 
   // Điều phối Tab hiện tại: 'OVERVIEW' | 'SCORING' | 'MY_RESULTS' | 'HISTORY' | 'SETTINGS'
   const canAccessOverview = isChairman || isManager || isAdmin;
@@ -100,23 +104,36 @@ const KpiEvaluationContainer = () => {
     return () => unsubDept();
   }, []);
 
-  // 3. Lắng nghe các kỳ đánh giá động
+  // 3. Lắng nghe các kỳ đánh giá động (tín nhiệm chung)
   useEffect(() => {
     const unsubPeriods = subscribeEvaluationPeriods((list) => {
       if (list && list.length > 0) {
         setPeriods(list);
-        const active = list.find((p) => p.status === 'ACTIVE') || list[0];
-        if (active) {
-          const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
-          const activeCode =
-            active.quarter && active.year
-              ? `Quý ${roman[active.quarter] || active.quarter} / ${active.year}`
-              : active.name;
-          setPeriod((prev) => prev || activeCode);
-        }
       }
     });
     return () => unsubPeriods();
+  }, []);
+
+  // 3b. Lắng nghe Danh mục Kỳ chấm điểm KPI chuyên biệt (kpi_periods: Tháng & Quý)
+  useEffect(() => {
+    const unsubKpiPeriods = subscribeKpiPeriods((list) => {
+      if (list && list.length > 0) {
+        setKpiPeriods(list);
+        const active = list.find((p) => p.status === 'ACTIVE') || list[0];
+        if (active) {
+          setPeriod((prev) => prev || active.name);
+        }
+      }
+    });
+    return () => unsubKpiPeriods();
+  }, []);
+
+  // 3c. Lắng nghe Danh mục Nhóm tiêu chí KPI động (kpi_criteria_groups)
+  useEffect(() => {
+    const unsubGroups = subscribeKpiCriteriaGroups((list) => {
+      if (list) setCriteriaGroups(list);
+    });
+    return () => unsubGroups();
   }, []);
 
   // 4. Lắng nghe danh sách phiếu KPI theo thời gian thực
@@ -145,12 +162,28 @@ const KpiEvaluationContainer = () => {
     return () => unsubHistory();
   }, []);
 
-  // Danh sách các kỳ đánh giá kết hợp từ evaluation_periods và dữ liệu thực tế
+  // Danh sách các kỳ đánh giá kết hợp từ kpi_periods và dữ liệu thực tế
   const periodOptions = useMemo(() => {
-    const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
     const seen = new Set();
     const opts = [];
 
+    // Ưu tiên các kỳ chấm KPI chuyên biệt (kpi_periods)
+    kpiPeriods.forEach((p) => {
+      if (p.name && !seen.has(p.name)) {
+        seen.add(p.name);
+        const typeBadge = p.type === 'MONTHLY' ? 'Tháng' : 'Quý';
+        opts.push({
+          value: p.name,
+          label: `${p.name}${p.status === 'ACTIVE' ? ' (Đang diễn ra)' : ''} [${typeBadge}]`,
+          status: p.status,
+          type: p.type,
+          id: p.id,
+        });
+      }
+    });
+
+    // Bổ sung các kỳ từ evaluation_periods
+    const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
     periods.forEach((p) => {
       const code =
         p.quarter && p.year
@@ -166,6 +199,7 @@ const KpiEvaluationContainer = () => {
       }
     });
 
+    // Bổ sung từ phiếu đã lập
     kpiList.forEach((k) => {
       if (k.period && !seen.has(k.period)) {
         seen.add(k.period);
@@ -178,11 +212,11 @@ const KpiEvaluationContainer = () => {
     });
 
     if (opts.length === 0) {
-      opts.push({ value: 'Quý III / 2026', label: 'Quý III / 2026 (Đang diễn ra)' });
+      opts.push({ value: 'Tháng 10 / 2026', label: 'Tháng 10 / 2026 (Đang diễn ra) [Tháng]', status: 'ACTIVE' });
     }
 
     return opts;
-  }, [periods, kpiList]);
+  }, [kpiPeriods, periods, kpiList]);
 
   // Phiếu KPI cá nhân của người dùng hiện tại trong kỳ đã chọn
   const myCurrentKpi = useMemo(() => {
@@ -373,6 +407,9 @@ const KpiEvaluationContainer = () => {
         {activeTab === 'SETTINGS' && canAccessSettings && (
           <KpiSettingsTab
             criteriaList={criteriaList}
+            groups={criteriaGroups}
+            periods={kpiPeriods.length > 0 ? kpiPeriods : periods}
+            employees={employees}
             departments={departments}
             kpiSettings={kpiSettings}
             thresholds={thresholds}
