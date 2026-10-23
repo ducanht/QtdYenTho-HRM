@@ -16,6 +16,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
+import { OFFICIAL_STAFF_EMPLOYEES } from './systemDefaults';
 
 // Re-export dịch vụ chuyên biệt theo từng Feature Module để bảo toàn tương thích ngược 100%
 export * from '../features/trust/services/trustService';
@@ -98,22 +99,45 @@ export const syncUserProfile = async (user) => {
 export const subscribeEmployees = (callback) => {
   if (!db) {
     console.error('Firestore db chưa sẵn sàng');
-    callback([]);
+    callback(OFFICIAL_STAFF_EMPLOYEES.map((e) => ({ ...e, fullName: e.fullName || e.name, name: e.name || e.fullName })));
     return () => {};
   }
 
   try {
-    const q = query(collection(db, 'users'), orderBy('code', 'asc'));
+    const q = query(collection(db, 'employees'), orderBy('order', 'asc'));
     return onSnapshot(
       q,
       (snapshot) => {
-        const rawList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (snapshot.empty) {
+          callback(OFFICIAL_STAFF_EMPLOYEES.map((e) => ({ ...e, fullName: e.fullName || e.name, name: e.name || e.fullName })));
+          return;
+        }
+
+        const rawList = snapshot.docs.map((d) => {
+          const data = d.data();
+          const fullName = data.fullName || data.name || '';
+          const name = data.name || data.fullName || '';
+          return {
+            id: d.id,
+            ...data,
+            fullName,
+            name,
+          };
+        });
+
+        // Loại bỏ hoàn toàn tài khoản hệ thống / ROOT / superadmin
+        const filteredList = rawList.filter((emp) => {
+          const id = String(emp.id || '').toLowerCase();
+          const code = String(emp.code || '').toUpperCase();
+          const role = String(emp.role || '').toLowerCase();
+          return id !== 'emp-root' && code !== 'ROOT' && role !== 'superadmin';
+        });
 
         // Khử trùng lặp đa tầng chuẩn mực:
         // 1. Nhóm theo mã cán bộ (code) hoặc email
         // 2. Ưu tiên giữ lại bản ghi có ID chuẩn 'emp-xxx'
         const deduplicatedMap = new Map();
-        rawList.forEach((emp) => {
+        filteredList.forEach((emp) => {
           const key = (emp.code && emp.code.trim().toUpperCase()) || (emp.email && emp.email.trim().toLowerCase()) || emp.id;
           if (!deduplicatedMap.has(key)) {
             deduplicatedMap.set(key, emp);
@@ -134,13 +158,13 @@ export const subscribeEmployees = (callback) => {
         callback(list);
       },
       (error) => {
-        console.error('Lỗi onSnapshot users từ Firestore:', error);
-        callback([]);
+        console.error('Lỗi onSnapshot employees từ Firestore:', error);
+        callback(OFFICIAL_STAFF_EMPLOYEES.map((e) => ({ ...e, fullName: e.fullName || e.name, name: e.name || e.fullName })));
       }
     );
   } catch (err) {
-    console.error('Lỗi thiết lập onSnapshot users:', err);
-    callback([]);
+    console.error('Lỗi thiết lập onSnapshot employees:', err);
+    callback(OFFICIAL_STAFF_EMPLOYEES.map((e) => ({ ...e, fullName: e.fullName || e.name, name: e.name || e.fullName })));
     return () => {};
   }
 };

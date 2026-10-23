@@ -73,7 +73,14 @@ const KpiPeriodConfigCard = ({
 
   // Cán bộ nhân viên đang hoạt động
   const activeEmployees = useMemo(() => {
-    return employees.filter((e) => e.status !== 'INACTIVE' && e.status !== 'DA_NGHI_VIEC');
+    return employees.filter((e) => {
+      const id = String(e.id || '').toLowerCase();
+      const code = String(e.code || '').toUpperCase();
+      const role = String(e.role || '').toLowerCase();
+      const isRoot = id === 'emp-root' || code === 'ROOT' || role === 'superadmin';
+      const isInactive = e.status === 'INACTIVE' || e.status === 'DA_NGHI_VIEC';
+      return !isRoot && !isInactive;
+    });
   }, [employees]);
 
   // Lọc CBNV trong modal cấu hình
@@ -82,7 +89,7 @@ const KpiPeriodConfigCard = ({
     const q = empSearch.toLowerCase();
     return activeEmployees.filter(
       (e) =>
-        (e.fullName || '').toLowerCase().includes(q) ||
+        (e.fullName || e.name || '').toLowerCase().includes(q) ||
         (e.code || '').toLowerCase().includes(q) ||
         (e.department || '').toLowerCase().includes(q) ||
         (e.position || '').toLowerCase().includes(q)
@@ -139,7 +146,11 @@ const KpiPeriodConfigCard = ({
     setChairmanDeadline(period.chairmanDeadline || '');
     setQuarterSummaryPeriodId(period.quarterSummaryPeriodId || '');
     setParticipantScope(period.participantScope || 'ALL');
-    setSelectedParticipantIds(Array.isArray(period.participantIds) ? period.participantIds : []);
+    setSelectedParticipantIds(
+      Array.isArray(period.participantIds) && period.participantIds.length > 0
+        ? period.participantIds
+        : activeEmployees.map((e) => e.id)
+    );
     setNotes(period.notes || '');
     setEmpSearch('');
     setIsModalOpen(true);
@@ -762,7 +773,7 @@ const KpiPeriodConfigCard = ({
                                 {isChecked && <Check className="w-3 h-3" />}
                               </div>
                               <div>
-                                <span className="font-semibold text-slate-800">{emp.fullName}</span>
+                                <span className="font-semibold text-slate-800">{emp.fullName || emp.name}</span>
                                 <span className="text-[11px] text-slate-400 ml-1.5 font-numeric">
                                   ({emp.code || '—'})
                                 </span>

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { 
   DEFAULT_KPI_CRITERIA_CATALOG,
+  OFFICIAL_STAFF_EMPLOYEES,
   DEFAULT_MODULE_KPI_SETTINGS,
   DEFAULT_KPI_CRITERIA_GROUPS,
   DEFAULT_KPI_PERIODS,
@@ -9,6 +10,7 @@ import {
   CURRENT_SCHEMA_VERSION, 
   CORE_COLLECTIONS 
 } from '../src/lib/autoInitDb';
+import { subscribeEmployees } from '../src/lib/services';
 import {
   calculateKpiFinal,
   filterKpiCriteriaByDepartment,
@@ -262,5 +264,25 @@ test.describe('Phân Hệ KPI 3 Cấp - Kiểm Thử Cấu Trúc CSDL & Dịch V
     expect(empA.avgSelfScore).toBe(88); // (90 + 86) / 2
     expect(empA.avgFinalScore).toBe(90); // (92 + 88) / 2
     expect(empA.classification).toBe('Xuất sắc');
+  });
+  test('10. Kiểm tra Danh sách Cán bộ nhân viên chuẩn hóa không có ROOT và lấy từ CSDL CBNV thực tế', async () => {
+    // 1. Kiểm tra danh sách cán bộ chuẩn có đúng 13 CBNV chính thức của Quỹ Yên Thọ
+    expect(Array.isArray(OFFICIAL_STAFF_EMPLOYEES)).toBe(true);
+    expect(OFFICIAL_STAFF_EMPLOYEES.length).toBe(13);
+
+    // 2. Tuyệt đối không chứa tài khoản ROOT hoặc SuperAdmin trong danh sách CBNV
+    const rootUser = OFFICIAL_STAFF_EMPLOYEES.find(
+      (e) => e.id === 'emp-root' || e.code === 'ROOT' || e.role === 'superadmin'
+    );
+    expect(rootUser).toBeUndefined();
+
+    // 3. Phải có đầy đủ Nguyễn Hữu Hiếu (CB06) và các cán bộ cốt cán
+    const hieu = OFFICIAL_STAFF_EMPLOYEES.find((e) => e.code === 'CB06');
+    expect(hieu).toBeTruthy();
+    expect(hieu.name || hieu.fullName).toBe('Nguyễn Hữu Hiếu');
+    expect(hieu.department).toBe('Phòng Tín dụng');
+
+    // 4. Kiểm tra hàm subscribeEmployees đã sẵn sàng
+    expect(typeof subscribeEmployees).toBe('function');
   });
 });

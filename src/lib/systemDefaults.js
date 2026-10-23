@@ -959,6 +959,8 @@ export const OFFICIAL_STAFF_EMPLOYEES = OFFICIAL_EMPLOYEES.filter(
   (emp) => emp.id !== 'emp-root' && emp.code !== 'ROOT'
 ).map(({ role, mustChangePassword, ...profile }) => ({
   ...profile,
+  name: profile.name,
+  fullName: profile.name,
   workLocation: profile.workLocation || 'Trụ sở chính - Quỹ TDND Yên Thọ (Thôn Tân Lộc, xã Quý Lộc)',
   secondaryPhone: profile.secondaryPhone || '',
   itLevel: profile.itLevel || 'Ứng dụng CNTT cơ bản',
