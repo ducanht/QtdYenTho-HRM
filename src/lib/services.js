@@ -15,12 +15,12 @@ import {
   where,
   serverTimestamp 
 } from 'firebase/firestore';
-import { db, auth } from './firebase';
-import { OFFICIAL_STAFF_EMPLOYEES } from './systemDefaults';
+import { db, auth } from './firebase.js';
+import { OFFICIAL_STAFF_EMPLOYEES } from './systemDefaults.js';
 
 // Re-export dịch vụ chuyên biệt theo từng Feature Module để bảo toàn tương thích ngược 100%
-export * from '../features/trust/services/trustService';
-export * from '../features/employees/services/hrService';
+export * from '../features/trust/services/trustService.js';
+export * from '../features/employees/services/hrService.js';
 
 
 // ============================================================================

@@ -11,9 +11,9 @@ import {
   setDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { auth, db, isFirebaseConfigured } from './firebase';
+import { auth, db, isFirebaseConfigured } from './firebase.js';
 
-import { SUPERADMIN_EMAIL, ROLES } from './constants';
+import { SUPERADMIN_EMAIL, ROLES } from './constants.js';
 
 /**
  * Kiểm tra quyền Quản trị viên trước khi thực thi bất kỳ thao tác ghi CSDL cấu trúc nào.
@@ -95,8 +95,8 @@ import {
   DEFAULT_KPI_CRITERIA_CATALOG,
   DEFAULT_KPI_CRITERIA_GROUPS,
   DEFAULT_KPI_PERIODS,
-} from './systemDefaults';
-import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions';
+} from './systemDefaults.js';
+import { SYSTEM_MODULES, ROLE_PERMISSIONS } from './permissions.js';
 
 /**
  * Phiên bản cấu trúc CSDL hiện tại của dự án
